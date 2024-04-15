@@ -2,7 +2,7 @@ const description =
   'Stop ticket trouble! Answerify uses the power of AI to automatically answer your customer questions, saving you time and delighting your customers.';
 
 export const siteConfig = {
-  name: 'Answerify: Your AI-Powered Support Ticket Superhero',
+  name: 'Answerify',
   url: 'https://answerify.app',
   description,
   hero: {

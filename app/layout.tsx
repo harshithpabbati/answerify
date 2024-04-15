@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { GeistSans } from 'geist/font/sans';
 
 import { siteConfig } from '@/lib/config';
+import { cn } from '@/lib/utils';
+import { Header } from '@/components/header';
 
 import './globals.css';
 
@@ -28,7 +30,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={GeistSans.className}>{children}</body>
+      <body
+        className={cn(
+          'bg-muted flex max-h-dvh min-h-dvh flex-col',
+          GeistSans.className
+        )}
+      >
+        {children}
+      </body>
     </html>
   );
 }
