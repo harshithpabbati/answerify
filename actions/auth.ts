@@ -5,11 +5,6 @@ import { UserAttributes } from '@supabase/supabase-js';
 import { getGravatar } from '@/lib/gravatar';
 import { createServerClient } from '@/lib/supabase/server';
 
-export async function getSession() {
-  const supabase = await createServerClient();
-  return await supabase.auth.getSession();
-}
-
 export async function getUser() {
   const supabase = await createServerClient();
   return await supabase.auth.getUser();
