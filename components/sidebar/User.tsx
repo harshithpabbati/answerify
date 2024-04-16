@@ -1,6 +1,7 @@
 'use client';
 
 import { signOut } from '@/actions/auth';
+import { useCreateOrganization } from '@/states/organization';
 import { ExitIcon, PlusIcon } from '@radix-ui/react-icons';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -20,9 +21,10 @@ interface Props {
 }
 
 export function User({ user }: Props) {
+  const [, setCreateOrg] = useCreateOrganization();
   return (
     <div className="flex flex-col items-center justify-center gap-2 p-2">
-      <Button variant="ghost">
+      <Button onClick={() => setCreateOrg(true)} variant="ghost">
         <PlusIcon className="size-4" />
       </Button>
       <DropdownMenu>

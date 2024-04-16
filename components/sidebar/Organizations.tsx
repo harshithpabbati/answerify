@@ -1,9 +1,12 @@
-import { getOrganizations } from '@/actions/organization';
+import { Tables } from '@/database.types';
 
 import { Organization } from './Organization';
 
-export async function Organizations() {
-  const organizations = await getOrganizations();
+interface Props {
+  organizations: Tables<'organization'>[];
+}
+
+export async function Organizations({ organizations }: Props) {
   return (
     <div className="mt-4 flex flex-col items-center justify-center gap-2">
       {organizations.map((o) => (

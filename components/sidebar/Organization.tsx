@@ -1,7 +1,11 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
+import { deleteOrganization } from '@/actions/organization';
+import { Tables } from '@/database.types';
+import { useUpdateOrganization } from '@/states/organization';
 import { Pencil1Icon, PersonIcon, TrashIcon } from '@radix-ui/react-icons';
+import { toast } from 'sonner';
 
 import { getNameInitials } from '@/lib/gravatar';
 import { Button } from '@/components/ui/button';
@@ -15,14 +19,26 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 
-interface Props {
-  name: string;
-  slug: string;
-}
-
-export function Organization({ name, slug }: Props) {
+export function Organization({ id, name, slug }: Tables<'organization'>) {
   const router = useRouter();
   const pathname = usePathname();
+  const [, setUpdateOrganization] = useUpdateOrganization();
+
+  const handleDelete = async () => {
+    const { error } = await deleteOrganization(id);
+    if (error) {
+      toast.error('Organization Deletion Failed', {
+        description:
+          'We are unable to delete the organization at this time. Please try again later',
+      });
+    }
+    toast.success('Successfully deleted your organization', {
+      description: 'Please wait while we redirect you to dashboard',
+    });
+    router.push('/dashboard');
+    router.refresh();
+  };
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
@@ -42,7 +58,7 @@ export function Organization({ name, slug }: Props) {
           </div>
         </ContextMenuLabel>
         <ContextMenuSeparator />
-        <ContextMenuItem>
+        <ContextMenuItem onSelect={() => setUpdateOrganization(id)}>
           Edit
           <ContextMenuShortcut>
             <Pencil1Icon />
@@ -55,7 +71,7 @@ export function Organization({ name, slug }: Props) {
           </ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem className="text-destructive">
+        <ContextMenuItem className="text-destructive" onSelect={handleDelete}>
           Delete
           <ContextMenuShortcut>
             <TrashIcon />

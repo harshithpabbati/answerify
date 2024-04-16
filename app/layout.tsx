@@ -3,7 +3,9 @@ import { GeistSans } from 'geist/font/sans';
 
 import { siteConfig } from '@/lib/config';
 import { cn } from '@/lib/utils';
-import { Header } from '@/components/header';
+import { Toaster } from '@/components/ui/sonner';
+import { Modals } from '@/components/modals';
+import { Providers } from '@/components/providers';
 
 import './globals.css';
 
@@ -36,7 +38,11 @@ export default function RootLayout({
           GeistSans.className
         )}
       >
-        {children}
+        <Providers>
+          {children}
+          <Modals />
+          <Toaster />
+        </Providers>
       </body>
     </html>
   );
