@@ -1,5 +1,8 @@
-import { getUser } from '@/actions/auth';
+'use client';
+
+import { signOut } from '@/actions/auth';
 import { ExitIcon, PlusIcon } from '@radix-ui/react-icons';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -12,10 +15,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export async function User() {
-  const {
-    data: { user },
-  } = await getUser();
+interface Props {
+  user: SupabaseUser;
+}
+
+export function User({ user }: Props) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 p-2">
       <Button variant="ghost">
@@ -42,7 +46,7 @@ export async function User() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => signOut()}>
             <ExitIcon className="mr-2 size-4" />
             Sign out
           </DropdownMenuItem>
