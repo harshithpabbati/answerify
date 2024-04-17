@@ -1,9 +1,6 @@
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { createOrganization } from '@/actions/organization';
-import { useCreateOrganization } from '@/states/organization';
 import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
 
 import { slugify } from '@/lib/slug';
 import { OrganizationSchema, resolver } from '@/lib/zod/organization';
@@ -20,34 +17,30 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 
-export function CreateOrganizationForm() {
-  const router = useRouter();
+interface Props {
+  onCreate?(slug: string): void;
+}
+
+export function CreateOrganizationForm({ onCreate }: Props) {
   const [error, setError] = useState('');
-  const [, setShow] = useCreateOrganization();
 
   const form = useForm<OrganizationSchema>({
     resolver,
     defaultValues: {
       name: '',
+      support_email: '',
     },
     mode: 'onChange',
   });
 
-  const orgName = form.watch('name');
-
-  const handleSubmit = async ({ name }: OrganizationSchema) => {
-    const { data, error } = await createOrganization(name);
+  const handleSubmit = async (org: OrganizationSchema) => {
+    const { data, error } = await createOrganization(org);
     if (error) {
       console.error(error);
       setError(error.message);
       return;
     }
-    setShow(false);
-    toast.success('Successfully created your organization', {
-      description: 'Please wait while we redirect you!',
-    });
-    router.push(`/org/${data.slug}`);
-    router.refresh();
+    onCreate?.(data.slug);
   };
 
   return (
@@ -75,10 +68,27 @@ export function CreateOrganizationForm() {
                   <Input placeholder="Acme, Inc" {...field} />
                 </FormControl>
                 <FormDescription>
-                  This will be the name of your organization. <br />
-                  Your URL will be{' '}
-                  {`${window.location.origin}/org/${slugify(orgName)}`}
+                  This will be the name of your organization.
                 </FormDescription>
+                {field.value && (
+                  <FormDescription>
+                    Your URL will be{' '}
+                    {`${window.location.origin}/org/${slugify(field.value)}`}
+                  </FormDescription>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="support_email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Support Email</FormLabel>
+                <FormControl>
+                  <Input placeholder="support@acme.com" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

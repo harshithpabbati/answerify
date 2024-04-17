@@ -53,22 +53,28 @@ export type Database = {
           created_at: string;
           created_by: string;
           id: string;
+          inbound_email: string;
           name: string;
           slug: string;
+          support_email: string;
         };
         Insert: {
           created_at?: string;
           created_by: string;
           id?: string;
+          inbound_email: string;
           name: string;
           slug: string;
+          support_email: string;
         };
         Update: {
           created_at?: string;
           created_by?: string;
           id?: string;
+          inbound_email?: string;
           name?: string;
           slug?: string;
+          support_email?: string;
         };
         Relationships: [
           {

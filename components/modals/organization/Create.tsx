@@ -1,4 +1,7 @@
+import { useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCreateOrganization } from '@/states/organization';
+import { toast } from 'sonner';
 
 import { useIsMobile } from '@/hooks/useIsMobile';
 import {
@@ -18,11 +21,24 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 
-import { CreateOrganizationForm } from './forms/Create';
+import { CreateOrganizationForm } from './forms';
 
 export function CreateOrganization() {
   const isMobile = useIsMobile();
+  const router = useRouter();
   const [open, setOpen] = useCreateOrganization();
+
+  const handleOnCreate = useCallback(
+    (name: string) => {
+      setOpen(false);
+      toast.success('Successfully created your organization', {
+        description: 'Please wait while we redirect you!',
+      });
+      router.push(`/org/${name}`);
+      router.refresh();
+    },
+    [router, setOpen]
+  );
 
   if (isMobile) {
     return (
@@ -34,7 +50,7 @@ export function CreateOrganization() {
               Tell us about your organization
             </DrawerDescription>
           </DrawerHeader>
-          <CreateOrganizationForm />
+          <CreateOrganizationForm onCreate={handleOnCreate} />
         </DrawerContent>
         <DrawerFooter>
           <DrawerClose />
@@ -50,7 +66,7 @@ export function CreateOrganization() {
           <DialogTitle>Set up your organization</DialogTitle>
           <DialogDescription>Tell us about your organization</DialogDescription>
         </DialogHeader>
-        <CreateOrganizationForm />
+        <CreateOrganizationForm onCreate={handleOnCreate} />
       </DialogContent>
     </Dialog>
   );

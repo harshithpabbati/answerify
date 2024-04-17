@@ -18,7 +18,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 
-import { UpdateOrganizationForm } from './forms/Update';
+import { UpdateOrganizationForm } from './forms/UpdateForm';
 
 export function UpdateOrganization() {
   const isMobile = useIsMobile();

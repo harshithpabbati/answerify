@@ -18,6 +18,14 @@ export async function getIsUserAuthenticated() {
   return Boolean(user?.id);
 }
 
+export async function isUserOnboarded() {
+  const {
+    data: { user },
+  } = await getUser();
+
+  return Boolean(user?.user_metadata?.onboarding?.hasOnboarded);
+}
+
 export async function signInWithPassword({
   email,
   password,

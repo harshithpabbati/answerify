@@ -32,14 +32,13 @@ export function UpdateOrganizationForm() {
     resolver,
     values: {
       name: organization?.name ?? '',
+      support_email: organization?.support_email ?? '',
     },
     mode: 'onChange',
   });
 
-  const orgName = form.watch('name');
-
-  const handleSubmit = async ({ name }: OrganizationSchema) => {
-    const { data, error } = await updateOrganization(orgId as string, name);
+  const handleSubmit = async (org: OrganizationSchema) => {
+    const { data, error } = await updateOrganization(orgId as string, org);
     if (error) {
       console.error(error);
       setError(error.message);
@@ -95,8 +94,21 @@ export function UpdateOrganizationForm() {
                 <FormDescription>
                   This will be the name of your organization. <br />
                   Your URL will be{' '}
-                  {`${window.location.origin}/org/${slugify(orgName)}`}
+                  {`${window.location.origin}/org/${slugify(field.value)}`}
                 </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="support_email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Support Email</FormLabel>
+                <FormControl>
+                  <Input placeholder="support@acme.com" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

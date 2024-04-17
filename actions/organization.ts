@@ -22,7 +22,13 @@ export async function getOrganization(id: string) {
   return { data, error };
 }
 
-export async function createOrganization(name: string) {
+export async function createOrganization({
+  name,
+  support_email,
+}: {
+  name: string;
+  support_email: string;
+}) {
   const supabase = await createServerClient();
   const {
     data: { user },
@@ -36,6 +42,8 @@ export async function createOrganization(name: string) {
     .insert({
       name,
       slug: slugify(name),
+      support_email,
+      inbound_email: `${crypto.randomUUID()}@inbound.answerify.app`,
       created_by: user.id,
     })
     .select()
@@ -56,11 +64,14 @@ export async function createOrganization(name: string) {
   return { data, error };
 }
 
-export async function updateOrganization(id: string, name: string) {
+export async function updateOrganization(
+  id: string,
+  { name, support_email }: { name: string; support_email: string }
+) {
   const supabase = await createServerClient();
   const { data, error } = await supabase
     .from('organization')
-    .update({ name, slug: slugify(name) })
+    .update({ name, slug: slugify(name), support_email })
     .eq('id', id)
     .select()
     .single();
@@ -73,5 +84,15 @@ export async function deleteOrganization(id: string) {
     .from('organization')
     .delete()
     .match({ id });
+  return { data, error };
+}
+
+export async function getOrganizationEmail(slug: string) {
+  const supabase = await createServerClient();
+  const { data, error } = await supabase
+    .from('organization')
+    .select('inbound_email')
+    .eq('slug', slug)
+    .single();
   return { data, error };
 }
