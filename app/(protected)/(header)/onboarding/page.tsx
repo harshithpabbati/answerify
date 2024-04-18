@@ -8,7 +8,12 @@ export const metadata: Metadata = {
   title: 'Onboarding',
 };
 
-const steps = ['onboarding', 'email-forwarding', 'dns', 'data-sources'];
+const steps = [
+  'onboarding',
+  'email-forwarding',
+  'data-sources',
+  'configurations',
+];
 
 export default async function OnboardingPage() {
   const {

@@ -31,8 +31,8 @@ export function Steps() {
   const steps = [
     { title: 'Organization creation', route: 'onboarding' },
     { title: 'Setting up email forwarding', route: 'email-forwarding' },
-    { title: 'Configuring DNS', route: 'dns' },
     { title: 'Setting up data sources', route: 'data-sources' },
+    { title: 'Configurations', route: 'configurations' },
   ];
 
   return (
