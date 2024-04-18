@@ -8,6 +8,8 @@ import {
 } from '@supabase/ssr';
 
 export const createServerClient = () => {
+  'use server';
+
   const cookieStore = cookies();
   return createSupabaseServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

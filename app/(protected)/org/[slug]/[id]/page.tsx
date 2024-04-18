@@ -27,7 +27,7 @@ export default async function EmailPage({ params: { id } }: Props) {
   return (
     <div className="max-h-dvh overflow-hidden">
       <ConversationHeader {...thread} />
-      <Conversations conversations={data ?? []} />
+      <Conversations threadId={thread.id} conversations={data ?? []} />
     </div>
   );
 }
