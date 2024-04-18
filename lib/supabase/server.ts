@@ -18,18 +18,10 @@ export const createServerClient = () => {
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value, ...options });
-          } catch (e) {
-            return;
-          }
+          cookieStore.set({ name, value, ...options });
         },
         remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: '', ...options });
-          } catch (e) {
-            return;
-          }
+          cookieStore.set({ name, value: '', ...options });
         },
       },
     }
