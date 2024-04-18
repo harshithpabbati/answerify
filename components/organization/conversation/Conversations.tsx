@@ -6,7 +6,7 @@ import { sendEmail } from '@/actions/email';
 import { Tables } from '@/database.types';
 
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Tiptap } from '@/components/ui/tiptap';
 
 import { Conversation } from './Conversation';
 
@@ -43,14 +43,7 @@ export function Conversations({ threadId, conversations }: Props) {
         ))}
       </div>
       <div className="bg-background w-full border-t p-4">
-        <Textarea
-          className="mt-4"
-          placeholder="Enter your message here"
-          rows={4}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          autoFocus
-        />
+        <Tiptap content={content} onContentChange={setContent} />
         <div className="mt-4 flex justify-end">
           <Button onClick={handleSubmit} size="lg">
             Submit

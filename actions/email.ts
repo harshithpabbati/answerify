@@ -48,7 +48,7 @@ export async function sendEmail(threadId: string, content: string) {
     from: 'Support <support@answerify.app>',
     to: [data.email_from],
     subject: data.subject,
-    text: content,
+    html: content,
     headers: {
       'In-Reply-To': data.message_id,
     },
