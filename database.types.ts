@@ -153,6 +153,7 @@ export type Database = {
           email_from_name: string;
           id: string;
           last_message_created_at: string;
+          message_id: string;
           organization_id: string;
           status: string;
           subject: string;
@@ -164,6 +165,7 @@ export type Database = {
           email_from_name: string;
           id?: string;
           last_message_created_at?: string;
+          message_id: string;
           organization_id?: string;
           status?: string;
           subject: string;
@@ -175,6 +177,7 @@ export type Database = {
           email_from_name?: string;
           id?: string;
           last_message_created_at?: string;
+          message_id?: string;
           organization_id?: string;
           status?: string;
           subject?: string;
