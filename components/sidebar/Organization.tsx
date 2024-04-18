@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { deleteOrganization } from '@/actions/organization';
 import { Tables } from '@/database.types';
 import { useUpdateOrganization } from '@/states/organization';
@@ -21,7 +21,7 @@ import {
 
 export function Organization({ id, name, slug }: Tables<'organization'>) {
   const router = useRouter();
-  const pathname = usePathname();
+  const params = useParams();
   const [, setUpdateOrganization] = useUpdateOrganization();
 
   const handleDelete = async () => {
@@ -43,7 +43,7 @@ export function Organization({ id, name, slug }: Tables<'organization'>) {
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <Button
-          variant={pathname === `/org/${slug}` ? 'default' : 'outline'}
+          variant={params.slug === slug ? 'default' : 'outline'}
           className="size-10"
           onClick={() => router.push(`/org/${slug}`)}
         >

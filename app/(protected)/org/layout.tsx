@@ -16,7 +16,7 @@ export default async function OrgLayout({
   const organizations = await getOrganizations();
 
   return (
-    <div className="flex h-dvh">
+    <div className="max-w-dvw flex h-dvh max-h-dvh w-dvw">
       <div className="bg-background relative flex h-full w-16 flex-col items-center justify-between border-r">
         <Organizations organizations={organizations} />
         <div className="flex flex-col items-center justify-center gap-2 p-2">

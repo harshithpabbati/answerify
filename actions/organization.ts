@@ -22,6 +22,16 @@ export async function getOrganization(id: string) {
   return { data, error };
 }
 
+export async function getOrganizationBySlug(slug: string) {
+  const supabase = await createServerClient();
+  const { data, error } = await supabase
+    .from('organization')
+    .select()
+    .match({ slug })
+    .single();
+  return { data, error };
+}
+
 export async function createOrganization({
   name,
   support_email,

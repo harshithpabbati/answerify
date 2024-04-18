@@ -1,7 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service';
 
 export async function POST(request: Request) {
-  const { session, from, subject, text, textAsHtml } = await request.json();
+  const { session, from, subject, text, html } = await request.json();
 
   if (
     session.mta !== 'mx1.forwardemail.net' &&
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       thread_id: data.id,
       email_from: from.value[0].address,
       email_from_name: from.value[0].name,
-      body: textAsHtml,
+      body: html,
       cleaned_body: text,
       role: 'user',
     })
