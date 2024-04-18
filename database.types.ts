@@ -9,6 +9,66 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      email: {
+        Row: {
+          body: string;
+          cleaned_body: string | null;
+          created_at: string;
+          email_bcc: string[] | null;
+          email_cc: string[] | null;
+          email_from: string;
+          email_from_name: string;
+          id: string;
+          is_perfect: boolean | null;
+          organization_id: string;
+          role: string;
+          thread_id: string;
+        };
+        Insert: {
+          body: string;
+          cleaned_body?: string | null;
+          created_at?: string;
+          email_bcc?: string[] | null;
+          email_cc?: string[] | null;
+          email_from: string;
+          email_from_name: string;
+          id?: string;
+          is_perfect?: boolean | null;
+          organization_id: string;
+          role?: string;
+          thread_id?: string;
+        };
+        Update: {
+          body?: string;
+          cleaned_body?: string | null;
+          created_at?: string;
+          email_bcc?: string[] | null;
+          email_cc?: string[] | null;
+          email_from?: string;
+          email_from_name?: string;
+          id?: string;
+          is_perfect?: boolean | null;
+          organization_id?: string;
+          role?: string;
+          thread_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'public_email_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organization';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'public_email_thread_id_fkey';
+            columns: ['thread_id'];
+            isOneToOne: false;
+            referencedRelation: 'thread';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       member: {
         Row: {
           created_at: string;
@@ -82,6 +142,50 @@ export type Database = {
             columns: ['created_by'];
             isOneToOne: false;
             referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      thread: {
+        Row: {
+          created_at: string;
+          email_from: string;
+          email_from_name: string;
+          id: string;
+          last_message_created_at: string;
+          organization_id: string;
+          status: string;
+          subject: string;
+          tags: string[] | null;
+        };
+        Insert: {
+          created_at?: string;
+          email_from: string;
+          email_from_name: string;
+          id?: string;
+          last_message_created_at?: string;
+          organization_id?: string;
+          status?: string;
+          subject: string;
+          tags?: string[] | null;
+        };
+        Update: {
+          created_at?: string;
+          email_from?: string;
+          email_from_name?: string;
+          id?: string;
+          last_message_created_at?: string;
+          organization_id?: string;
+          status?: string;
+          subject?: string;
+          tags?: string[] | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'public_thread_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organization';
             referencedColumns: ['id'];
           },
         ];
