@@ -11,20 +11,26 @@ export type Database = {
     Tables: {
       datasource: {
         Row: {
+          content: string | null;
           created_at: string;
           id: string;
+          metadata: Json | null;
           organization_id: string;
           url: string;
         };
         Insert: {
+          content?: string | null;
           created_at?: string;
           id?: string;
+          metadata?: Json | null;
           organization_id?: string;
           url: string;
         };
         Update: {
+          content?: string | null;
           created_at?: string;
           id?: string;
+          metadata?: Json | null;
           organization_id?: string;
           url?: string;
         };
