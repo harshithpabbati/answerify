@@ -25,7 +25,7 @@ export function EmailForwarding({ email, slug }: Props) {
     await updateUser({
       data: {
         onboarding: {
-          hasOnboarded: true,
+          hasOnboarded: false,
           slug,
           onboardingStep: 3,
         },

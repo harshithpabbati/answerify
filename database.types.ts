@@ -9,6 +9,35 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      datasource: {
+        Row: {
+          created_at: string;
+          id: string;
+          organization_id: string;
+          url: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          organization_id?: string;
+          url: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          organization_id?: string;
+          url?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'public_datasource_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organization';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       email: {
         Row: {
           body: string;
@@ -146,6 +175,45 @@ export type Database = {
           },
         ];
       };
+      section: {
+        Row: {
+          content: string;
+          datasource_id: string;
+          embedding: string | null;
+          id: string;
+          organization_id: string;
+        };
+        Insert: {
+          content: string;
+          datasource_id: string;
+          embedding?: string | null;
+          id?: string;
+          organization_id: string;
+        };
+        Update: {
+          content?: string;
+          datasource_id?: string;
+          embedding?: string | null;
+          id?: string;
+          organization_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'public_section_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organization';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'section_datasource_id_fkey';
+            columns: ['datasource_id'];
+            isOneToOne: false;
+            referencedRelation: 'datasource';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       thread: {
         Row: {
           created_at: string;
@@ -198,7 +266,13 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      get_user_organizations: {
+        Args: {
+          user_id: string;
+          role: number;
+        };
+        Returns: string[];
+      };
     };
     Enums: {
       [_ in never]: never;
