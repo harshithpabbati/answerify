@@ -181,6 +181,48 @@ export type Database = {
           },
         ];
       };
+      reply: {
+        Row: {
+          content: string;
+          created_at: string;
+          id: string;
+          is_perfect: boolean | null;
+          organization_id: string;
+          thread_id: string;
+        };
+        Insert: {
+          content: string;
+          created_at?: string;
+          id?: string;
+          is_perfect?: boolean | null;
+          organization_id: string;
+          thread_id?: string;
+        };
+        Update: {
+          content?: string;
+          created_at?: string;
+          id?: string;
+          is_perfect?: boolean | null;
+          organization_id?: string;
+          thread_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'public_reply_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organization';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'public_reply_thread_id_fkey';
+            columns: ['thread_id'];
+            isOneToOne: false;
+            referencedRelation: 'thread';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       section: {
         Row: {
           content: string;
@@ -205,17 +247,17 @@ export type Database = {
         };
         Relationships: [
           {
+            foreignKeyName: 'public_section_datasource_id_fkey';
+            columns: ['datasource_id'];
+            isOneToOne: false;
+            referencedRelation: 'datasource';
+            referencedColumns: ['id'];
+          },
+          {
             foreignKeyName: 'public_section_organization_id_fkey';
             columns: ['organization_id'];
             isOneToOne: false;
             referencedRelation: 'organization';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'section_datasource_id_fkey';
-            columns: ['datasource_id'];
-            isOneToOne: false;
-            referencedRelation: 'datasource';
             referencedColumns: ['id'];
           },
         ];
@@ -278,6 +320,20 @@ export type Database = {
           role: number;
         };
         Returns: string[];
+      };
+      match_sections: {
+        Args: {
+          embedding: string;
+          match_threshold: number;
+          organization_id: string;
+        };
+        Returns: {
+          content: string;
+          datasource_id: string;
+          embedding: string | null;
+          id: string;
+          organization_id: string;
+        }[];
       };
     };
     Enums: {

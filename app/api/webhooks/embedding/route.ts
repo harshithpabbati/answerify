@@ -12,7 +12,6 @@ export async function POST(request: Request) {
   const response = await openai.embeddings.create({
     model: 'text-embedding-3-small',
     input: record.content,
-    dimensions: 384,
   });
 
   const supabase = await createServiceClient();

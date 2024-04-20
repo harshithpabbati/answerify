@@ -34,7 +34,7 @@ export function CreateOrganization() {
       toast.success('Successfully created your organization', {
         description: 'Please wait while we redirect you!',
       });
-      router.push(`/org/${name}`);
+      router.push(`/onboarding/${name}/email-forwarding`);
       router.refresh();
     },
     [router, setOpen]
