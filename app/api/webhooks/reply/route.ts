@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   }
 
   const response = await openai.embeddings.create({
-    model: 'text-embedding-3-small',
+    model: 'text-embedding-ada-002',
     input: record.cleaned_body,
   });
 
@@ -50,10 +50,16 @@ export async function POST(request: Request) {
     );
   }
 
-  const docs =
-    documents && documents.length > 0
-      ? documents.map(({ content }) => content).join('\n\n')
-      : 'No documents found';
+  if (documents && documents.length === 0) {
+    return new Response(
+      JSON.stringify({
+        error: 'We can not find documents related to the question',
+      }),
+      { status: 500 }
+    );
+  }
+
+  const docs = documents.map(({ content }) => content).join('\n\n');
 
   const completionMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] =
     [
