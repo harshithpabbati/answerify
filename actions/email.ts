@@ -4,12 +4,13 @@ import { Resend } from 'resend';
 
 import { createServerClient } from '@/lib/supabase/server';
 
-export async function getThreads(orgId: string) {
+export async function getThreads(orgId: string, status: 'open' | 'closed') {
   const supabase = await createServerClient();
   const { data, error } = await supabase
     .from('thread')
     .select()
     .match({ organization_id: orgId })
+    .filter('status', 'eq', status)
     .order('last_message_created_at', { ascending: false });
   return { data, error };
 }

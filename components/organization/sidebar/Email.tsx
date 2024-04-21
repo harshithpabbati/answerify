@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 
 import { getNameInitials } from '@/lib/gravatar';
 import { cn } from '@/lib/utils';
@@ -26,9 +26,10 @@ export function Email({
   created_at,
 }: Props) {
   const params = useParams();
+  const searchParams = useSearchParams();
   return (
     <Link
-      href={`/org/${slug}/${id}`}
+      href={`/org/${slug}/${id}?${searchParams.toString()}`}
       className={cn(
         'hover:bg-muted flex items-center gap-2 border-b px-2 py-3',
         params.id === id ? 'bg-muted' : 'bg-background'
