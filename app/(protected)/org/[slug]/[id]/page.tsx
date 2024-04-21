@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getEmails, getThread } from '@/actions/email';
+import { getReply } from '@/actions/reply';
 
 import {
   ConversationHeader,
@@ -23,11 +24,16 @@ export default async function EmailPage({ params: { id } }: Props) {
   if (threadError || !thread?.id) return notFound();
 
   const { data } = await getEmails(id);
+  const { data: replyData } = await getReply(id);
 
   return (
     <div className="max-h-dvh overflow-hidden">
       <ConversationHeader {...thread} />
-      <Conversations threadId={thread.id} conversations={data ?? []} />
+      <Conversations
+        threadId={thread.id}
+        conversations={data ?? []}
+        reply={replyData ?? null}
+      />
     </div>
   );
 }

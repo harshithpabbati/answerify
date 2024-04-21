@@ -87,3 +87,9 @@
     margin-top: 0.75em;
   }
 }
+
+.email-content {
+  > * + * {
+    margin-top: 0.75em;
+  }
+}

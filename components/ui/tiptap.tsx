@@ -6,38 +6,15 @@ import {
   ResetIcon,
   StrikethroughIcon,
 } from '@radix-ui/react-icons';
-import { EditorContent, useEditor } from '@tiptap/react';
-import { StarterKit } from '@tiptap/starter-kit';
+import { Editor, EditorContent } from '@tiptap/react';
 
 import { Toggle } from '@/components/ui/toggle';
 
 interface Props {
-  content?: string;
-  onContentChange?(content: string): void;
+  editor: Editor | null;
 }
 
-export const Tiptap = ({ content, onContentChange }: Props) => {
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        bulletList: {
-          keepMarks: true,
-          keepAttributes: true,
-          HTMLAttributes: {
-            class: 'list-disc px-4',
-          },
-        },
-      }),
-    ],
-    content,
-    onUpdate({ editor }) {
-      onContentChange?.(editor.getHTML());
-    },
-    onTransaction({ editor }) {
-      onContentChange?.(editor.getHTML());
-    },
-  });
-
+export const Tiptap = ({ editor }: Props) => {
   return (
     <div className="relative mt-4">
       <div className="flex items-center justify-between rounded-t-md border p-1">

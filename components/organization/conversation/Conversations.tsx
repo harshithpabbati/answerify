@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { sendEmail } from '@/actions/email';
 import { Tables } from '@/database.types';
 
+import { useTiptap } from '@/hooks/useTiptap';
 import { Button } from '@/components/ui/button';
 import { Tiptap } from '@/components/ui/tiptap';
 
@@ -13,22 +14,24 @@ import { Conversation } from './Conversation';
 interface Props {
   threadId: string;
   conversations: Tables<'email'>[];
+  reply: Tables<'reply'> | null;
 }
 
-export function Conversations({ threadId, conversations }: Props) {
+export function Conversations({ threadId, conversations, reply }: Props) {
   const router = useRouter();
   const divRef = useRef<HTMLDivElement>(null);
-  const [content, setContent] = useState<string>('');
+
+  const editor = useTiptap(reply?.content);
 
   useEffect(() => {
     if (!divRef.current) return;
-    // scroll to bottom on load
     divRef.current.scrollTop = divRef.current.scrollHeight;
   }, []);
 
   const handleSubmit = () => {
-    sendEmail(threadId, content);
-    setContent('');
+    if (!editor) return;
+    sendEmail(threadId, editor?.getHTML(), reply?.id);
+    editor.commands.setContent('');
     router.refresh();
   };
 
@@ -43,7 +46,7 @@ export function Conversations({ threadId, conversations }: Props) {
         ))}
       </div>
       <div className="bg-background w-full border-t p-4">
-        <Tiptap content={content} onContentChange={setContent} />
+        <Tiptap editor={editor} />
         <div className="mt-4 flex justify-end">
           <Button onClick={handleSubmit} size="lg">
             Submit

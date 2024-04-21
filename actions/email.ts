@@ -34,7 +34,51 @@ export async function getEmails(threadId: string) {
   return { data, error };
 }
 
-export async function sendEmail(threadId: string, content: string) {
+export async function updateReplyStatus(replyId: string, content: string) {
+  const supabase = await createServerClient();
+  const { data, error } = await supabase
+    .from('reply')
+    .select('content')
+    .match({ id: replyId })
+    .single();
+
+  if (error) return { data: null, error };
+
+  return await supabase
+    .from('reply')
+    .update({ is_perfect: data.content === content })
+    .match({ id: replyId });
+}
+
+export async function sendEmailWithResend({
+  to,
+  subject,
+  content,
+  messageId,
+}: {
+  to: string;
+  subject: string;
+  content: string;
+  messageId: string;
+}) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const { data } = await resend.emails.send({
+    from: 'Support <support@answerify.app>',
+    to: [to],
+    subject,
+    html: content,
+    headers: {
+      'In-Reply-To': messageId,
+    },
+  });
+  return data;
+}
+
+export async function sendEmail(
+  threadId: string,
+  content: string,
+  replyId?: string
+) {
   const supabase = await createServerClient();
   const { data, error } = await supabase
     .from('thread')
@@ -43,17 +87,12 @@ export async function sendEmail(threadId: string, content: string) {
     .single();
   if (error || !data?.id) return { data: null, error };
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const { data: resendData } = await resend.emails.send({
-    from: 'Support <support@answerify.app>',
-    to: [data.email_from],
+  const resendData = await sendEmailWithResend({
+    to: data.email_from,
     subject: data.subject,
-    html: content,
-    headers: {
-      'In-Reply-To': data.message_id,
-    },
+    content,
+    messageId: data.message_id,
   });
-
   if (!resendData?.id) return;
 
   const { data: emailData, error: emailError } = await supabase
@@ -68,5 +107,7 @@ export async function sendEmail(threadId: string, content: string) {
     })
     .select()
     .single();
+
+  if (replyId) updateReplyStatus(replyId, content);
   return { data: emailData, error: emailError };
 }
