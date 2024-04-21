@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 export function CreateNewOrganizationButton() {
   const [, setCreate] = useCreateOrganization();
   return (
-    <Button onClick={() => setCreate(true)}>
+    <Button onClick={() => setCreate(true)} className="w-full md:w-auto">
       <PlusIcon className="mr-2" />
       Create new organization
     </Button>

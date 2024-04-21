@@ -3,9 +3,10 @@
 import { useParams, useRouter } from 'next/navigation';
 import { deleteOrganization } from '@/actions/organization';
 import { Tables } from '@/database.types';
-import { useAddDataSource } from '@/states/data-source';
+import { useAddDataSource, useViewDataSource } from '@/states/data-source';
 import { useUpdateOrganization } from '@/states/organization';
 import {
+  FileIcon,
   FilePlusIcon,
   Pencil1Icon,
   PersonIcon,
@@ -22,6 +23,9 @@ import {
   ContextMenuLabel,
   ContextMenuSeparator,
   ContextMenuShortcut,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 
@@ -30,6 +34,7 @@ export function Organization({ id, name, slug }: Tables<'organization'>) {
   const params = useParams();
   const [, setUpdateOrganization] = useUpdateOrganization();
   const [, setAddDataSource] = useAddDataSource();
+  const [, setViewDataSource] = useViewDataSource();
 
   const handleDelete = async () => {
     const { error } = await deleteOrganization(id);
@@ -71,18 +76,29 @@ export function Organization({ id, name, slug }: Tables<'organization'>) {
             <Pencil1Icon />
           </ContextMenuShortcut>
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => setAddDataSource(slug)}>
-          Add data-source
-          <ContextMenuShortcut>
-            <FilePlusIcon />
-          </ContextMenuShortcut>
-        </ContextMenuItem>
         <ContextMenuItem>
           Invite members
           <ContextMenuShortcut>
             <PersonIcon />
           </ContextMenuShortcut>
         </ContextMenuItem>
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>Data sources</ContextMenuSubTrigger>
+          <ContextMenuSubContent className="w-56">
+            <ContextMenuItem onSelect={() => setViewDataSource(id)}>
+              View sources
+              <ContextMenuShortcut>
+                <FileIcon />
+              </ContextMenuShortcut>
+            </ContextMenuItem>
+            <ContextMenuItem onSelect={() => setAddDataSource(slug)}>
+              Add new sources
+              <ContextMenuShortcut>
+                <FilePlusIcon />
+              </ContextMenuShortcut>
+            </ContextMenuItem>
+          </ContextMenuSubContent>
+        </ContextMenuSub>
         <ContextMenuSeparator />
         <ContextMenuItem className="text-destructive" onSelect={handleDelete}>
           Delete

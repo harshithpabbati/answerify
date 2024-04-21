@@ -25,7 +25,7 @@ export default async function DashboardPage() {
     <div className="container size-full">
       {organizations.length > 0 ? (
         <>
-          <div className="flex items-center justify-between pt-10">
+          <div className="flex flex-col items-center justify-between gap-4 pt-10 md:flex-row">
             <h3 className="text-2xl font-semibold">Organizations</h3>
             <CreateNewOrganizationButton />
           </div>
