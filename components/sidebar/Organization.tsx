@@ -3,8 +3,14 @@
 import { useParams, useRouter } from 'next/navigation';
 import { deleteOrganization } from '@/actions/organization';
 import { Tables } from '@/database.types';
+import { useAddDataSource } from '@/states/data-source';
 import { useUpdateOrganization } from '@/states/organization';
-import { Pencil1Icon, PersonIcon, TrashIcon } from '@radix-ui/react-icons';
+import {
+  FilePlusIcon,
+  Pencil1Icon,
+  PersonIcon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
 import { toast } from 'sonner';
 
 import { getNameInitials } from '@/lib/gravatar';
@@ -23,6 +29,7 @@ export function Organization({ id, name, slug }: Tables<'organization'>) {
   const router = useRouter();
   const params = useParams();
   const [, setUpdateOrganization] = useUpdateOrganization();
+  const [, setAddDataSource] = useAddDataSource();
 
   const handleDelete = async () => {
     const { error } = await deleteOrganization(id);
@@ -62,6 +69,12 @@ export function Organization({ id, name, slug }: Tables<'organization'>) {
           Edit
           <ContextMenuShortcut>
             <Pencil1Icon />
+          </ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={() => setAddDataSource(slug)}>
+          Add data-source
+          <ContextMenuShortcut>
+            <FilePlusIcon />
           </ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem>

@@ -2,19 +2,12 @@
 
 import { createServerClient } from '@/lib/supabase/server';
 
-export async function getSources(slug: string) {
+export async function getSources(id: string) {
   const supabase = await createServerClient();
-  const { data, error } = await supabase
-    .from('organization')
-    .select('id')
-    .match({ slug })
-    .single();
-  if (error || !data?.id) return { data: null, error };
-
   return await supabase
     .from('datasource')
     .select()
-    .match({ organization_id: data.id });
+    .match({ organization_id: id });
 }
 
 export async function setupSources(slug: string, sources: { url: string }[]) {
