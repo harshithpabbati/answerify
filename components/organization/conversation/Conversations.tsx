@@ -15,9 +15,15 @@ interface Props {
   threadId: string;
   conversations: Tables<'email'>[];
   reply: Tables<'reply'> | null;
+  status: string;
 }
 
-export function Conversations({ threadId, conversations, reply }: Props) {
+export function Conversations({
+  threadId,
+  conversations,
+  reply,
+  status,
+}: Props) {
   const router = useRouter();
   const divRef = useRef<HTMLDivElement>(null);
 
@@ -28,9 +34,13 @@ export function Conversations({ threadId, conversations, reply }: Props) {
     divRef.current.scrollTop = divRef.current.scrollHeight;
   }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = (status: 'open' | 'closed' | undefined = undefined) => {
     if (!editor) return;
-    sendEmail(threadId, editor?.getHTML(), reply?.id);
+    sendEmail(threadId, {
+      content: editor?.getHTML(),
+      replyId: reply?.id,
+      status,
+    });
     editor.commands.setContent('');
     router.refresh();
   };
@@ -47,9 +57,19 @@ export function Conversations({ threadId, conversations, reply }: Props) {
       </div>
       <div className="bg-background w-full border-t p-4">
         <Tiptap editor={editor} />
-        <div className="mt-4 flex justify-end">
-          <Button onClick={handleSubmit} size="lg">
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => handleSubmit()} size="lg">
             Submit
+          </Button>
+          <Button
+            onClick={() =>
+              handleSubmit(status === 'closed' ? 'open' : 'closed')
+            }
+            size="lg"
+          >
+            {status === 'closed'
+              ? 'Submit & re-open ticket'
+              : 'Submit & close ticket'}
           </Button>
         </div>
       </div>

@@ -33,6 +33,7 @@ export default async function EmailPage({ params: { id } }: Props) {
         threadId={thread.id}
         conversations={data ?? []}
         reply={replyData ?? null}
+        status={thread.status}
       />
     </div>
   );

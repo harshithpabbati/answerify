@@ -74,10 +74,28 @@ export async function sendEmailWithResend({
   return data;
 }
 
+export async function updateTicketStatus(
+  threadId: string,
+  status: 'open' | 'closed'
+) {
+  const supabase = await createServerClient();
+  return await supabase
+    .from('thread')
+    .update({ status })
+    .match({ id: threadId });
+}
+
 export async function sendEmail(
   threadId: string,
-  content: string,
-  replyId?: string
+  {
+    content,
+    replyId,
+    status,
+  }: {
+    content: string;
+    replyId?: string;
+    status?: 'open' | 'closed';
+  }
 ) {
   const supabase = await createServerClient();
   const { data, error } = await supabase
@@ -109,5 +127,7 @@ export async function sendEmail(
     .single();
 
   if (replyId) updateReplyStatus(replyId, content);
+  if (status) updateTicketStatus(threadId, status);
+
   return { data: emailData, error: emailError };
 }

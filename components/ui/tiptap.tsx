@@ -63,7 +63,7 @@ export const Tiptap = ({ editor }: Props) => {
       </div>
       <EditorContent
         placeholder="Enter your message"
-        className="rounded-md rounded-t-none border border-t-0"
+        className="rounded-md rounded-t-none border border-t-0 text-sm"
         editor={editor}
       />
     </div>
