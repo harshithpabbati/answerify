@@ -97,11 +97,24 @@ export function EmailsList({ orgId, name, slug }: Props) {
         </Select>
       </div>
       <div className="flex h-[calc(100dvh-60px)] flex-col overflow-auto">
-        {isLoading
-          ? Array.from({ length: 10 }).map((_, index) => (
-              <EmailSkeleton key={index} />
-            ))
-          : data.map((e) => <Email key={e.id} slug={slug} {...e} />)}
+        {isLoading ? (
+          Array.from({ length: 10 }).map((_, index) => (
+            <EmailSkeleton key={index} />
+          ))
+        ) : data.length > 0 ? (
+          data.map((e) => <Email key={e.id} slug={slug} {...e} />)
+        ) : (
+          <div className="flex size-full flex-col items-center justify-center gap-4 p-4 text-center">
+            <h1 className="text-xl font-bold tracking-tight">
+              We can&apos;t find any emails
+            </h1>
+            <p className="text-muted-foreground">
+              Emails will be listed here once you receive any email, also please
+              check if your forwarding is set correctly if emails are not listed
+              here
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
