@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getOrganizationBySlug } from '@/actions/organization';
 
 import { EmailsList } from '@/components/organization';
@@ -11,6 +11,10 @@ export default async function OrgLayout({
 }>) {
   const { data, error } = await getOrganizationBySlug(params.slug);
   if (error || !data?.id) return notFound();
+
+  const onboarding = data.onboarding as any;
+  if (!onboarding?.hasOnboarded)
+    redirect(`/onboarding/${params.slug}/${onboarding.step}`);
 
   return (
     <div className="flex size-full max-h-dvh">

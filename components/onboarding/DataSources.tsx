@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { updateUser } from '@/actions/auth';
+import { updateOnboardingStep } from '@/actions/auth';
 import { setupSources } from '@/actions/source';
 import { useFieldArray, useForm } from 'react-hook-form';
 
@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 
 export function DataSources() {
   const router = useRouter();
-  const params = useParams();
+  const params = useParams<{ slug: string }>();
 
   const [error, setError] = useState('');
   const form = useForm<DataSourcesSchema>({
@@ -44,14 +44,9 @@ export function DataSources() {
       setError(error.message);
       return;
     }
-    await updateUser({
-      data: {
-        onboarding: {
-          hasOnboarded: true,
-          onboardingStep: 4,
-          slug: params.slug,
-        },
-      },
+    await updateOnboardingStep(params.slug, {
+      hasOnboarded: false,
+      step: 'configurations',
     });
     router.push(`/onboarding/${params.slug}/configurations`);
   };

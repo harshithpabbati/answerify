@@ -1,7 +1,5 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { isUserOnboarded } from '@/actions/auth';
 import { getOrganizations } from '@/actions/organization';
 
 import {
@@ -18,9 +16,6 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const isOnboarded = await isUserOnboarded();
-  if (!isOnboarded) return redirect('/onboarding');
-
   const organizations = await getOrganizations();
 
   return (
@@ -37,7 +32,9 @@ export default async function DashboardPage() {
                     <CardDescription>{o.support_email}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {new Date(o.created_at).toLocaleString()}
+                    <p className="text-muted-foreground text-sm">
+                      {new Date(o.created_at).toLocaleString()}
+                    </p>
                   </CardContent>
                 </Card>
               </Link>

@@ -1,18 +1,18 @@
 import { Metadata } from 'next';
 import { getOrganizationBySlug } from '@/actions/organization';
 
-export async function generateMetadata({
-  params,
-}: {
+interface Props {
   params: { slug: string };
-}): Promise<Metadata> {
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { data, error } = await getOrganizationBySlug(params.slug);
   return {
     title: error ? 'Not found' : data?.name,
   };
 }
 
-export default function OrgPage() {
+export default async function OrgPage() {
   return (
     <div className="grid h-screen place-content-center px-4">
       <div className="text-center">

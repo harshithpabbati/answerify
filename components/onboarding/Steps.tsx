@@ -29,9 +29,9 @@ function Step({ title, current, index }: StepProps) {
 export function Steps() {
   const pathname = usePathname();
   const steps = [
-    { title: 'Organization creation', route: 'onboarding' },
-    { title: 'Setting up email forwarding', route: 'email-forwarding' },
-    { title: 'Setting up data sources', route: 'data-sources' },
+    { title: 'Create organization', route: 'onboarding' },
+    { title: 'Setup email forwarding', route: 'email-forwarding' },
+    { title: 'Setup data sources', route: 'data-sources' },
     { title: 'Configurations', route: 'configurations' },
   ];
 

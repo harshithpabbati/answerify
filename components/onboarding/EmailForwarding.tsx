@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { updateUser } from '@/actions/auth';
+import { updateOnboardingStep } from '@/actions/auth';
 import { CheckIcon, ClipboardCopyIcon } from '@radix-ui/react-icons';
 
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
@@ -18,14 +18,9 @@ export function EmailForwarding({ email, slug }: Props) {
   const { copied, copyToClipboard } = useCopyToClipboard();
 
   const handleOnSetupForwarding = async () => {
-    await updateUser({
-      data: {
-        onboarding: {
-          hasOnboarded: false,
-          slug,
-          onboardingStep: 3,
-        },
-      },
+    await updateOnboardingStep(slug, {
+      hasOnboarded: false,
+      step: 'data-sources',
     });
     router.push(`/onboarding/${slug}/data-sources`);
   };

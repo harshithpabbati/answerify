@@ -150,6 +150,7 @@ export type Database = {
           id: string;
           inbound_email: string;
           name: string;
+          onboarding: Json;
           slug: string;
           support_email: string;
         };
@@ -159,6 +160,7 @@ export type Database = {
           id?: string;
           inbound_email: string;
           name: string;
+          onboarding?: Json;
           slug: string;
           support_email: string;
         };
@@ -168,6 +170,7 @@ export type Database = {
           id?: string;
           inbound_email?: string;
           name?: string;
+          onboarding?: Json;
           slug?: string;
           support_email?: string;
         };
@@ -314,6 +317,12 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      get_organization_owner: {
+        Args: {
+          organization_id: string;
+        };
+        Returns: string[];
+      };
       get_user_organizations: {
         Args: {
           user_id: string;

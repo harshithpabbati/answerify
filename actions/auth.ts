@@ -18,14 +18,6 @@ export async function getIsUserAuthenticated() {
   return Boolean(user?.id);
 }
 
-export async function isUserOnboarded() {
-  const {
-    data: { user },
-  } = await getUser();
-
-  return Boolean(user?.user_metadata?.onboarding?.hasOnboarded);
-}
-
 export async function signInWithPassword({
   email,
   password,
@@ -82,6 +74,24 @@ export async function updateUser(options: UserAttributes) {
       ...options?.data,
     },
   });
+}
+
+export async function updateOnboardingStep(
+  slug: string,
+  {
+    hasOnboarded,
+    step,
+  }: {
+    hasOnboarded: boolean;
+    step: 'email-forwarding' | 'data-sources' | 'configurations';
+  }
+) {
+  const supabase = await createServerClient();
+  return await supabase
+    .from('organization')
+    .update({ onboarding: { hasOnboarded, step } })
+    .match({ slug })
+    .single();
 }
 
 export async function signOut({
