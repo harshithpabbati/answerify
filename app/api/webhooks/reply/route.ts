@@ -3,8 +3,6 @@ import OpenAI from 'openai';
 
 import { createServiceClient } from '@/lib/supabase/service';
 
-export const runtime = 'edge';
-
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_KEY!,
 });
@@ -70,7 +68,7 @@ export async function POST(request: Request) {
         content: codeBlock`
           You're an AI assistant who answers questions about documents.
 
-          You're a chat bot, so keep your replies succinct.
+          You're a chat bot, so keep your replies clear & organized.
 
           You're only allowed to use the documents below to answer the question.
 
@@ -98,7 +96,7 @@ export async function POST(request: Request) {
     model: 'gpt-3.5-turbo',
     messages: completionMessages,
     max_tokens: 1024,
-    temperature: 0,
+    temperature: 0.5,
   });
 
   if (
