@@ -12,6 +12,13 @@ export const useTiptap = (content: string = '') => {
             class: 'list-disc px-4',
           },
         },
+        orderedList: {
+          keepMarks: true,
+          keepAttributes: true,
+          HTMLAttributes: {
+            class: 'list-disc px-4',
+          },
+        },
       }),
     ],
     content,

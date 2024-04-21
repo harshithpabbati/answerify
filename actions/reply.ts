@@ -5,7 +5,7 @@ export async function getReply(threadId: string) {
   return await supabase
     .from('reply')
     .select()
-    .filter('is_perfect', 'eq', null)
+    .is('is_perfect', null)
     .match({ thread_id: threadId })
     .limit(1)
     .single();

@@ -83,7 +83,7 @@ export async function POST(request: Request) {
           Documents:
           ${docs}
 
-          Reply back in HTML.
+          Reply back in HTML and nothing else.
         `,
       },
       {
@@ -111,7 +111,10 @@ export async function POST(request: Request) {
     .insert({
       organization_id: record.organization_id,
       thread_id: record.thread_id,
-      content: choices?.[0].message?.content,
+      content: choices?.[0].message?.content.replace(
+        /^```html\s*|\s*```$/g,
+        ''
+      ),
     })
     .select()
     .single();
