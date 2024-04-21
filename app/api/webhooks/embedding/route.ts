@@ -9,11 +9,17 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_KEY!,
 });
 
-export async function POST(request: Request) {
-  const { records } = await request.json();
+export async function POST() {
   const supabase = await createServiceClient();
+  const { data: records } = await supabase
+    .from('section')
+    .select()
+    .is('embedding', null);
 
-  const results = await Promise.allSettled(
+  if (!records || records?.length === 0) {
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  }
+  await Promise.allSettled(
     records.map(async (record: Tables<'section'>) => {
       const response = await openai.embeddings.create({
         model: 'text-embedding-ada-002',

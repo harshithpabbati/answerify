@@ -52,10 +52,7 @@ export async function POST(request: Request) {
         );
       }
 
-      await fetch(`${origin}/api/webhooks/embedding`, {
-        method: 'POST',
-        body: JSON.stringify({ records }),
-      });
+      await fetch(`${origin}/api/webhooks/embedding`, { method: 'POST' });
     }
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (err) {
