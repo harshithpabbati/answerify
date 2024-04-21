@@ -75,10 +75,10 @@ export async function POST(request: Request) {
           You're only allowed to use the documents below to answer the question.
 
           If the question isn't related to these documents, say:
-          "Sorry, I couldn't find any information on that."
+          "NO_INFORMATION"
 
           If the information isn't available in the below documents, say:
-          "Sorry, I couldn't find any information on that."
+          "NO_INFORMATION"
 
           Do not go off topic.
 
@@ -101,7 +101,10 @@ export async function POST(request: Request) {
     temperature: 0,
   });
 
-  if (!choices?.[0].message?.content) {
+  if (
+    !choices?.[0].message?.content ||
+    choices?.[0].message?.content === 'NO_INFORMATION'
+  ) {
     return new Response(
       JSON.stringify({ error: 'Response is not available' }),
       { status: 500 }

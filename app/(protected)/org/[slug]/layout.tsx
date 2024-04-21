@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { getThreads } from '@/actions/email';
 import { getOrganizationBySlug } from '@/actions/organization';
 
 import { EmailsList } from '@/components/organization';
@@ -12,10 +13,17 @@ export default async function OrgLayout({
   const { data, error } = await getOrganizationBySlug(params.slug);
   if (error || !data?.id) return notFound();
 
+  const { data: threads } = await getThreads(data.id);
+
   return (
     <div className="flex size-full max-h-dvh">
       <div className="bg-background h-full w-[40dvw] border-r lg:w-[25dvw]">
-        <EmailsList name={data.name} slug={params.slug} orgId={data.id} />
+        <EmailsList
+          orgId={data.id}
+          name={data.name}
+          slug={params.slug}
+          threads={threads ?? []}
+        />
       </div>
       <div className="flex-1">{children}</div>
     </div>
