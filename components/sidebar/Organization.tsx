@@ -4,7 +4,11 @@ import { useParams, useRouter } from 'next/navigation';
 import { deleteOrganization } from '@/actions/organization';
 import { Tables } from '@/database.types';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
-import { useUpdateOrganization } from '@/states/organization';
+import {
+  useInviteMembers,
+  useMembers,
+  useUpdateOrganization,
+} from '@/states/organization';
 import {
   FileIcon,
   FilePlusIcon,
@@ -35,6 +39,8 @@ export function Organization({ id, name, slug }: Tables<'organization'>) {
   const [, setUpdateOrganization] = useUpdateOrganization();
   const [, setAddDataSource] = useAddDataSource();
   const [, setViewDataSource] = useViewDataSource();
+  const [, inviteMember] = useInviteMembers();
+  const [, setViewMembers] = useMembers();
 
   const handleDelete = async () => {
     const { error } = await deleteOrganization(id);
@@ -76,12 +82,23 @@ export function Organization({ id, name, slug }: Tables<'organization'>) {
             <Pencil1Icon />
           </ContextMenuShortcut>
         </ContextMenuItem>
-        <ContextMenuItem>
-          Invite members
-          <ContextMenuShortcut>
-            <PersonIcon />
-          </ContextMenuShortcut>
-        </ContextMenuItem>
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>Members</ContextMenuSubTrigger>
+          <ContextMenuSubContent className="w-56">
+            <ContextMenuItem onSelect={() => setViewMembers(id)}>
+              View
+              <ContextMenuShortcut>
+                <PersonIcon />
+              </ContextMenuShortcut>
+            </ContextMenuItem>
+            <ContextMenuItem onSelect={() => inviteMember(id)}>
+              Invite members
+              <ContextMenuShortcut>
+                <PersonIcon />
+              </ContextMenuShortcut>
+            </ContextMenuItem>
+          </ContextMenuSubContent>
+        </ContextMenuSub>
         <ContextMenuSub>
           <ContextMenuSubTrigger>Data sources</ContextMenuSubTrigger>
           <ContextMenuSubContent className="w-56">
