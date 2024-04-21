@@ -3,6 +3,8 @@ import OpenAI from 'openai';
 
 import { createServiceClient } from '@/lib/supabase/service';
 
+export const runtime = 'edge';
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_KEY!,
 });

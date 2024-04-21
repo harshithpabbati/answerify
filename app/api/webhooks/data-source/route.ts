@@ -1,6 +1,8 @@
 import { processMarkdown } from '@/lib/processMarkdown';
 import { createServiceClient } from '@/lib/supabase/service';
 
+export const runtime = 'edge';
+
 export async function POST(request: Request) {
   const { record } = await request.json();
 

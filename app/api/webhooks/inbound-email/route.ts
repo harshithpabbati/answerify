@@ -1,5 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service';
 
+export const runtime = 'edge';
+
 export async function POST(request: Request) {
   const { session, from, subject, text, html, messageId, references } =
     await request.json();
