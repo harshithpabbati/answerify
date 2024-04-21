@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 export const runtime = 'edge';
 
 export async function POST(request: Request) {
+  const { origin } = new URL(request.url);
   const { record } = await request.json();
 
   const options = {
@@ -39,15 +40,26 @@ export async function POST(request: Request) {
         .from('section')
         .delete()
         .match({ datasource_id: record.id });
-      await supabase.from('section').insert(document_sections);
+
+      const { data: records, error } = await supabase
+        .from('section')
+        .insert(document_sections);
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to insert sections' }),
+          { status: 500 }
+        );
+      }
+
+      fetch(`${origin}/api/webhooks/embedding`, {
+        method: 'POST',
+        body: JSON.stringify({ records }),
+      });
     }
-    return new Response(JSON.stringify({ ok: true }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (err) {
     console.error(err);
-    return new Response(JSON.stringify({ err }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ err }), { status: 500 });
   }
 }
