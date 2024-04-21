@@ -1,3 +1,5 @@
+import { Tables } from '@/database.types';
+
 import { createServiceClient } from '@/lib/supabase/service';
 
 export const runtime = 'edge';
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let threadId: string | null = null;
+  let thread: Tables<'thread'> | null = null;
   if (references) {
     const isArray = Array.isArray(references);
     const { data, error } = await supabase
@@ -48,7 +50,7 @@ export async function POST(request: Request) {
         }
       );
     }
-    threadId = data.id;
+    thread = data;
   } else {
     const { data, error } = await supabase
       .from('thread')
@@ -70,10 +72,10 @@ export async function POST(request: Request) {
         }
       );
     }
-    threadId = data.id;
+    thread = data;
   }
 
-  if (!threadId) {
+  if (!thread?.id) {
     return new Response(
       JSON.stringify({ error: 'Failed to find the thread' }),
       {
@@ -86,7 +88,7 @@ export async function POST(request: Request) {
     .from('email')
     .insert({
       organization_id: orgData.id,
-      thread_id: threadId,
+      thread_id: thread.id,
       email_from: from.value[0].address,
       email_from_name: from.value[0].name,
       body: html,
@@ -94,6 +96,14 @@ export async function POST(request: Request) {
       role: 'user',
     })
     .single();
+
+  if (thread.status === 'closed') {
+    // Re-open ticket whenever there's a new email in the thread.
+    await supabase
+      .from('thread')
+      .update({ status: 'open' })
+      .match({ id: thread.id });
+  }
 
   if (emailError) {
     return new Response(JSON.stringify({ error: 'Failed to create email' }), {
