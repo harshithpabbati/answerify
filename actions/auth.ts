@@ -46,7 +46,7 @@ export async function signUpWithPassword({
     email,
     password,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`,
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback?next=/onboarding`,
       data: {
         full_name: name,
         avatar_url: getGravatar(email),
