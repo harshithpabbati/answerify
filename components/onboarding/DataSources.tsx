@@ -11,10 +11,10 @@ export function DataSources() {
 
   const onAdd = async () => {
     await updateOnboardingStep(params.slug, {
-      hasOnboarded: false,
+      hasOnboarded: true,
       step: 'configurations',
     });
-    router.push(`/onboarding/${params.slug}/configurations`);
+    router.push(`/org/${params.slug}`);
   };
 
   return (
