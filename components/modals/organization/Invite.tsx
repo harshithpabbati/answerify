@@ -20,19 +20,18 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 
+import { InviteMemberForm } from './forms';
+
 export function InviteMembers() {
   const isMobile = useIsMobile();
   const [id, setOpen] = useInviteMembers();
 
-  const handleInviteUsers = useCallback(
-    (name: string) => {
-      setOpen(false);
-      toast.success('Invited users to your organization', {
-        description: 'Users have access to your organization now',
-      });
-    },
-    [setOpen]
-  );
+  const handleInviteUsers = useCallback(() => {
+    setOpen(false);
+    toast.success('Success', {
+      description: 'Invited user to your organization!',
+    });
+  }, [setOpen]);
 
   if (isMobile) {
     return (
@@ -44,6 +43,7 @@ export function InviteMembers() {
               You can invite users to your organization
             </DrawerDescription>
           </DrawerHeader>
+          <InviteMemberForm orgId={id as string} onInvite={handleInviteUsers} />
         </DrawerContent>
         <DrawerFooter>
           <DrawerClose />
@@ -61,6 +61,7 @@ export function InviteMembers() {
             You can invite users to your organization
           </DialogDescription>
         </DialogHeader>
+        <InviteMemberForm orgId={id as string} onInvite={handleInviteUsers} />
       </DialogContent>
     </Dialog>
   );

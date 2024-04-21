@@ -2,6 +2,7 @@
 
 import { slugify } from '@/lib/slug';
 import { createServerClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 
 import { getUser } from './auth';
 
@@ -105,4 +106,31 @@ export async function getOrganizationEmail(slug: string) {
     .eq('slug', slug)
     .single();
   return { data, error };
+}
+
+export async function getUsers() {
+  const supabase = await createServiceClient();
+  return await supabase.auth.admin.listUsers({
+    page: 1,
+    // to avoid pagination
+    perPage: 1000,
+  });
+}
+
+export async function inviteMember(
+  orgId: string,
+  { email, role }: { email: string; role: string }
+) {
+  const supabase = await createServerClient();
+  const {
+    data: { users },
+  } = await getUsers();
+  const user = users.filter((user) => user?.email === email)[0];
+  if (!user?.id)
+    return { data: null, error: new Error('We can not find the user') };
+  return await supabase
+    .from('member')
+    .insert({ organization_id: orgId, user_id: user.id, role: parseInt(role) })
+    .select()
+    .single();
 }

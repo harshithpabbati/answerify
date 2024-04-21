@@ -42,7 +42,7 @@ export function Email({
           {getNameInitials(email_from_name)}
         </AvatarFallback>
       </Avatar>
-      <div className="flex size-full flex-col overflow-auto">
+      <div className="flex size-full flex-col gap-0.5 overflow-auto">
         <h3 className="truncate text-sm font-medium">{subject}</h3>
         <div className="flex items-center justify-between">
           <p className="text-muted-foreground text-xs">{email_from}</p>
