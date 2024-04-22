@@ -45,7 +45,7 @@ export function Email({
       <div className="flex size-full flex-col gap-0.5 overflow-auto">
         <h3 className="truncate text-sm font-medium">{subject}</h3>
         <div className="flex items-center justify-between">
-          <p className="text-muted-foreground text-xs">{email_from}</p>
+          <span className="text-muted-foreground text-xs">{email_from}</span>
           <HumanizedTime time={created_at} />
         </div>
       </div>
