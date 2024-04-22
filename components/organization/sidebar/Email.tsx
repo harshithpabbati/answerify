@@ -43,7 +43,9 @@ export function Email({
         </AvatarFallback>
       </Avatar>
       <div className="flex size-full flex-col gap-0.5 overflow-auto">
-        <h3 className="truncate text-sm font-medium">{subject}</h3>
+        <h3 className="text-foreground truncate text-sm font-medium">
+          {subject}
+        </h3>
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground text-xs">{email_from}</span>
           <HumanizedTime time={created_at} />

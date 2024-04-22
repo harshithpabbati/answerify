@@ -23,8 +23,10 @@ export default async function EmailPage({ params: { id } }: Props) {
   const { data: thread, error: threadError } = await getThread(id);
   if (threadError || !thread?.id) return notFound();
 
-  const { data } = await getEmails(id);
-  const { data: replyData } = await getReply(id);
+  const [{ data }, { data: replyData }] = await Promise.all([
+    getEmails(id),
+    getReply(id),
+  ]);
 
   return (
     <div className="max-h-dvh overflow-hidden">
