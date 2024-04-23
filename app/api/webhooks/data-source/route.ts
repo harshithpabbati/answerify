@@ -3,26 +3,37 @@ import { createServiceClient } from '@/lib/supabase/service';
 
 export const runtime = 'edge';
 
+const scrapeURL = async (record: any) => {
+  if (record.content)
+    return { success: true, markdown: record.content, metadata: null };
+  else {
+    const options = {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url: record.url }),
+    };
+    try {
+      const response = await fetch(
+        'https://api.firecrawl.dev/v0/scrape',
+        options
+      );
+      const data = await response.json();
+      return data;
+    } catch (e) {
+      throw e;
+    }
+  }
+};
+
 export async function POST(request: Request) {
   const { origin } = new URL(request.url);
   const { record } = await request.json();
 
-  const options = {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ url: record.url }),
-  };
-
   try {
-    const response = await fetch(
-      'https://api.firecrawl.dev/v0/scrape',
-      options
-    );
-    const data = await response.json();
-
+    const data = await scrapeURL(record);
     if (data?.success) {
       const supabase = await createServiceClient();
       await supabase
