@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from 'next-view-transitions';
 import { useParams, useSearchParams } from 'next/navigation';
 
 import { getNameInitials } from '@/lib/gravatar';

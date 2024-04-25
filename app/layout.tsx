@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { GeistSans } from 'geist/font/sans';
+import { ViewTransitions } from 'next-view-transitions';
 
 import { siteConfig } from '@/lib/config';
 import { cn } from '@/lib/utils';
@@ -31,19 +32,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={cn(
-          'bg-muted flex max-h-dvh min-h-dvh flex-col',
-          GeistSans.className
-        )}
-      >
-        <Providers>
-          {children}
-          <Modals />
-          <Toaster />
-        </Providers>
-      </body>
-    </html>
+    <ViewTransitions>
+      <html lang="en" suppressHydrationWarning>
+        <body
+          className={cn(
+            'bg-muted flex max-h-dvh min-h-dvh flex-col',
+            GeistSans.className
+          )}
+        >
+          <Providers>
+            {children}
+            <Modals />
+            <Toaster />
+          </Providers>
+        </body>
+      </html>
+    </ViewTransitions>
   );
 }

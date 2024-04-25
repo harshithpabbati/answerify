@@ -1,5 +1,5 @@
 import React from 'react';
-import Link from 'next/link';
+import { Link } from 'next-view-transitions';
 import { getUser } from '@/actions/auth';
 
 import { buttonVariants } from '@/components/ui/button';
