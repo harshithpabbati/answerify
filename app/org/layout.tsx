@@ -1,5 +1,4 @@
 import React from 'react';
-import { redirect } from 'next/navigation';
 import { getUser } from '@/actions/auth';
 import { getOrganizations } from '@/actions/organization';
 
@@ -11,7 +10,7 @@ export default async function OrgLayout({
   const {
     data: { user },
   } = await getUser();
-  if (!user?.id) return redirect('/auth/sign-in');
+  if (!user?.id) return null;
 
   const organizations = await getOrganizations();
 

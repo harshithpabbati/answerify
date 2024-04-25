@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
-import { Link } from 'next-view-transitions';
 import { getOrganizations } from '@/actions/organization';
+import { Link } from 'next-view-transitions';
 
 import {
   Card,
