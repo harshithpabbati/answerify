@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function SignInPage() {
   return (
-    <div className="z-10 flex flex-1 items-center justify-center">
+    <div className="bg-grid z-10 flex flex-1 items-center justify-center bg-[size:70px_70px]">
       <Card className="w-[25rem] max-w-[calc(100vw-5vw)]">
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
@@ -33,9 +33,7 @@ export default function SignInPage() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background text-muted-foreground px-2">
-                  Or
-                </span>
+                <span className="bg-background text-foreground px-2">Or</span>
               </div>
             </div>
             <SignIn />
@@ -43,20 +41,8 @@ export default function SignInPage() {
         </CardContent>
         <CardFooter className="flex flex-col items-start gap-1 text-sm">
           <p>
-            Forgot password?{' '}
-            <Link
-              className="text-muted-foreground underline"
-              href={{ pathname: '/auth/forgot-password' }}
-            >
-              Reset here
-            </Link>
-          </p>
-          <p>
             No account?{' '}
-            <Link
-              className="text-muted-foreground underline"
-              href={{ pathname: '/auth/sign-up' }}
-            >
+            <Link className="text-foreground underline" href="/auth/sign-up">
               Sign up
             </Link>
           </p>

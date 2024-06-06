@@ -108,7 +108,7 @@ export function EmailsList({ orgId, name, slug }: Props) {
             <h1 className="text-xl font-bold tracking-tight">
               We can&apos;t find any emails
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-foreground">
               Emails will be listed here once you receive any email, also please
               check if your forwarding is set correctly if emails are not listed
               here

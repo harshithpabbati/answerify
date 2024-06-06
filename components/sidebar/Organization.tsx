@@ -61,7 +61,7 @@ export function Organization({ id, name, slug }: Tables<'organization'>) {
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <Button
-          variant={params.slug === slug ? 'default' : 'outline'}
+          variant={params.slug === slug ? 'default' : 'neutral'}
           className="size-10"
           onClick={() => router.push(`/org/${slug}`)}
         >
@@ -72,7 +72,7 @@ export function Organization({ id, name, slug }: Tables<'organization'>) {
         <ContextMenuLabel>
           <div className="flex flex-col items-start space-y-1">
             <p className="text-sm font-medium leading-none">{name}</p>
-            <p className="text-muted-foreground text-xs leading-none">{slug}</p>
+            <p className="text-foreground text-xs leading-none">{slug}</p>
           </div>
         </ContextMenuLabel>
         <ContextMenuSeparator />

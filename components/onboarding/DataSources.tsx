@@ -20,7 +20,7 @@ export function DataSources() {
   return (
     <div>
       <h2 className="text-3xl font-semibold">Setup Datasources</h2>
-      <p className="text-muted-foreground mt-1">
+      <p className="text-foreground mt-1">
         Add your links to the docs, blogs & other help center docs
       </p>
       <div className="mt-4">

@@ -3,7 +3,11 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { updateOnboardingStep } from '@/actions/auth';
-import { CheckIcon, ClipboardCopyIcon } from '@radix-ui/react-icons';
+import {
+  ArrowRightIcon,
+  CheckIcon,
+  ClipboardCopyIcon,
+} from '@radix-ui/react-icons';
 
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { Button } from '@/components/ui/button';
@@ -28,7 +32,7 @@ export function EmailForwarding({ email, slug }: Props) {
   return (
     <div>
       <h2 className="text-3xl font-semibold">Setup email forwarding</h2>
-      <p className="text-muted-foreground mt-1">
+      <p className="text-foreground mt-1">
         Follow the instructions below to setup email forwarding from your
         support account
       </p>
@@ -76,8 +80,8 @@ export function EmailForwarding({ email, slug }: Props) {
         <div className="bg-muted mt-4 flex items-center justify-between gap-2 rounded-md p-4">
           <p>{email}</p>
           <Button
+            variant="neutral"
             size="icon"
-            variant="outline"
             onClick={() => copyToClipboard(email)}
           >
             {copied ? <CheckIcon /> : <ClipboardCopyIcon />}
@@ -85,10 +89,11 @@ export function EmailForwarding({ email, slug }: Props) {
         </div>
         <Button
           onClick={handleOnSetupForwarding}
-          className="mt-8 w-full"
+          className="float-right mt-8"
           size="lg"
         >
           Next
+          <ArrowRightIcon className="ml-2" />
         </Button>
       </div>
     </div>

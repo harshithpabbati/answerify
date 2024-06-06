@@ -15,10 +15,10 @@ function Step({ title, current, index }: StepProps) {
     <div
       className={cn(
         'relative flex size-full flex-col items-start gap-1 p-4',
-        current ? 'bg-background rounded-xl border' : ''
+        current ? 'bg-main shadow-base rounded-base border' : ''
       )}
     >
-      <p className="text-muted-foreground text-xs font-semibold uppercase">
+      <p className="text-foreground text-xs font-semibold uppercase">
         Step {index}
       </p>
       <h2 className="text-lg font-medium">{title}</h2>

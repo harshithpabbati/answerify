@@ -95,7 +95,7 @@ export default async function OrgPage() {
         <h1 className="mt-6 text-2xl font-bold tracking-tight">
           Choose a Conversation to View
         </h1>
-        <p className="text-muted-foreground mt-4">
+        <p className="text-foreground mt-4">
           Begin by selecting a conversation from the list on the left to view
           its contents
         </p>

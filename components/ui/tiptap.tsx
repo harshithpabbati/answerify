@@ -17,7 +17,7 @@ interface Props {
 export const Tiptap = ({ editor }: Props) => {
   return (
     <div className="relative mt-4">
-      <div className="flex items-center justify-between rounded-t-md border p-1">
+      <div className="rounded-t-base flex items-center justify-between border p-1">
         <div className="flex items-center justify-center gap-1">
           <Toggle
             pressed={editor?.isActive('bold')}
@@ -63,7 +63,7 @@ export const Tiptap = ({ editor }: Props) => {
       </div>
       <EditorContent
         placeholder="Enter your message"
-        className="rounded-md rounded-t-none border border-t-0 text-sm"
+        className="rounded-base font-base rounded-t-none border border-t-0 text-sm"
         editor={editor}
       />
     </div>

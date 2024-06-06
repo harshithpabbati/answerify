@@ -23,7 +23,7 @@ export default function NotFound() {
         <h1 className="mt-6 text-2xl font-bold tracking-tight sm:text-4xl">
           Uh-oh!
         </h1>
-        <p className="text-muted-foreground mt-4">
+        <p className="text-foreground mt-4">
           We can&apos;t find the conversation
         </p>
       </div>

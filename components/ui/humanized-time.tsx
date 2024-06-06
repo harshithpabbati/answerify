@@ -40,7 +40,7 @@ export function HumanizedTime({ time }: { time: string }) {
         minute: '2-digit',
         second: '2-digit',
       })}
-      className="text-muted-foreground text-xs"
+      className="text-foreground text-xs"
     >
       {currentTime}
     </span>

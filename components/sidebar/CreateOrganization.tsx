@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 export function CreateOrganization() {
   const [, setCreateOrganization] = useCreateOrganization();
   return (
-    <Button onClick={() => setCreateOrganization(true)} variant="ghost">
+    <Button onClick={() => setCreateOrganization(true)} variant="link">
       <PlusIcon className="size-4" />
     </Button>
   );

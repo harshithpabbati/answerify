@@ -19,7 +19,6 @@ export function SocialLogins() {
       <Button
         onClick={() => handleSocialLogin('google')}
         className="w-full"
-        variant="secondary"
         size="lg"
       >
         Continue with Google

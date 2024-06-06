@@ -23,8 +23,8 @@ export function User({ user }: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="size-9 rounded-full">
-          <Avatar className="size-9 border">
+        <Button variant="neutral" className="size-9 rounded-full">
+          <Avatar className="size-9">
             <AvatarImage src={user?.user_metadata?.avatar_url} />
             <AvatarFallback>{user?.user_metadata?.fallback}</AvatarFallback>
           </Avatar>
@@ -36,7 +36,7 @@ export function User({ user }: Props) {
             <p className="text-sm font-medium leading-none">
               {user?.user_metadata?.full_name}
             </p>
-            <p className="text-muted-foreground text-xs leading-none">
+            <p className="text-foreground font-base text-xs leading-none">
               {user?.email}
             </p>
           </div>

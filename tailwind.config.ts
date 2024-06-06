@@ -19,7 +19,9 @@ const config = {
     },
     extend: {
       colors: {
-        border: 'hsl(var(--border))',
+        bg: '#E0E7F1',
+        main: '#A3E636',
+        border: 'black',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
@@ -54,9 +56,24 @@ const config = {
         },
       },
       borderRadius: {
+        base: '5px',
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      boxShadow: {
+        base: '4px 4px 0px 0px rgba(0,0,0,1)',
+      },
+      translate: {
+        boxShadowX: '4px',
+        boxShadowY: '4px',
+      },
+      fontWeight: {
+        base: '400',
+        heading: '600',
+      },
+      backgroundImage: {
+        grid: 'linear-gradient(to right, #80808033 1px, transparent 1px), linear-gradient(to bottom, #80808033 1px, transparent 1px)',
       },
       keyframes: {
         'accordion-down': {
@@ -67,10 +84,24 @@ const config = {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        marquee: {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-100%)' },
+        },
+        marquee2: {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(0%)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        marquee: 'marquee 15s linear infinite',
+        marquee2: 'marquee2 15s linear infinite',
+      },
+      screens: {
+        w900: { raw: '(max-width: 900px)' },
+        w500: { raw: '(max-width: 500px)' },
       },
       fontFamily: {
         sans: ['var(--font-geist-sans)'],

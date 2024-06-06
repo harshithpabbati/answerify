@@ -115,7 +115,11 @@ export function UpdateOrganizationForm() {
           />
         </div>
         <Button
-          disabled={form.formState.isSubmitting || !form.formState.isValid}
+          disabled={
+            form.formState.isSubmitting ||
+            !form.formState.isValid ||
+            !form.formState.isDirty
+          }
           className="w-full"
         >
           {form.formState.isSubmitting ? 'Updating...' : 'Update organization'}

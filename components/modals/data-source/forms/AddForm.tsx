@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { setupSources } from '@/actions/source';
+import { PlusIcon } from '@radix-ui/react-icons';
 import { useFieldArray, useForm } from 'react-hook-form';
 
 import { cn } from '@/lib/utils';
@@ -82,11 +83,12 @@ export function AddDataSourceForm({ slug, onAdd }: Props) {
           ))}
           <Button
             type="button"
-            variant="outline"
+            variant="neutral"
             size="sm"
             className="mt-2"
             onClick={() => append({ url: '' })}
           >
+            <PlusIcon className="mr-2" />
             Add URL
           </Button>
         </div>

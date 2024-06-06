@@ -88,7 +88,7 @@ export function EmptyState() {
       <h1 className="mt-6 text-2xl font-bold tracking-tight">
         Start by creating an organization
       </h1>
-      <p className="text-muted-foreground mt-4">
+      <p className="text-foreground mt-4">
         Setup your organization to get help from Answerify to reduce your
         support tickets
       </p>

@@ -58,7 +58,7 @@ export function Conversations({
       <div className="bg-background w-full border-t p-4">
         <Tiptap editor={editor} />
         <div className="mt-4 flex justify-end gap-2">
-          <Button variant="outline" onClick={() => handleSubmit()} size="lg">
+          <Button variant="neutral" onClick={() => handleSubmit()} size="lg">
             Submit
           </Button>
           <Button
