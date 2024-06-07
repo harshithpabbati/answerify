@@ -53,6 +53,7 @@ export type Database = {
           email_cc: string[] | null;
           email_from: string;
           email_from_name: string;
+          embedding: string | null;
           id: string;
           is_perfect: boolean | null;
           organization_id: string;
@@ -67,6 +68,7 @@ export type Database = {
           email_cc?: string[] | null;
           email_from: string;
           email_from_name: string;
+          embedding?: string | null;
           id?: string;
           is_perfect?: boolean | null;
           organization_id: string;
@@ -81,6 +83,7 @@ export type Database = {
           email_cc?: string[] | null;
           email_from?: string;
           email_from_name?: string;
+          embedding?: string | null;
           id?: string;
           is_perfect?: boolean | null;
           organization_id?: string;
@@ -329,6 +332,28 @@ export type Database = {
           role: number;
         };
         Returns: string[];
+      };
+      match_email_sections: {
+        Args: {
+          content_embedding: string;
+          match_threshold: number;
+          org_id: string;
+        };
+        Returns: {
+          body: string;
+          cleaned_body: string | null;
+          created_at: string;
+          email_bcc: string[] | null;
+          email_cc: string[] | null;
+          email_from: string;
+          email_from_name: string;
+          embedding: string | null;
+          id: string;
+          is_perfect: boolean | null;
+          organization_id: string;
+          role: string;
+          thread_id: string;
+        }[];
       };
       match_sections: {
         Args: {

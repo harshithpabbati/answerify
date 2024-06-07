@@ -64,7 +64,7 @@ export async function middleware(request: NextRequest) {
     pathname.includes('/auth/') ||
     pathname.includes('/api/')
   ) {
-    if (user && pathname !== '/') {
+    if (user && pathname.includes('/auth/')) {
       return NextResponse.redirect(`${origin}/dashboard`);
     }
     return response;

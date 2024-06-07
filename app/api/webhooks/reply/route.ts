@@ -27,18 +27,25 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createServiceClient();
-  const { data: documents, error: matchError } = await supabase
+  const { data: emails, error: matchEmailsError } = await supabase
+    .rpc('match_email_sections', {
+      content_embedding: response.data[0].embedding as any,
+      match_threshold: 0.6,
+      org_id: record.organization_id,
+    })
+    .select('cleaned_body')
+    .limit(5);
+
+  const { data: sections, error: matchError } = await supabase
     .rpc('match_sections', {
       embedding: response.data[0].embedding as any,
-      match_threshold: 0.8,
+      match_threshold: 0.6,
       organization_id: record.organization_id,
     })
     .select('content')
     .limit(5);
 
-  if (matchError) {
-    console.error(matchError);
-
+  if (matchError && matchEmailsError) {
     return new Response(
       JSON.stringify({
         error: 'There was an error reading your documents, please try again.',
@@ -49,6 +56,10 @@ export async function POST(request: Request) {
       }
     );
   }
+
+  const documents =
+    emails?.map((email) => ({ content: email.cleaned_body })) || [];
+  documents.push(...(sections || []));
 
   if (documents && documents.length === 0) {
     return new Response(
@@ -83,7 +94,8 @@ export async function POST(request: Request) {
           Documents:
           ${docs}
 
-          Reply back in HTML and nothing else.
+          Reply back in HTML and nothing else, avoid using markdown, and 
+          format the response accordingly. Also avoid signature at the end of the reply.
         `,
       },
       {

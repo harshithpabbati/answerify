@@ -1,7 +1,9 @@
 'use server';
 
+import OpenAI from 'openai';
 import { Resend } from 'resend';
 
+import { cleanBody } from '@/lib/cleanBody';
 import { createServerClient } from '@/lib/supabase/server';
 
 export async function getThreads(orgId: string, status: 'open' | 'closed') {
@@ -86,6 +88,17 @@ export async function updateTicketStatus(
     .match({ id: threadId });
 }
 
+export async function createEmbedding(content: string) {
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_KEY!,
+  });
+  const response = await openai.embeddings.create({
+    model: 'text-embedding-ada-002',
+    input: content,
+  });
+  return response.data?.[0].embedding;
+}
+
 export async function sendEmail(
   threadId: string,
   {
@@ -114,12 +127,15 @@ export async function sendEmail(
   });
   if (!resendData?.id) return;
 
+  const embedding = await createEmbedding(content);
   const { data: emailData, error: emailError } = await supabase
     .from('email')
     .insert({
       organization_id: data.organization_id,
       thread_id: threadId,
       body: content,
+      cleaned_body: cleanBody(content),
+      embedding: embedding as any,
       role: 'staff',
       email_from: 'support@answerify.app',
       email_from_name: 'Support',
