@@ -37,7 +37,7 @@ export async function Header({ isDashboard = true }: Props) {
           </Link>
           <Link
             href="/auth/sign-up"
-            className={buttonVariants({ variant: 'neutral' })}
+            className={buttonVariants({ variant: 'shadow' })}
           >
             Sign up
           </Link>
