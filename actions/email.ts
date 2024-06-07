@@ -123,6 +123,7 @@ export async function sendEmail(
       role: 'staff',
       email_from: 'support@answerify.app',
       email_from_name: 'Support',
+      is_perfect: true,
     })
     .select()
     .single();
