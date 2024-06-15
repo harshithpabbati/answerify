@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { getOrganizationBySlug } from '@/actions/organization';
 
-import { EmailsList } from '@/components/organization';
+import { Sidebar } from '@/components/sidebar';
 
 export default async function OrgLayout({
   params,
@@ -17,11 +17,9 @@ export default async function OrgLayout({
     redirect(`/onboarding/${params.slug}/${onboarding.step}`);
 
   return (
-    <div className="flex size-full max-h-dvh">
-      <div className="bg-background h-full w-[40dvw] border-r lg:w-[25dvw]">
-        <EmailsList orgId={data.id} name={data.name} slug={params.slug} />
-      </div>
-      <div className="flex-1">{children}</div>
+    <div className="flex size-full max-h-dvh overflow-hidden">
+      <Sidebar orgId={data.id} name={data.name} slug={params.slug} />
+      <div className="hidden flex-1 md:block">{children}</div>
     </div>
   );
 }
