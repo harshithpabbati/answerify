@@ -27,7 +27,11 @@ export function Conversations({
   const router = useRouter();
   const divRef = useRef<HTMLDivElement>(null);
 
-  const editor = useTiptap(reply?.content);
+  const editor = useTiptap(
+    conversations[conversations.length - 1].role === 'user'
+      ? reply?.content
+      : ''
+  );
 
   useEffect(() => {
     if (!divRef.current) return;
