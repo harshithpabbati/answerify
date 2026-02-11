@@ -7,10 +7,11 @@ export const metadata: Metadata = {
 };
 
 export default async function ConfigurationsOnboardingPage({
-  params: { slug },
+  params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
   const { data, error } = await getOrganizationEmail(slug);
   if (error || !data?.inbound_email) return notFound();
 

@@ -2,11 +2,12 @@ import { Metadata } from 'next';
 import { getOrganizationBySlug } from '@/actions/organization';
 
 interface Props {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { data, error } = await getOrganizationBySlug(params.slug);
+  const { slug } = await params;
+  const { data, error } = await getOrganizationBySlug(slug);
   return {
     title: error ? 'Not found' : data?.name,
   };
