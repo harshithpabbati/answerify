@@ -99,7 +99,7 @@ export function EmailsList({ orgId, name, slug }: Props) {
       <div className="flex h-[calc(100dvh-60px)] flex-col overflow-auto">
         {isLoading ? (
           Array.from({ length: 10 }).map((_, index) => (
-            <EmailSkeleton key={index} />
+            <EmailSkeleton key={`skeleton-${index}`} />
           ))
         ) : data.length > 0 ? (
           data.map((e) => <Email key={e.id} slug={slug} {...e} />)

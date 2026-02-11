@@ -12,10 +12,20 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ error: true }), { status: 500 });
   }
 
-  fetch(`${origin}/api/webhooks/embedding`, {
-    method: 'POST',
-    body: JSON.stringify({ records }),
-  });
+  // Fire webhook request and wait for completion to ensure it's processed
+  try {
+    const webhookResponse = await fetch(`${origin}/api/webhooks/embedding`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ records }),
+    });
+    
+    if (!webhookResponse.ok) {
+      console.error('Webhook failed:', await webhookResponse.text());
+    }
+  } catch (error) {
+    console.error('Webhook request failed:', error);
+  }
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });
 }
