@@ -1,0 +1,20 @@
+# Cloudflare Workers local development environment variables
+# Copy this file to .dev.vars and fill in your values
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_KEY=
+
+# Base URL
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+
+# Email Service (Resend or Cloudflare Email)
+RESEND_API_KEY=
+
+# AI Services
+OPENAI_KEY=
+FIRECRAWL_API_KEY=
+
+# Cloudflare AI (optional alternative to OpenAI)
+# CF_AI_BINDING=your-ai-binding
