@@ -1,15 +1,27 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { sendEmail } from '@/actions/email';
 import { Tables } from '@/database.types';
 
 import { useTiptap } from '@/hooks/useTiptap';
 import { Button } from '@/components/ui/button';
-import { Tiptap } from '@/components/ui/tiptap';
 
 import { Conversation } from './Conversation';
+
+// Dynamically import Tiptap to reduce initial bundle size
+const Tiptap = dynamic(
+  () =>
+    import('@/components/ui/tiptap').then((mod) => ({ default: mod.Tiptap })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mt-4 h-40 rounded-base animate-pulse border" />
+    ),
+  }
+);
 
 interface Props {
   threadId: string;

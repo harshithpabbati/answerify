@@ -8,6 +8,9 @@ import {
   Conversations,
 } from '@/components/organization/conversation';
 
+// Force dynamic rendering for this page as it shows real-time email conversations
+export const dynamic = 'force-dynamic';
+
 interface Props {
   params: Promise<{ id: string }>;
 }

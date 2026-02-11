@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: 'Dashboard',
 };
 
+// Revalidate every 60 seconds to keep dashboard fresh
+export const revalidate = 60;
+
 export default async function DashboardPage() {
   const organizations = await getOrganizations();
 
