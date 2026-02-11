@@ -2,9 +2,6 @@
 const nextConfig = {
   reactStrictMode: false,
   
-  // Cloudflare Pages compatibility
-  output: 'standalone',
-  
   async redirects() {
     return [
       {

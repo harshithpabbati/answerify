@@ -45,5 +45,5 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: answerify
-          directory: .next/server
+          directory: .next
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}

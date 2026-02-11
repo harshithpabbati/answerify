@@ -51,7 +51,7 @@ wrangler pages dev .next/server --compatibility-date=2024-01-01
 npm run build
 
 # Deploy to Cloudflare Pages
-wrangler pages deploy .next/server --project-name=answerify
+wrangler pages deploy .next --project-name=answerify
 ```
 
 ### Option 2: Deploy via Cloudflare Dashboard
@@ -61,7 +61,7 @@ wrangler pages deploy .next/server --project-name=answerify
 3. Connect your GitHub repository
 4. Configure build settings:
    - **Build command**: `npm run build`
-   - **Build output directory**: `.next/server`
+   - **Build output directory**: `.next`
    - **Root directory**: `/`
 5. Add environment variables in the dashboard
 6. Deploy!

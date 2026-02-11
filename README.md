@@ -4,7 +4,7 @@ Stop ticket trouble! Answerify uses the power of AI to automatically answer your
 
 ## 🚀 Tech Stack
 
-- **Frontend**: Next.js 15.5 with React 19
+- **Frontend**: Next.js 15.1 with React 19
 - **Backend**: Supabase (PostgreSQL + Auth)
 - **AI**: OpenAI (Embeddings & GPT)
 - **Email**: Resend
@@ -39,7 +39,7 @@ See [CLOUDFLARE_DEPLOYMENT.md](./CLOUDFLARE_DEPLOYMENT.md) for detailed deployme
 
 1. Connect your GitHub repo to Cloudflare Pages
 2. Set build command: `npm run build`
-3. Set build output directory: `.next/server`
+3. Set build output directory: `.next`
 4. Add environment variables
 5. Deploy!
 
