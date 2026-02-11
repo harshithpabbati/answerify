@@ -9,17 +9,19 @@ import {
 } from '@/components/organization/conversation';
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { data, error } = await getThread(params.id);
+  const { id } = await params;
+  const { data, error } = await getThread(id);
   return {
     title: error ? 'Not found' : data?.subject,
   };
 }
 
-export default async function EmailPage({ params: { id } }: Props) {
+export default async function EmailPage({ params }: Props) {
+  const { id } = await params;
   const { data: thread, error: threadError } = await getThread(id);
   if (threadError || !thread?.id) return notFound();
 

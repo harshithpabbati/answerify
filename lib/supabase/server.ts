@@ -7,10 +7,8 @@ import {
   type CookieOptions,
 } from '@supabase/ssr';
 
-export const createServerClient = () => {
-  'use server';
-
-  const cookieStore = cookies();
+export const createServerClient = async () => {
+  const cookieStore = await cookies();
   return createSupabaseServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -27,5 +25,5 @@ export const createServerClient = () => {
         },
       },
     }
-  );
+  ) as any;
 };

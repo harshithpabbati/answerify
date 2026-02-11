@@ -5,9 +5,11 @@ import { createServiceClient } from '@/lib/supabase/service';
 
 export const runtime = 'edge';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_KEY!,
-});
+function getOpenAIClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_KEY!,
+  });
+}
 
 export async function POST() {
   const supabase = await createServiceClient();
@@ -19,6 +21,8 @@ export async function POST() {
   if (!records || records?.length === 0) {
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   }
+
+  const openai = getOpenAIClient();
   await Promise.allSettled(
     records.map(async (record: Tables<'section'>) => {
       const response = await openai.embeddings.create({

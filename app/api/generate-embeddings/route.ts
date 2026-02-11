@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ records }),
     });
-    
+
     if (!webhookResponse.ok) {
       console.error('Webhook failed:', await webhookResponse.text());
     }

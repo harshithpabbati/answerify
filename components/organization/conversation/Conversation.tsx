@@ -1,6 +1,5 @@
-import DOMPurify from 'isomorphic-dompurify';
-
 import { Tables } from '@/database.types';
+import DOMPurify from 'isomorphic-dompurify';
 
 import { getNameInitials } from '@/lib/gravatar';
 import { cn } from '@/lib/utils';
