@@ -3,9 +3,11 @@ import OpenAI from 'openai';
 
 import { createServiceClient } from '@/lib/supabase/service';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_KEY!,
-});
+function getOpenAI() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_KEY!,
+  });
+}
 
 export async function POST(request: Request) {
   const { record } = await request.json();
@@ -14,6 +16,7 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   }
 
+  const openai = getOpenAI();
   const response = await openai.embeddings.create({
     model: 'text-embedding-ada-002',
     input: record.cleaned_body,

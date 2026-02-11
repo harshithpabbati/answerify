@@ -5,11 +5,14 @@ import { createServiceClient } from '@/lib/supabase/service';
 
 export const runtime = 'edge';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_KEY!,
-});
+function getOpenAI() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_KEY!,
+  });
+}
 
 export async function POST() {
+  const openai = getOpenAI();
   const supabase = await createServiceClient();
   const { data: records } = await supabase
     .from('section')

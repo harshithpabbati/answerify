@@ -21,6 +21,6 @@ export default function cloudflareImageLoader({
   // For local images, use Cloudflare Image Resizing
   // Format: /cdn-cgi/image/width=<width>,quality=<quality>,format=auto/<src>
   const params = [`width=${width}`, `quality=${quality || 75}`, 'format=auto'];
-  
+
   return `/cdn-cgi/image/${params.join(',')}${src}`;
 }
