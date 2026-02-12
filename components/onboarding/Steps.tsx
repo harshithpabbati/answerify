@@ -39,7 +39,7 @@ export function Steps() {
     <div className="flex flex-col items-center justify-center gap-2">
       {steps.map((step, index) => (
         <Step
-          key={index}
+          key={step.route}
           index={index + 1}
           title={step.title}
           current={pathname.split('/').at(-1) === step.route}

@@ -45,7 +45,7 @@ export async function updateReplyStatus(replyId: string, content: string) {
     .match({ id: replyId })
     .single();
 
-  if (error) return { data: null, error };
+  if (error || !data) return { data: null, error };
 
   return await supabase
     .from('reply')

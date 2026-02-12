@@ -1,6 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: false,
+  reactStrictMode: true,
+  
+  // Enable compression for better performance
+  compress: true,
+  
+  // Optimize bundle analyzer output
+  poweredByHeader: false,
+  
   async redirects() {
     return [
       {
@@ -28,6 +35,8 @@ const nextConfig = {
         port: '',
       },
     ],
+    // Enable modern image formats
+    formats: ['image/avif', 'image/webp'],
   },
 };
 

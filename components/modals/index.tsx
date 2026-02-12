@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
 import {
   useCreateOrganization,
@@ -8,13 +9,25 @@ import {
   useUpdateOrganization,
 } from '@/states/organization';
 
-import { AddDataSource, ViewDataSources } from './data-source';
-import {
-  CreateOrganization,
-  InviteMembers,
-  UpdateOrganization,
-  ViewMembers,
-} from './organization';
+// Dynamically import modals to reduce initial bundle size
+const AddDataSource = dynamic(() =>
+  import('./data-source').then((mod) => mod.AddDataSource)
+);
+const ViewDataSources = dynamic(() =>
+  import('./data-source').then((mod) => mod.ViewDataSources)
+);
+const CreateOrganization = dynamic(() =>
+  import('./organization').then((mod) => mod.CreateOrganization)
+);
+const UpdateOrganization = dynamic(() =>
+  import('./organization').then((mod) => mod.UpdateOrganization)
+);
+const InviteMembers = dynamic(() =>
+  import('./organization').then((mod) => mod.InviteMembers)
+);
+const ViewMembers = dynamic(() =>
+  import('./organization').then((mod) => mod.ViewMembers)
+);
 
 export function Modals() {
   const [showCreateOrganization] = useCreateOrganization();
