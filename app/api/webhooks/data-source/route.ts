@@ -5,23 +5,26 @@ export const runtime = 'edge';
 
 const scrapeURL = async (record: any) => {
   if (record.content)
-    return { success: true, data: { markdown: record.content, metadata: null } };
+    return {
+      success: true,
+      data: { markdown: record.content, metadata: null },
+    };
   else {
     try {
       // Use markdown.new - a free service to convert web pages to markdown
       const response = await fetch(`https://markdown.new/${record.url}`);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to scrape URL: ${response.statusText}`);
       }
-      
+
       const markdown = await response.text();
-      return { 
-        success: true, 
-        data: { 
-          markdown, 
-          metadata: null 
-        } 
+      return {
+        success: true,
+        data: {
+          markdown,
+          metadata: null,
+        },
       };
     } catch (e) {
       throw e;

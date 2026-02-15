@@ -18,7 +18,7 @@ const Tiptap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="mt-4 h-40 rounded-base animate-pulse border" />
+      <div className="rounded-base mt-4 h-40 animate-pulse border" />
     ),
   }
 );
