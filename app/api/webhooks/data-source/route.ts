@@ -8,8 +8,8 @@ const scrapeURL = async (record: any) => {
     return { success: true, data: { markdown: record.content, metadata: null } };
   else {
     try {
-      // Use Jina AI Reader - a free service to convert web pages to markdown
-      const response = await fetch(`https://r.jina.ai/${record.url}`);
+      // Use markdown.new - a free service to convert web pages to markdown
+      const response = await fetch(`https://markdown.new/${record.url}`);
       
       if (!response.ok) {
         throw new Error(`Failed to scrape URL: ${response.statusText}`);
