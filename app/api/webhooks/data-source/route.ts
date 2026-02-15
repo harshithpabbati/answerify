@@ -5,23 +5,24 @@ export const runtime = 'edge';
 
 const scrapeURL = async (record: any) => {
   if (record.content)
-    return { success: true, markdown: record.content, metadata: null };
+    return { success: true, data: { markdown: record.content, metadata: null } };
   else {
-    const options = {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ url: record.url }),
-    };
     try {
-      const response = await fetch(
-        'https://api.firecrawl.dev/v0/scrape',
-        options
-      );
-      const data = await response.json();
-      return data;
+      // Use Jina AI Reader - a free service to convert web pages to markdown
+      const response = await fetch(`https://r.jina.ai/${record.url}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to scrape URL: ${response.statusText}`);
+      }
+      
+      const markdown = await response.text();
+      return { 
+        success: true, 
+        data: { 
+          markdown, 
+          metadata: null 
+        } 
+      };
     } catch (e) {
       throw e;
     }
