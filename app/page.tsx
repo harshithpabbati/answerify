@@ -1,3 +1,6 @@
+import { Metadata } from 'next';
+
+import { siteConfig } from '@/lib/config';
 import { Header } from '@/components/header';
 import {
   Features,
@@ -6,6 +9,11 @@ import {
   Pricing,
   Slider,
 } from '@/components/marketing';
+
+export const metadata: Metadata = {
+  title: siteConfig.name,
+  description: siteConfig.description,
+};
 
 export default function Home() {
   return (

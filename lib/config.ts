@@ -10,5 +10,3 @@ export const siteConfig = {
     description,
   },
 };
-
-export type SiteConfig = typeof siteConfig;

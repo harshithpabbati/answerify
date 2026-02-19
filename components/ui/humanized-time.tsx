@@ -18,7 +18,7 @@ const calculateCurrentTime = (time: string) => {
 };
 
 export function HumanizedTime({ time }: { time: string }) {
-  const [currentTime, setCurrentTime] = useState(calculateCurrentTime(time));
+  const [currentTime, setCurrentTime] = useState(() => calculateCurrentTime(time));
 
   useEffect(() => {
     setCurrentTime(calculateCurrentTime(time));

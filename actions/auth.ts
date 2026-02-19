@@ -10,14 +10,6 @@ export async function getUser() {
   return await supabase.auth.getUser();
 }
 
-export async function getIsUserAuthenticated() {
-  const {
-    data: { user },
-  } = await getUser();
-
-  return Boolean(user?.id);
-}
-
 export async function signInWithPassword({
   email,
   password,
