@@ -2,11 +2,14 @@
   "name": "answerify",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "dev:vinext": "vite dev --port 3001",
+    "build:vinext": "vite build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
@@ -63,6 +66,7 @@
     "@types/node": "^20",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-rsc": "^0.5.20",
     "eslint": "^8",
     "eslint-config-next": "15.5.12",
     "eslint-config-prettier": "^9.1.0",
@@ -70,6 +74,8 @@
     "eslint-plugin-tailwindcss": "^3.15.1",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vinext": "^0.0.5",
+    "vite": "^7.3.1"
   }
 }
