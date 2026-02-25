@@ -4,531 +4,595 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
   public: {
     Tables: {
       datasource: {
         Row: {
-          content: string | null;
-          created_at: string;
-          id: string;
-          is_internal_kb: boolean | null;
-          metadata: Json | null;
-          organization_id: string;
-          title: string | null;
-          url: string;
-        };
+          content: string | null
+          created_at: string
+          id: string
+          is_internal_kb: boolean | null
+          metadata: Json | null
+          organization_id: string
+          title: string | null
+          url: string
+        }
         Insert: {
-          content?: string | null;
-          created_at?: string;
-          id?: string;
-          is_internal_kb?: boolean | null;
-          metadata?: Json | null;
-          organization_id?: string;
-          title?: string | null;
-          url: string;
-        };
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_internal_kb?: boolean | null
+          metadata?: Json | null
+          organization_id?: string
+          title?: string | null
+          url: string
+        }
         Update: {
-          content?: string | null;
-          created_at?: string;
-          id?: string;
-          is_internal_kb?: boolean | null;
-          metadata?: Json | null;
-          organization_id?: string;
-          title?: string | null;
-          url?: string;
-        };
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_internal_kb?: boolean | null
+          metadata?: Json | null
+          organization_id?: string
+          title?: string | null
+          url?: string
+        }
         Relationships: [
           {
-            foreignKeyName: 'public_datasource_organization_id_fkey';
-            columns: ['organization_id'];
-            isOneToOne: false;
-            referencedRelation: 'organization';
-            referencedColumns: ['id'];
+            foreignKeyName: "public_datasource_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       email: {
         Row: {
-          body: string;
-          cleaned_body: string | null;
-          created_at: string;
-          email_bcc: string[] | null;
-          email_cc: string[] | null;
-          email_from: string;
-          email_from_name: string;
-          embedding: string | null;
-          id: string;
-          is_perfect: boolean | null;
-          organization_id: string;
-          role: string;
-          thread_id: string;
-        };
+          body: string
+          cleaned_body: string | null
+          created_at: string
+          email_bcc: string[] | null
+          email_cc: string[] | null
+          email_from: string
+          email_from_name: string
+          embedding: string | null
+          id: string
+          is_perfect: boolean | null
+          organization_id: string
+          role: string
+          thread_id: string
+        }
         Insert: {
-          body: string;
-          cleaned_body?: string | null;
-          created_at?: string;
-          email_bcc?: string[] | null;
-          email_cc?: string[] | null;
-          email_from: string;
-          email_from_name: string;
-          embedding?: string | null;
-          id?: string;
-          is_perfect?: boolean | null;
-          organization_id: string;
-          role?: string;
-          thread_id?: string;
-        };
+          body: string
+          cleaned_body?: string | null
+          created_at?: string
+          email_bcc?: string[] | null
+          email_cc?: string[] | null
+          email_from: string
+          email_from_name: string
+          embedding?: string | null
+          id?: string
+          is_perfect?: boolean | null
+          organization_id: string
+          role?: string
+          thread_id?: string
+        }
         Update: {
-          body?: string;
-          cleaned_body?: string | null;
-          created_at?: string;
-          email_bcc?: string[] | null;
-          email_cc?: string[] | null;
-          email_from?: string;
-          email_from_name?: string;
-          embedding?: string | null;
-          id?: string;
-          is_perfect?: boolean | null;
-          organization_id?: string;
-          role?: string;
-          thread_id?: string;
-        };
+          body?: string
+          cleaned_body?: string | null
+          created_at?: string
+          email_bcc?: string[] | null
+          email_cc?: string[] | null
+          email_from?: string
+          email_from_name?: string
+          embedding?: string | null
+          id?: string
+          is_perfect?: boolean | null
+          organization_id?: string
+          role?: string
+          thread_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: 'public_email_organization_id_fkey';
-            columns: ['organization_id'];
-            isOneToOne: false;
-            referencedRelation: 'organization';
-            referencedColumns: ['id'];
+            foreignKeyName: "public_email_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'public_email_thread_id_fkey';
-            columns: ['thread_id'];
-            isOneToOne: false;
-            referencedRelation: 'thread';
-            referencedColumns: ['id'];
+            foreignKeyName: "public_email_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "thread"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       member: {
         Row: {
-          created_at: string;
-          id: string;
-          organization_id: string;
-          role: number;
-          user_id: string;
-        };
+          created_at: string
+          id: string
+          organization_id: string
+          role: number
+          user_id: string
+        }
         Insert: {
-          created_at?: string;
-          id?: string;
-          organization_id?: string;
-          role?: number;
-          user_id?: string;
-        };
+          created_at?: string
+          id?: string
+          organization_id?: string
+          role?: number
+          user_id?: string
+        }
         Update: {
-          created_at?: string;
-          id?: string;
-          organization_id?: string;
-          role?: number;
-          user_id?: string;
-        };
+          created_at?: string
+          id?: string
+          organization_id?: string
+          role?: number
+          user_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: 'public_member_organization_id_fkey';
-            columns: ['organization_id'];
-            isOneToOne: false;
-            referencedRelation: 'organization';
-            referencedColumns: ['id'];
+            foreignKeyName: "public_member_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization"
+            referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: 'public_member_user_id_fkey';
-            columns: ['user_id'];
-            isOneToOne: false;
-            referencedRelation: 'users';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
+        ]
+      }
       organization: {
         Row: {
-          autopilot_enabled: boolean;
-          autopilot_threshold: number;
-          created_at: string;
-          created_by: string;
-          id: string;
-          inbound_email: string;
-          name: string;
-          onboarding: Json;
-          slug: string;
-          support_email: string;
-        };
+          autopilot_enabled: boolean
+          autopilot_threshold: number
+          created_at: string
+          created_by: string
+          id: string
+          inbound_email: string
+          name: string
+          onboarding: Json
+          slug: string
+          support_email: string
+        }
         Insert: {
-          autopilot_enabled?: boolean;
-          autopilot_threshold?: number;
-          created_at?: string;
-          created_by: string;
-          id?: string;
-          inbound_email: string;
-          name: string;
-          onboarding?: Json;
-          slug: string;
-          support_email: string;
-        };
+          autopilot_enabled?: boolean
+          autopilot_threshold?: number
+          created_at?: string
+          created_by: string
+          id?: string
+          inbound_email: string
+          name: string
+          onboarding?: Json
+          slug: string
+          support_email: string
+        }
         Update: {
-          autopilot_enabled?: boolean;
-          autopilot_threshold?: number;
-          created_at?: string;
-          created_by?: string;
-          id?: string;
-          inbound_email?: string;
-          name?: string;
-          onboarding?: Json;
-          slug?: string;
-          support_email?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'public_organization_created_by_fkey';
-            columns: ['created_by'];
-            isOneToOne: false;
-            referencedRelation: 'users';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
+          autopilot_enabled?: boolean
+          autopilot_threshold?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          inbound_email?: string
+          name?: string
+          onboarding?: Json
+          slug?: string
+          support_email?: string
+        }
+        Relationships: []
+      }
       reply: {
         Row: {
-          citations: Json | null;
-          confidence_score: number | null;
-          content: string;
-          created_at: string;
-          id: string;
-          is_perfect: boolean | null;
-          organization_id: string;
-          sent_at: string | null;
-          sent_via: string | null;
-          status: string;
-          thread_id: string;
-        };
+          citations: Json | null
+          confidence_score: number | null
+          content: string
+          created_at: string
+          id: string
+          is_perfect: boolean | null
+          organization_id: string
+          status: string
+          thread_id: string
+        }
         Insert: {
-          citations?: Json | null;
-          confidence_score?: number | null;
-          content: string;
-          created_at?: string;
-          id?: string;
-          is_perfect?: boolean | null;
-          organization_id: string;
-          sent_at?: string | null;
-          sent_via?: string | null;
-          status?: string;
-          thread_id?: string;
-        };
+          citations?: Json | null
+          confidence_score?: number | null
+          content: string
+          created_at?: string
+          id?: string
+          is_perfect?: boolean | null
+          organization_id: string
+          status?: string
+          thread_id?: string
+        }
         Update: {
-          citations?: Json | null;
-          confidence_score?: number | null;
-          content?: string;
-          created_at?: string;
-          id?: string;
-          is_perfect?: boolean | null;
-          organization_id?: string;
-          sent_at?: string | null;
-          sent_via?: string | null;
-          status?: string;
-          thread_id?: string;
-        };
+          citations?: Json | null
+          confidence_score?: number | null
+          content?: string
+          created_at?: string
+          id?: string
+          is_perfect?: boolean | null
+          organization_id?: string
+          status?: string
+          thread_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: 'public_reply_organization_id_fkey';
-            columns: ['organization_id'];
-            isOneToOne: false;
-            referencedRelation: 'organization';
-            referencedColumns: ['id'];
+            foreignKeyName: "public_reply_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'public_reply_thread_id_fkey';
-            columns: ['thread_id'];
-            isOneToOne: false;
-            referencedRelation: 'thread';
-            referencedColumns: ['id'];
+            foreignKeyName: "public_reply_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "thread"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       reply_edit: {
         Row: {
-          created_at: string;
-          final_content: string;
-          id: string;
-          learned: boolean;
-          organization_id: string;
-          original_content: string;
-          reply_id: string;
-        };
+          created_at: string
+          final_content: string
+          id: string
+          learned: boolean
+          organization_id: string
+          original_content: string
+          reply_id: string
+        }
         Insert: {
-          created_at?: string;
-          final_content: string;
-          id?: string;
-          learned?: boolean;
-          organization_id: string;
-          original_content: string;
-          reply_id: string;
-        };
+          created_at?: string
+          final_content: string
+          id?: string
+          learned?: boolean
+          organization_id: string
+          original_content: string
+          reply_id: string
+        }
         Update: {
-          created_at?: string;
-          final_content?: string;
-          id?: string;
-          learned?: boolean;
-          organization_id?: string;
-          original_content?: string;
-          reply_id?: string;
-        };
+          created_at?: string
+          final_content?: string
+          id?: string
+          learned?: boolean
+          organization_id?: string
+          original_content?: string
+          reply_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: 'public_reply_edit_reply_id_fkey';
-            columns: ['reply_id'];
-            isOneToOne: false;
-            referencedRelation: 'reply';
-            referencedColumns: ['id'];
+            foreignKeyName: "public_reply_edit_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'public_reply_edit_organization_id_fkey';
-            columns: ['organization_id'];
-            isOneToOne: false;
-            referencedRelation: 'organization';
-            referencedColumns: ['id'];
+            foreignKeyName: "public_reply_edit_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "reply"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       section: {
         Row: {
-          content: string;
-          datasource_id: string;
-          embedding: string | null;
-          id: string;
-          organization_id: string;
-        };
+          content: string
+          datasource_id: string
+          embedding: string | null
+          id: string
+          organization_id: string
+        }
         Insert: {
-          content: string;
-          datasource_id: string;
-          embedding?: string | null;
-          id?: string;
-          organization_id: string;
-        };
+          content: string
+          datasource_id: string
+          embedding?: string | null
+          id?: string
+          organization_id: string
+        }
         Update: {
-          content?: string;
-          datasource_id?: string;
-          embedding?: string | null;
-          id?: string;
-          organization_id?: string;
-        };
+          content?: string
+          datasource_id?: string
+          embedding?: string | null
+          id?: string
+          organization_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: 'public_section_datasource_id_fkey';
-            columns: ['datasource_id'];
-            isOneToOne: false;
-            referencedRelation: 'datasource';
-            referencedColumns: ['id'];
+            foreignKeyName: "public_section_datasource_id_fkey"
+            columns: ["datasource_id"]
+            isOneToOne: false
+            referencedRelation: "datasource"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: 'public_section_organization_id_fkey';
-            columns: ['organization_id'];
-            isOneToOne: false;
-            referencedRelation: 'organization';
-            referencedColumns: ['id'];
+            foreignKeyName: "public_section_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
+      source: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string
+          organization_id: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id: string
+          organization_id?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string
+          organization_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       thread: {
         Row: {
-          created_at: string;
-          email_from: string;
-          email_from_name: string;
-          id: string;
-          last_message_created_at: string;
-          message_id: string;
-          organization_id: string;
-          status: string;
-          subject: string;
-          tags: string[] | null;
-        };
+          created_at: string
+          email_from: string
+          email_from_name: string
+          id: string
+          last_message_created_at: string
+          message_id: string
+          organization_id: string
+          status: string
+          subject: string
+          tags: string[] | null
+        }
         Insert: {
-          created_at?: string;
-          email_from: string;
-          email_from_name: string;
-          id?: string;
-          last_message_created_at?: string;
-          message_id: string;
-          organization_id?: string;
-          status?: string;
-          subject: string;
-          tags?: string[] | null;
-        };
+          created_at?: string
+          email_from: string
+          email_from_name: string
+          id?: string
+          last_message_created_at?: string
+          message_id: string
+          organization_id?: string
+          status?: string
+          subject: string
+          tags?: string[] | null
+        }
         Update: {
-          created_at?: string;
-          email_from?: string;
-          email_from_name?: string;
-          id?: string;
-          last_message_created_at?: string;
-          message_id?: string;
-          organization_id?: string;
-          status?: string;
-          subject?: string;
-          tags?: string[] | null;
-        };
+          created_at?: string
+          email_from?: string
+          email_from_name?: string
+          id?: string
+          last_message_created_at?: string
+          message_id?: string
+          organization_id?: string
+          status?: string
+          subject?: string
+          tags?: string[] | null
+        }
         Relationships: [
           {
-            foreignKeyName: 'public_thread_organization_id_fkey';
-            columns: ['organization_id'];
-            isOneToOne: false;
-            referencedRelation: 'organization';
-            referencedColumns: ['id'];
+            foreignKeyName: "public_thread_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization"
+            referencedColumns: ["id"]
           },
-        ];
-      };
-    };
+        ]
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
       get_organization_owner: {
-        Args: {
-          organization_id: string;
-        };
-        Returns: string[];
-      };
+        Args: { organization_id: string }
+        Returns: string[]
+      }
       get_user_organizations: {
-        Args: {
-          user_id: string;
-          role: number;
-        };
-        Returns: string[];
-      };
+        Args: { role: number; user_id: string }
+        Returns: string[]
+      }
       match_email_sections: {
         Args: {
-          content_embedding: string;
-          match_threshold: number;
-          org_id: string;
-        };
+          content_embedding: string
+          match_threshold: number
+          org_id: string
+        }
         Returns: {
-          body: string;
-          cleaned_body: string | null;
-          created_at: string;
-          email_bcc: string[] | null;
-          email_cc: string[] | null;
-          email_from: string;
-          email_from_name: string;
-          embedding: string | null;
-          id: string;
-          is_perfect: boolean | null;
-          organization_id: string;
-          role: string;
-          thread_id: string;
-        }[];
-      };
+          body: string
+          cleaned_body: string | null
+          created_at: string
+          email_bcc: string[] | null
+          email_cc: string[] | null
+          email_from: string
+          email_from_name: string
+          embedding: string | null
+          id: string
+          is_perfect: boolean | null
+          organization_id: string
+          role: string
+          thread_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "email"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       match_sections: {
         Args: {
-          embedding: string;
-          match_threshold: number;
-          organization_id: string;
-        };
+          embedding: string
+          match_threshold: number
+          organization_id: string
+        }
         Returns: {
-          content: string;
-          datasource_id: string;
-          embedding: string | null;
-          id: string;
-          organization_id: string;
-        }[];
-      };
-    };
+          content: string
+          datasource_id: string
+          embedding: string | null
+          id: string
+          organization_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "section"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+    }
     Enums: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
+      [_ in never]: never
+    }
+  }
+}
 
-type PublicSchema = Database[Extract<keyof Database, 'public'>];
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema['Tables'] & PublicSchema['Views'])
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions['schema']]['Tables'] &
-        Database[PublicTableNameOrOptions['schema']]['Views'])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions['schema']]['Tables'] &
-      Database[PublicTableNameOrOptions['schema']]['Views'])[TableName] extends {
-      Row: infer R;
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema['Tables'] &
-        PublicSchema['Views'])
-    ? (PublicSchema['Tables'] &
-        PublicSchema['Views'])[PublicTableNameOrOptions] extends {
-        Row: infer R;
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
       }
       ? R
       : never
-    : never;
+    : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema['Tables']
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions['schema']]['Tables']
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions['schema']]['Tables'][TableName] extends {
-      Insert: infer I;
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema['Tables']
-    ? PublicSchema['Tables'][PublicTableNameOrOptions] extends {
-        Insert: infer I;
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
       }
       ? I
       : never
-    : never;
+    : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema['Tables']
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions['schema']]['Tables']
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions['schema']]['Tables'][TableName] extends {
-      Update: infer U;
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema['Tables']
-    ? PublicSchema['Tables'][PublicTableNameOrOptions] extends {
-        Update: infer U;
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
       }
       ? U
       : never
-    : never;
+    : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema['Enums']
-    | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions['schema']]['Enums']
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions['schema']]['Enums'][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema['Enums']
-    ? PublicSchema['Enums'][PublicEnumNameOrOptions]
-    : never;
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
