@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { sendEmail } from '@/actions/email';
@@ -97,8 +97,6 @@ export function Conversations({
 }: Props) {
   const router = useRouter();
   const divRef = useRef<HTMLDivElement>(null);
-  const [isLearning, setIsLearning] = useState(false);
-  const [learnedSuccess, setLearnedSuccess] = useState(false);
 
   const citations = (reply?.citations as Citation[] | null) ?? [];
   const isDraft = reply?.status === 'draft' || reply?.status === 'approved';
@@ -136,14 +134,6 @@ export function Conversations({
     });
     editor.commands.setContent('');
     router.refresh();
-  };
-
-  const handleLearnFromThis = async () => {
-    if (!reply?.id) return;
-    setIsLearning(true);
-    await fetch(`/api/replies/${reply.id}/learn`, { method: 'POST' });
-    setIsLearning(false);
-    setLearnedSuccess(true);
   };
 
   return (
@@ -185,23 +175,6 @@ export function Conversations({
         <Tiptap editor={editor} />
 
         <div className="mt-4 flex flex-wrap justify-end gap-2">
-          {/* Learn from this – only show for draft replies */}
-          {reply?.id && isDraft && (
-            <Button
-              variant="neutral"
-              size="lg"
-              onClick={handleLearnFromThis}
-              disabled={isLearning || learnedSuccess}
-              title="Save this reply to the internal knowledge base to improve future answers"
-            >
-              {learnedSuccess
-                ? '✓ Learned'
-                : isLearning
-                  ? 'Learning…'
-                  : 'Learn from this'}
-            </Button>
-          )}
-
           {/* Approve & Send – primary action for draft replies */}
           {isDraft && (
             <Button size="lg" onClick={handleApproveAndSend}>

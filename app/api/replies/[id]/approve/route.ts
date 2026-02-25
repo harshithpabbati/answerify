@@ -67,5 +67,11 @@ export async function POST(
     .select()
     .single();
 
+  // Auto-learn from this reply in the background
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+  fetch(`${baseUrl}/api/replies/${reply.id}/learn`, { method: 'POST' }).catch(
+    () => {}
+  );
+
   return new Response(JSON.stringify({ data, error }), { status: 200 });
 }

@@ -206,6 +206,10 @@ CREATE INDEX "member_organization_id_user_id_idx" ON "public"."member" USING "bt
 
 CREATE INDEX "organization_inbound_email_idx" ON "public"."organization" USING "btree" ("inbound_email");
 
+CREATE INDEX "reply_edit_reply_id_idx" ON "public"."reply_edit" USING "btree" ("reply_id");
+
+CREATE INDEX "reply_edit_organization_id_idx" ON "public"."reply_edit" USING "btree" ("organization_id");
+
 CREATE INDEX "section_embedding_idx" ON "public"."section" USING "hnsw" ("embedding" "extensions"."vector_ip_ops");
 
 CREATE INDEX "thread_organization_id_created_at_message_id_idx" ON "public"."thread" USING "btree" ("organization_id", "created_at", "message_id");

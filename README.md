@@ -84,14 +84,50 @@ Citations are rendered as footnotes in the reply HTML and also displayed in the 
 
 ## Learning Loop
 
-When a human edits an AI draft and sends it, you can click **"Learn from this"** to:
+When a human edits an AI draft and clicks **"Approve & Send"**, the system automatically:
 
-1. Store an edit log (`reply_edit` table) with the original and final content.
-2. Find or create an internal knowledge-base datasource (`is_internal_kb = true`) for the organization.
-3. Chunk the final answer into sections and generate embeddings.
-4. Insert the sections into the `section` table so they affect future retrieval.
+1. Sends the reply to the customer.
+2. Stores an edit log (`reply_edit` table) with the original and final content if the reply was edited.
+3. Finds or creates an internal knowledge-base datasource (`is_internal_kb = true`) for the organization.
+4. Chunks the final answer into sections and generates embeddings.
+5. Inserts the sections into the `section` table so they affect future retrieval.
 
-This progressively improves the quality of future AI replies.
+This progressively improves the quality of future AI replies without any extra manual steps.
+
+### reply_edit table SQL
+
+Run the following in Supabase to create the `reply_edit` table:
+
+```sql
+CREATE TABLE IF NOT EXISTS "public"."reply_edit" (
+    "id" uuid DEFAULT gen_random_uuid() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "reply_id" uuid NOT NULL,
+    "organization_id" uuid NOT NULL,
+    "original_content" text NOT NULL,
+    "final_content" text NOT NULL,
+    "learned" boolean DEFAULT false NOT NULL,
+    CONSTRAINT "reply_edit_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "public_reply_edit_reply_id_fkey"
+        FOREIGN KEY ("reply_id") REFERENCES "public"."reply"("id")
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT "public_reply_edit_organization_id_fkey"
+        FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id")
+        ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS "reply_edit_reply_id_idx"
+    ON "public"."reply_edit" USING btree ("reply_id");
+
+CREATE INDEX IF NOT EXISTS "reply_edit_organization_id_idx"
+    ON "public"."reply_edit" USING btree ("organization_id");
+
+ALTER TABLE "public"."reply_edit" ENABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON TABLE "public"."reply_edit" TO "anon";
+GRANT ALL ON TABLE "public"."reply_edit" TO "authenticated";
+GRANT ALL ON TABLE "public"."reply_edit" TO "service_role";
+```
 
 ---
 
