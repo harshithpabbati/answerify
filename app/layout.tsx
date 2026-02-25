@@ -33,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <ViewTransitions>
-      <html lang="en" suppressHydrationWarning>
+      <html lang="en" className="dark" suppressHydrationWarning>
         <body
           className={cn(
             'bg-muted flex max-h-dvh min-h-dvh flex-col',
