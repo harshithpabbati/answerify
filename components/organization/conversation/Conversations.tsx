@@ -113,24 +113,20 @@ export function Conversations({
     divRef.current.scrollTop = divRef.current.scrollHeight;
   }, []);
 
-  const handleSubmit = (status: 'open' | 'closed' | undefined = undefined) => {
-    if (!editor) return;
-    sendEmail(threadId, {
-      content: editor?.getHTML(),
-      replyId: reply?.id,
-      status,
-    });
-    editor.commands.setContent('');
-    router.refresh();
-  };
-
-  const handleApproveAndSend = async () => {
+  const handleSubmit = async (
+    status: 'open' | 'closed' | undefined = undefined
+  ) => {
     if (!editor || !reply?.id) return;
     const content = editor.getHTML();
     await fetch(`/api/replies/${reply.id}/approve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),
+    });
+    sendEmail(threadId, {
+      content: editor?.getHTML(),
+      replyId: reply?.id,
+      status,
     });
     editor.commands.setContent('');
     router.refresh();
@@ -175,38 +171,21 @@ export function Conversations({
         <Tiptap editor={editor} />
 
         <div className="mt-4 flex flex-wrap justify-end gap-2">
-          {/* Approve & Send – primary action for draft replies */}
-          {isDraft && (
-            <Button size="lg" onClick={handleApproveAndSend}>
-              Approve &amp; Send
-            </Button>
-          )}
-
-          {/* Standard submit buttons (also available when no reply or reply is sent) */}
-          {!isDraft && (
-            <>
-              <Button
-                variant="neutral"
-                onClick={() => handleSubmit()}
-                size="lg"
-              >
-                Submit
-              </Button>
-              <Button
-                onClick={() =>
-                  handleSubmit(status === 'closed' ? 'open' : 'closed')
-                }
-                size="lg"
-              >
-                {status === 'closed'
-                  ? 'Submit & re-open ticket'
-                  : 'Submit & close ticket'}
-              </Button>
-            </>
-          )}
+          <Button variant="neutral" onClick={() => handleSubmit()} size="lg">
+            Submit
+          </Button>
+          <Button
+            onClick={() =>
+              handleSubmit(status === 'closed' ? 'open' : 'closed')
+            }
+            size="lg"
+          >
+            {status === 'closed'
+              ? 'Submit & re-open ticket'
+              : 'Submit & close ticket'}
+          </Button>
         </div>
       </div>
     </div>
   );
 }
-
