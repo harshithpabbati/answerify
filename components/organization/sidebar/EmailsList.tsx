@@ -32,7 +32,11 @@ type ThreadState = {
 
 type ThreadAction =
   | { type: 'FETCH_START' }
-  | { type: 'FETCH_SUCCESS'; data: Tables<'thread'>[]; status: 'open' | 'closed' }
+  | {
+      type: 'FETCH_SUCCESS';
+      data: Tables<'thread'>[];
+      status: 'open' | 'closed';
+    }
   | { type: 'INSERT_THREAD'; thread: Tables<'thread'> };
 
 function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
@@ -65,7 +69,11 @@ export function EmailsList({ orgId, name, slug }: Props) {
     const fetchThreads = async () => {
       dispatch({ type: 'FETCH_START' });
       const { data: threads } = await getThreads(orgId, newStatus);
-      dispatch({ type: 'FETCH_SUCCESS', data: threads ?? [], status: newStatus });
+      dispatch({
+        type: 'FETCH_SUCCESS',
+        data: threads ?? [],
+        status: newStatus,
+      });
     };
 
     fetchThreads();
@@ -87,7 +95,10 @@ export function EmailsList({ orgId, name, slug }: Props) {
         },
         (payload) => {
           if (state.status === 'closed') return;
-          dispatch({ type: 'INSERT_THREAD', thread: payload.new as Tables<'thread'> });
+          dispatch({
+            type: 'INSERT_THREAD',
+            thread: payload.new as Tables<'thread'>,
+          });
         }
       )
       .subscribe();

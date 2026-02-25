@@ -1,14 +1,12 @@
 import { Tables } from '@/database.types';
-import OpenAI from 'openai';
+import { GoogleGenAI } from '@google/genai';
 
 import { createServiceClient } from '@/lib/supabase/service';
 
 export const runtime = 'edge';
 
-function getOpenAIClient() {
-  return new OpenAI({
-    apiKey: process.env.OPENAI_KEY!,
-  });
+function getGenAIClient() {
+  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 }
 
 export async function POST() {
@@ -22,17 +20,23 @@ export async function POST() {
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   }
 
-  const openai = getOpenAIClient();
+  const ai = getGenAIClient();
+
   await Promise.allSettled(
     records.map(async (record: Tables<'section'>) => {
-      const response = await openai.embeddings.create({
-        model: 'text-embedding-ada-002',
-        input: record.content,
+      const result = await ai.models.embedContent({
+        model: 'gemini-embedding-001',
+        contents: record.content,
+        config: {
+          outputDimensionality: 1536,
+          taskType: 'QUESTION_ANSWERING',
+        },
       });
+      const embedding = result.embeddings?.[0]?.values;
 
       await supabase
         .from('section')
-        .update({ embedding: response.data?.[0].embedding as any })
+        .update({ embedding: embedding as any })
         .match({ id: record.id })
         .select('id');
 

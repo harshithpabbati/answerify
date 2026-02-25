@@ -2,13 +2,7 @@ import { Metadata } from 'next';
 
 import { siteConfig } from '@/lib/config';
 import { Header } from '@/components/header';
-import {
-  Features,
-  Footer,
-  Hero,
-  Pricing,
-  Slider,
-} from '@/components/marketing';
+import { Features, Hero, Slider } from '@/components/marketing';
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -22,8 +16,6 @@ export default function Home() {
       <Hero />
       <Features />
       <Slider />
-      <Pricing />
-      <Footer />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use server';
 
-import OpenAI from 'openai';
+import { GoogleGenAI } from '@google/genai';
 import { Resend } from 'resend';
 
 import { cleanBody } from '@/lib/cleanBody';
@@ -89,14 +89,16 @@ export async function updateTicketStatus(
 }
 
 export async function createEmbedding(content: string) {
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_KEY!,
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+  const result = await ai.models.embedContent({
+    model: 'gemini-embedding-001',
+    contents: content,
+    config: {
+      outputDimensionality: 1536,
+      taskType: 'QUESTION_ANSWERING',
+    },
   });
-  const response = await openai.embeddings.create({
-    model: 'text-embedding-ada-002',
-    input: content,
-  });
-  return response.data?.[0].embedding;
+  return result.embeddings?.[0]?.values;
 }
 
 export async function sendEmail(

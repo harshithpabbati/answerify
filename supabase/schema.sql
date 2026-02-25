@@ -51,7 +51,7 @@ SET default_table_access_method = "heap";
 CREATE TABLE IF NOT EXISTS "public"."section" (
     "datasource_id" "uuid" NOT NULL,
     "content" "text" NOT NULL,
-    "embedding" "extensions"."vector"(1536),
+    "embedding" "extensions"."vector"(768),
     "organization_id" "uuid" NOT NULL,
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL
 );
@@ -79,8 +79,10 @@ CREATE TABLE IF NOT EXISTS "public"."datasource" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "organization_id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "url" "text" NOT NULL,
+    "title" "text",
     "content" "text",
-    "metadata" "jsonb"
+    "metadata" "jsonb",
+    "is_internal_kb" boolean DEFAULT false
 );
 
 ALTER TABLE "public"."datasource" OWNER TO "postgres";
@@ -120,7 +122,9 @@ CREATE TABLE IF NOT EXISTS "public"."organization" (
     "created_by" "uuid" NOT NULL,
     "support_email" "text" NOT NULL,
     "inbound_email" "text" NOT NULL,
-    "onboarding" "jsonb" DEFAULT '{"step": 2, "hasOnboarded": false}'::"jsonb" NOT NULL
+    "onboarding" "jsonb" DEFAULT '{"step": 2, "hasOnboarded": false}'::"jsonb" NOT NULL,
+    "autopilot_enabled" boolean DEFAULT true NOT NULL,
+    "autopilot_threshold" double precision DEFAULT 0.65 NOT NULL
 );
 
 ALTER TABLE "public"."organization" OWNER TO "postgres";
@@ -131,10 +135,25 @@ CREATE TABLE IF NOT EXISTS "public"."reply" (
     "thread_id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "content" "text" NOT NULL,
     "is_perfect" boolean,
-    "organization_id" "uuid" NOT NULL
+    "organization_id" "uuid" NOT NULL,
+    "status" "text" DEFAULT 'draft'::"text" NOT NULL,
+    "confidence_score" double precision,
+    "citations" "jsonb",
+    "sent_at" timestamp with time zone,
+    "sent_via" "text"
 );
 
 ALTER TABLE "public"."reply" OWNER TO "postgres";
+
+CREATE TABLE IF NOT EXISTS "public"."reply_edit" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "reply_id" "uuid" NOT NULL,
+    "organization_id" "uuid" NOT NULL,
+    "original_content" "text" NOT NULL,
+    "final_content" "text" NOT NULL,
+    "learned" boolean DEFAULT false NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS "public"."thread" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -150,6 +169,9 @@ CREATE TABLE IF NOT EXISTS "public"."thread" (
 );
 
 ALTER TABLE "public"."thread" OWNER TO "postgres";
+
+ALTER TABLE ONLY "public"."reply_edit"
+    ADD CONSTRAINT "reply_edit_pkey" PRIMARY KEY ("id");
 
 ALTER TABLE ONLY "public"."datasource"
     ADD CONSTRAINT "datasource_pkey" PRIMARY KEY ("id");
@@ -184,6 +206,10 @@ CREATE INDEX "member_organization_id_user_id_idx" ON "public"."member" USING "bt
 
 CREATE INDEX "organization_inbound_email_idx" ON "public"."organization" USING "btree" ("inbound_email");
 
+CREATE INDEX "reply_edit_reply_id_idx" ON "public"."reply_edit" USING "btree" ("reply_id");
+
+CREATE INDEX "reply_edit_organization_id_idx" ON "public"."reply_edit" USING "btree" ("organization_id");
+
 CREATE INDEX "section_embedding_idx" ON "public"."section" USING "hnsw" ("embedding" "extensions"."vector_ip_ops");
 
 CREATE INDEX "thread_organization_id_created_at_message_id_idx" ON "public"."thread" USING "btree" ("organization_id", "created_at", "message_id");
@@ -217,6 +243,12 @@ ALTER TABLE ONLY "public"."reply"
 
 ALTER TABLE ONLY "public"."reply"
     ADD CONSTRAINT "public_reply_thread_id_fkey" FOREIGN KEY ("thread_id") REFERENCES "public"."thread"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."reply_edit"
+    ADD CONSTRAINT "public_reply_edit_reply_id_fkey" FOREIGN KEY ("reply_id") REFERENCES "public"."reply"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."reply_edit"
+    ADD CONSTRAINT "public_reply_edit_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
 ALTER TABLE ONLY "public"."section"
     ADD CONSTRAINT "public_section_datasource_id_fkey" FOREIGN KEY ("datasource_id") REFERENCES "public"."datasource"("id") ON UPDATE CASCADE ON DELETE CASCADE;
@@ -273,6 +305,8 @@ ALTER TABLE "public"."organization" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."reply" ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE "public"."reply_edit" ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE "public"."section" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."thread" ENABLE ROW LEVEL SECURITY;
@@ -317,6 +351,10 @@ GRANT ALL ON TABLE "public"."organization" TO "service_role";
 GRANT ALL ON TABLE "public"."reply" TO "anon";
 GRANT ALL ON TABLE "public"."reply" TO "authenticated";
 GRANT ALL ON TABLE "public"."reply" TO "service_role";
+
+GRANT ALL ON TABLE "public"."reply_edit" TO "anon";
+GRANT ALL ON TABLE "public"."reply_edit" TO "authenticated";
+GRANT ALL ON TABLE "public"."reply_edit" TO "service_role";
 
 GRANT ALL ON TABLE "public"."thread" TO "anon";
 GRANT ALL ON TABLE "public"."thread" TO "authenticated";
