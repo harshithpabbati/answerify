@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 import { processMarkdown } from '@/lib/processMarkdown';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -82,17 +82,16 @@ export async function POST(
 
   // Chunk content into sections and generate embeddings
   const { sections } = processMarkdown(learnContent);
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY! });
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  const embeddingModel = genAI.getGenerativeModel({
+    model: 'text-embedding-004',
+  });
 
   for (const section of sections) {
     if (!section.content.trim()) continue;
 
-    const embeddingResponse = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
-      input: section.content,
-    });
-
-    const embedding = embeddingResponse.data?.[0]?.embedding;
+    const embeddingResult = await embeddingModel.embedContent(section.content);
+    const embedding = embeddingResult.embedding.values;
     if (!embedding) continue;
 
     await supabase.from('section').insert({

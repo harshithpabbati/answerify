@@ -51,7 +51,7 @@ SET default_table_access_method = "heap";
 CREATE TABLE IF NOT EXISTS "public"."section" (
     "datasource_id" "uuid" NOT NULL,
     "content" "text" NOT NULL,
-    "embedding" "extensions"."vector"(1536),
+    "embedding" "extensions"."vector"(768),
     "organization_id" "uuid" NOT NULL,
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL
 );

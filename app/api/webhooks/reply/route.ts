@@ -1,15 +1,13 @@
 import { codeBlock } from 'common-tags';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Resend } from 'resend';
 
 import { createServiceClient } from '@/lib/supabase/service';
 
 const AUTOPILOT_CONFIDENCE_THRESHOLD_DEFAULT = 0.65;
 
-function getOpenAIClient() {
-  return new OpenAI({
-    apiKey: process.env.OPENAI_KEY!,
-  });
+function getGeminiClient() {
+  return new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 }
 
 type Citation = {
@@ -48,13 +46,16 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   }
 
-  const openai = getOpenAIClient();
-  const response = await openai.embeddings.create({
-    model: 'text-embedding-3-small',
-    input: record.cleaned_body,
+  const genAI = getGeminiClient();
+  const embeddingModel = genAI.getGenerativeModel({
+    model: 'text-embedding-004',
   });
+  const embeddingResult = await embeddingModel.embedContent(
+    record.cleaned_body
+  );
+  const embedding = embeddingResult.embedding.values;
 
-  if (!response?.data?.[0]?.embedding) {
+  if (!embedding?.length) {
     return new Response(
       JSON.stringify({ error: 'Not able to create embedding for the input' }),
       { status: 500 }
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
 
   const { data: sections, error: matchError } = await supabase
     .rpc('match_sections', {
-      embedding: response.data[0].embedding as any,
+      embedding: embedding as any,
       match_threshold: 0.6,
       organization_id: record.organization_id,
     })
@@ -144,48 +145,41 @@ export async function POST(request: Request) {
           .join(', ')}</p>`
       : '';
 
-  const completionMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] =
-    [
-      {
-        role: 'system',
-        content: codeBlock`
-          You're an AI assistant who answers questions about documents.
+  const systemPrompt = codeBlock`
+    You're an AI assistant who answers questions about documents.
 
-          You're a chat bot, so keep your replies clear & organized.
+    You're a chat bot, so keep your replies clear & organized.
 
-          You're only allowed to use the documents below to answer the question.
+    You're only allowed to use the documents below to answer the question.
 
-          If the question isn't related to these documents, say:
-          "NO_INFORMATION"
+    If the question isn't related to these documents, say:
+    "NO_INFORMATION"
 
-          If the information isn't available in the below documents, say:
-          "NO_INFORMATION"
+    If the information isn't available in the below documents, say:
+    "NO_INFORMATION"
 
-          Do not go off topic.
+    Do not go off topic.
 
-          Documents:
-          ${docs}
+    Documents:
+    ${docs}
 
-          Reply back in HTML and nothing else, avoid using markdown, and 
-          format the response accordingly. Also avoid signature at the end of the reply.
-        `,
-      },
-      {
-        role: 'user',
-        content: record.cleaned_body,
-      },
-    ];
+    Reply back in HTML and nothing else, avoid using markdown, and 
+    format the response accordingly. Also avoid signature at the end of the reply.
+  `;
 
-  const { choices } = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: completionMessages,
-    max_tokens: 1024,
-    temperature: 0.5,
+  const chatModel = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    systemInstruction: systemPrompt,
   });
 
-  const rawContent = choices?.[0].message?.content;
+  const chatResult = await chatModel.generateContent({
+    contents: [{ role: 'user', parts: [{ text: record.cleaned_body }] }],
+    generationConfig: { maxOutputTokens: 1024, temperature: 0.5 },
+  });
 
-  if (!rawContent || rawContent === 'NO_INFORMATION') {
+  const rawContent = chatResult.response.text();
+
+  if (!rawContent || rawContent.trim() === 'NO_INFORMATION') {
     // Generate clarifying question draft instead of erroring out
     const clarifyingContent = `<p>Thank you for contacting us. Based on the information available, I wasn't able to provide a complete answer to your question. Could you please provide more details or rephrase your question so we can assist you better?</p>`;
     const { data, error } = await supabase

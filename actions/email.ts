@@ -1,6 +1,6 @@
 'use server';
 
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Resend } from 'resend';
 
 import { cleanBody } from '@/lib/cleanBody';
@@ -89,14 +89,12 @@ export async function updateTicketStatus(
 }
 
 export async function createEmbedding(content: string) {
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_KEY!,
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  const embeddingModel = genAI.getGenerativeModel({
+    model: 'text-embedding-004',
   });
-  const response = await openai.embeddings.create({
-    model: 'text-embedding-3-small',
-    input: content,
-  });
-  return response.data?.[0].embedding;
+  const result = await embeddingModel.embedContent(content);
+  return result.embedding.values;
 }
 
 export async function sendEmail(

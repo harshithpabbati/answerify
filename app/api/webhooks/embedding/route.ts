@@ -1,14 +1,12 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Tables } from '@/database.types';
-import OpenAI from 'openai';
 
 import { createServiceClient } from '@/lib/supabase/service';
 
 export const runtime = 'edge';
 
-function getOpenAIClient() {
-  return new OpenAI({
-    apiKey: process.env.OPENAI_KEY!,
-  });
+function getGeminiClient() {
+  return new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 }
 
 export async function POST() {
@@ -22,17 +20,19 @@ export async function POST() {
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   }
 
-  const openai = getOpenAIClient();
+  const genAI = getGeminiClient();
+  const embeddingModel = genAI.getGenerativeModel({
+    model: 'text-embedding-004',
+  });
+
   await Promise.allSettled(
     records.map(async (record: Tables<'section'>) => {
-      const response = await openai.embeddings.create({
-        model: 'text-embedding-3-small',
-        input: record.content,
-      });
+      const result = await embeddingModel.embedContent(record.content);
+      const embedding = result.embedding.values;
 
       await supabase
         .from('section')
-        .update({ embedding: response.data?.[0].embedding as any })
+        .update({ embedding: embedding as any })
         .match({ id: record.id })
         .select('id');
 
@@ -42,3 +42,4 @@ export async function POST() {
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });
 }
+

@@ -104,5 +104,5 @@ This progressively improves the quality of future AI replies.
 | `SUPABASE_SERVICE_KEY` | Supabase service-role key (used in webhooks) |
 | `NEXT_PUBLIC_BASE_URL` | Base URL of your deployment (e.g. `https://answerify.app`) |
 | `RESEND_API_KEY` | Resend API key for sending emails |
-| `OPENAI_KEY` | OpenAI API key for embeddings and completions |
+| `GEMINI_API_KEY` | Google Gemini API key for embeddings (`text-embedding-004`) and completions (`gemini-2.0-flash`) |
 
