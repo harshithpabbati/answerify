@@ -2,8 +2,8 @@ import { Suspense } from 'react';
 import { getUser } from '@/actions/auth';
 import { getOrganizations } from '@/actions/organization';
 
-import { EmailsList } from '@/components/organization/sidebar/EmailsList';
 import { EmailSkeleton } from '@/components/organization/sidebar/EmailSkeleton';
+import { EmailsList } from '@/components/organization/sidebar/EmailsList';
 
 import { CreateOrganization } from './CreateOrganization';
 import { Organizations } from './Organizations';
@@ -33,7 +33,20 @@ export async function Sidebar({ orgId, name, slug }: Props) {
         </div>
       </div>
       <div className="bg-background border-r-none size-full md:w-[40dvw] md:border-r lg:w-[25dvw]">
-        <Suspense fallback={<div className="max-h-dvh"><div className="flex h-[60px] items-center justify-between border-b p-4"><h3 className="font-semibold">{name}</h3></div><div className="flex h-[calc(100dvh-60px)] flex-col overflow-auto">{Array.from({ length: 10 }).map((_, i) => <EmailSkeleton key={i} />)}</div></div>}>
+        <Suspense
+          fallback={
+            <div className="max-h-dvh">
+              <div className="flex h-[60px] items-center justify-between border-b p-4">
+                <h3 className="font-semibold">{name}</h3>
+              </div>
+              <div className="flex h-[calc(100dvh-60px)] flex-col overflow-auto">
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <EmailSkeleton key={i} />
+                ))}
+              </div>
+            </div>
+          }
+        >
           <EmailsList orgId={orgId} name={name} slug={slug} />
         </Suspense>
       </div>

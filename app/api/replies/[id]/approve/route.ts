@@ -13,7 +13,9 @@ export async function POST(
 
   const { data: reply, error: replyError } = await supabase
     .from('reply')
-    .select('*, thread:thread_id(email_from, subject, message_id, organization_id)')
+    .select(
+      '*, thread:thread_id(email_from, subject, message_id, organization_id)'
+    )
     .eq('id', id)
     .single();
 
