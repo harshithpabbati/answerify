@@ -93,6 +93,9 @@ export async function createEmbedding(content: string) {
   const result = await ai.models.embedContent({
     model: 'text-embedding-004',
     contents: content,
+    config: {
+      outputDimensionality: 1536,
+    },
   });
   return result.embeddings?.[0]?.values;
 }

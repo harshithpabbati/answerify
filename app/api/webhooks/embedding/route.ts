@@ -1,5 +1,5 @@
-import { GoogleGenAI } from '@google/genai';
 import { Tables } from '@/database.types';
+import { GoogleGenAI } from '@google/genai';
 
 import { createServiceClient } from '@/lib/supabase/service';
 
@@ -27,6 +27,9 @@ export async function POST() {
       const result = await ai.models.embedContent({
         model: 'text-embedding-004',
         contents: record.content,
+        config: {
+          outputDimensionality: 1536,
+        },
       });
       const embedding = result.embeddings?.[0]?.values;
 
@@ -42,4 +45,3 @@ export async function POST() {
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });
 }
-

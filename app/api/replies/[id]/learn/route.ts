@@ -90,6 +90,9 @@ export async function POST(
     const embeddingResult = await ai.models.embedContent({
       model: 'text-embedding-004',
       contents: section.content,
+      config: {
+        outputDimensionality: 1536,
+      },
     });
     const embedding = embeddingResult.embeddings?.[0]?.values;
     if (!embedding) continue;

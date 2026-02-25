@@ -1,5 +1,5 @@
-import { codeBlock } from 'common-tags';
 import { GoogleGenAI } from '@google/genai';
+import { codeBlock } from 'common-tags';
 import { Resend } from 'resend';
 
 import { createServiceClient } from '@/lib/supabase/service';
@@ -50,6 +50,9 @@ export async function POST(request: Request) {
   const embeddingResult = await ai.models.embedContent({
     model: 'text-embedding-004',
     contents: record.cleaned_body,
+    config: {
+      outputDimensionality: 1536,
+    },
   });
   const embedding = embeddingResult.embeddings?.[0]?.values;
 
@@ -161,7 +164,7 @@ export async function POST(request: Request) {
     Documents:
     ${docs}
 
-    Reply back in HTML and nothing else, avoid using markdown, and 
+    Reply back in HTML and nothing else, avoid using markdown, and
     format the response accordingly. Also avoid signature at the end of the reply.
   `;
 
@@ -261,4 +264,3 @@ export async function POST(request: Request) {
 
   return new Response(JSON.stringify({ data, error }), { status: 200 });
 }
-
