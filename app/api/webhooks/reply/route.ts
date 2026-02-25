@@ -1,13 +1,13 @@
 import { codeBlock } from 'common-tags';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { Resend } from 'resend';
 
 import { createServiceClient } from '@/lib/supabase/service';
 
 const AUTOPILOT_CONFIDENCE_THRESHOLD_DEFAULT = 0.65;
 
-function getGeminiClient() {
-  return new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+function getGenAIClient() {
+  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 }
 
 type Citation = {
@@ -46,14 +46,12 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   }
 
-  const genAI = getGeminiClient();
-  const embeddingModel = genAI.getGenerativeModel({
+  const ai = getGenAIClient();
+  const embeddingResult = await ai.models.embedContent({
     model: 'text-embedding-004',
+    contents: record.cleaned_body,
   });
-  const embeddingResult = await embeddingModel.embedContent(
-    record.cleaned_body
-  );
-  const embedding = embeddingResult.embedding.values;
+  const embedding = embeddingResult.embeddings?.[0]?.values;
 
   if (!embedding?.length) {
     return new Response(
@@ -167,17 +165,17 @@ export async function POST(request: Request) {
     format the response accordingly. Also avoid signature at the end of the reply.
   `;
 
-  const chatModel = genAI.getGenerativeModel({
+  const chatResult = await ai.models.generateContent({
     model: 'gemini-2.0-flash',
-    systemInstruction: systemPrompt,
+    contents: record.cleaned_body,
+    config: {
+      systemInstruction: systemPrompt,
+      maxOutputTokens: 1024,
+      temperature: 0.5,
+    },
   });
 
-  const chatResult = await chatModel.generateContent({
-    contents: [{ role: 'user', parts: [{ text: record.cleaned_body }] }],
-    generationConfig: { maxOutputTokens: 1024, temperature: 0.5 },
-  });
-
-  const rawContent = chatResult.response.text();
+  const rawContent = chatResult.text;
 
   if (!rawContent || rawContent.trim() === 'NO_INFORMATION') {
     // Generate clarifying question draft instead of erroring out

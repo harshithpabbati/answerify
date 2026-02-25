@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@google/genai": "^1.42.0",
-    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.3.4",
     "@openpanel/nextjs": "0.0.10-beta",
     "@radix-ui/react-avatar": "^1.0.4",
