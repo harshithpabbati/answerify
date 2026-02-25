@@ -48,10 +48,11 @@ export async function POST(request: Request) {
 
   const ai = getGenAIClient();
   const embeddingResult = await ai.models.embedContent({
-    model: 'text-embedding-004',
+    model: 'gemini-embedding-001',
     contents: record.cleaned_body,
     config: {
       outputDimensionality: 1536,
+      taskType: 'QUESTION_ANSWERING',
     },
   });
   const embedding = embeddingResult.embeddings?.[0]?.values;
@@ -169,7 +170,7 @@ export async function POST(request: Request) {
   `;
 
   const chatResult = await ai.models.generateContent({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-3-flash-preview',
     contents: record.cleaned_body,
     config: {
       systemInstruction: systemPrompt,

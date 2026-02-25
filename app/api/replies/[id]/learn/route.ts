@@ -88,10 +88,11 @@ export async function POST(
     if (!section.content.trim()) continue;
 
     const embeddingResult = await ai.models.embedContent({
-      model: 'text-embedding-004',
+      model: 'gemini-embedding-001',
       contents: section.content,
       config: {
         outputDimensionality: 1536,
+        taskType: 'QUESTION_ANSWERING',
       },
     });
     const embedding = embeddingResult.embeddings?.[0]?.values;

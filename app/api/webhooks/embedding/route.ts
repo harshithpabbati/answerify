@@ -25,10 +25,11 @@ export async function POST() {
   await Promise.allSettled(
     records.map(async (record: Tables<'section'>) => {
       const result = await ai.models.embedContent({
-        model: 'text-embedding-004',
+        model: 'gemini-embedding-001',
         contents: record.content,
         config: {
           outputDimensionality: 1536,
+          taskType: 'QUESTION_ANSWERING',
         },
       });
       const embedding = result.embeddings?.[0]?.values;

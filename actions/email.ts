@@ -91,10 +91,11 @@ export async function updateTicketStatus(
 export async function createEmbedding(content: string) {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
   const result = await ai.models.embedContent({
-    model: 'text-embedding-004',
+    model: 'gemini-embedding-001',
     contents: content,
     config: {
       outputDimensionality: 1536,
+      taskType: 'QUESTION_ANSWERING',
     },
   });
   return result.embeddings?.[0]?.values;
