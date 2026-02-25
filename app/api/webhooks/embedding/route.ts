@@ -26,7 +26,7 @@ export async function POST() {
   await Promise.allSettled(
     records.map(async (record: Tables<'section'>) => {
       const response = await openai.embeddings.create({
-        model: 'text-embedding-ada-002',
+        model: 'text-embedding-3-small',
         input: record.content,
       });
 

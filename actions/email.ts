@@ -93,7 +93,7 @@ export async function createEmbedding(content: string) {
     apiKey: process.env.OPENAI_KEY!,
   });
   const response = await openai.embeddings.create({
-    model: 'text-embedding-ada-002',
+    model: 'text-embedding-3-small',
     input: content,
   });
   return response.data?.[0].embedding;
