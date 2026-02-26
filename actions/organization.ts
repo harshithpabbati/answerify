@@ -128,29 +128,41 @@ export async function getOrganizationEmail(slug: string) {
   return { data, error };
 }
 
-export async function getUsers() {
-  const supabase = await createServiceClient();
-  return await supabase.auth.admin.listUsers({
-    page: 1,
-    // to avoid pagination
-    perPage: 1000,
-  });
-}
-
 export async function inviteMember(
   orgId: string,
   { email, role }: { email: string; role: string }
 ) {
-  const supabase = await createServerClient();
-  const {
-    data: { users },
-  } = await getUsers();
-  const user = users.filter((user) => user?.email === email)[0];
-  if (!user?.id)
+  const serviceSupabase = await createServiceClient();
+
+  // Paginate through auth users in small batches and stop as soon as the
+  // target email is found, instead of loading up to 1000 users at once.
+  let foundUserId: string | undefined;
+  let page = 1;
+  const perPage = 50;
+  while (!foundUserId) {
+    const { data } = await serviceSupabase.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+    const match = data.users.find((u) => u.email === email);
+    if (match) {
+      foundUserId = match.id;
+      break;
+    }
+    // Stop if this is the last page: either the API signals no next page via
+    // the Link header, or fewer records than requested were returned.
+    const nextPage = 'nextPage' in data ? data.nextPage : null;
+    if (!nextPage || data.users.length < perPage) break;
+    page = nextPage;
+  }
+
+  if (!foundUserId)
     return { data: null, error: new Error('We can not find the user') };
+
+  const supabase = await createServerClient();
   return await supabase
     .from('member')
-    .insert({ organization_id: orgId, user_id: user.id, role: parseInt(role) })
+    .insert({ organization_id: orgId, user_id: foundUserId, role: parseInt(role) })
     .select()
     .single();
 }

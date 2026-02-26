@@ -140,10 +140,9 @@ export async function POST(request: Request) {
     };
   });
 
-  // De-duplicate citations by datasource_id
-  const uniqueCitations = citations.filter(
-    (c, idx, arr) =>
-      arr.findIndex((x) => x.datasource_id === c.datasource_id) === idx
+  // De-duplicate citations by datasource_id using a Map for O(n) complexity
+  const uniqueCitations = Array.from(
+    new Map(citations.map((c) => [c.datasource_id, c])).values()
   );
 
   const docs = sections.map((s: any) => s.content).join('\n\n');
