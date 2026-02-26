@@ -6,6 +6,9 @@ import { getThreads } from '@/actions/email';
 import { Tables } from '@/database.types';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
+import { CheckIcon, ClipboardCopyIcon } from '@radix-ui/react-icons';
+
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { createBrowserClient } from '@/lib/supabase/client';
 import {
   Select,
@@ -22,6 +25,7 @@ interface Props {
   orgId: string;
   name: string;
   slug: string;
+  inboundEmail: string;
 }
 
 type ThreadState = {
@@ -50,10 +54,11 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
   }
 }
 
-export function EmailsList({ orgId, name, slug }: Props) {
+export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const { copied, copyToClipboard } = useCopyToClipboard();
 
   const [state, dispatch] = useReducer(threadReducer, {
     data: [],
@@ -137,13 +142,29 @@ export function EmailsList({ orgId, name, slug }: Props) {
         ) : (
           <div className="flex size-full flex-col items-center justify-center gap-4 p-4 text-center">
             <h1 className="text-xl font-bold tracking-tight">
-              We can&apos;t find any emails
+              No emails yet
             </h1>
-            <p className="text-foreground">
-              Emails will be listed here once you receive any email, also please
-              check if your forwarding is set correctly if emails are not listed
-              here
+            <p className="text-foreground text-sm">
+              Forward your support emails to the address below to get started.
             </p>
+            {inboundEmail && (
+              <div className="bg-bg flex w-full items-center justify-between gap-2 rounded-base border-2 border-black px-3 py-2 shadow-base">
+                <span className="truncate text-xs font-medium">
+                  {inboundEmail}
+                </span>
+                <button
+                  onClick={() => copyToClipboard(inboundEmail)}
+                  className="shrink-0 text-black transition-opacity hover:opacity-70"
+                  aria-label="Copy inbound email"
+                >
+                  {copied ? (
+                    <CheckIcon className="size-4" />
+                  ) : (
+                    <ClipboardCopyIcon className="size-4" />
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

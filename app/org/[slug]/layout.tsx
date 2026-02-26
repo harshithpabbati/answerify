@@ -19,7 +19,7 @@ export default async function OrgLayout({
 
   return (
     <div className="flex size-full max-h-dvh overflow-hidden">
-      <Sidebar orgId={data.id} name={data.name} slug={slug} />
+      <Sidebar orgId={data.id} name={data.name} slug={slug} inboundEmail={data.inbound_email ?? ''} />
       <div className="hidden flex-1 md:block">{children}</div>
     </div>
   );

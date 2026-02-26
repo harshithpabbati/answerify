@@ -27,7 +27,7 @@ export async function getOrganizationBySlug(slug: string) {
   const supabase = await createServerClient();
   const { data, error } = await supabase
     .from('organization')
-    .select('id, name, onboarding')
+    .select('id, name, onboarding, inbound_email')
     .match({ slug })
     .single();
   return { data, error };
