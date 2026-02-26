@@ -16,7 +16,7 @@ export const useTiptap = (content: string = '') => {
           keepMarks: true,
           keepAttributes: true,
           HTMLAttributes: {
-            class: 'list-disc px-4',
+            class: 'list-decimal px-4',
           },
         },
       }),
