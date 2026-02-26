@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { getOrganizationBySlug } from '@/actions/organization';
 import { getSources } from '@/actions/source';
 
@@ -19,14 +20,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function OrgPage({ params }: Props) {
   const { slug } = await params;
   const { data: org } = await getOrganizationBySlug(slug);
-  const { data: sources } = org?.id
-    ? await getSources(org.id)
-    : { data: [] };
+  if (!org?.id) return notFound();
+
+  const { data: sources } = await getSources(org.id);
 
   return (
     <WelcomeDashboard
-      orgName={org?.name ?? ''}
-      inboundEmail={org?.inbound_email ?? ''}
+      orgId={org.id}
+      orgName={org.name}
+      slug={slug}
+      inboundEmail={org.inbound_email ?? ''}
       sourcesCount={sources?.length ?? 0}
     />
   );

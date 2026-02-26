@@ -1,9 +1,15 @@
 'use client';
 
 import { CheckIcon, ClipboardCopyIcon } from '@radix-ui/react-icons';
+import { useAddDataSource, useViewDataSource } from '@/states/data-source';
+import {
+  useInviteMembers,
+  useUpdateOrganization,
+} from '@/states/organization';
 
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -13,18 +19,14 @@ import {
 } from '@/components/ui/card';
 
 interface Props {
+  orgId: string;
   orgName: string;
+  slug: string;
   inboundEmail: string;
   sourcesCount: number;
 }
 
-function StepBadge({
-  step,
-  done,
-}: {
-  step: number;
-  done: boolean;
-}) {
+function StepBadge({ step, done }: { step: number; done: boolean }) {
   return (
     <span
       className={cn(
@@ -38,11 +40,17 @@ function StepBadge({
 }
 
 export function WelcomeDashboard({
+  orgId,
   orgName,
+  slug,
   inboundEmail,
   sourcesCount,
 }: Props) {
   const { copied, copyToClipboard } = useCopyToClipboard();
+  const [, setAddDataSource] = useAddDataSource();
+  const [, setViewDataSource] = useViewDataSource();
+  const [, setInviteMembers] = useInviteMembers();
+  const [, setUpdateOrganization] = useUpdateOrganization();
 
   return (
     <div className="flex h-screen flex-col overflow-auto p-6 md:p-10">
@@ -178,6 +186,44 @@ export function WelcomeDashboard({
                 </span>
               </li>
             </ol>
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions Card */}
+        <Card className="sm:col-span-2">
+          <CardHeader>
+            <CardTitle>⚡ Quick Actions</CardTitle>
+            <CardDescription>
+              Configure your workspace without digging through menus.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="default"
+                onClick={() => setAddDataSource(slug)}
+              >
+                + Add Data Source
+              </Button>
+              <Button
+                variant="neutral"
+                onClick={() => setViewDataSource(orgId)}
+              >
+                View Data Sources
+              </Button>
+              <Button
+                variant="neutral"
+                onClick={() => setInviteMembers(orgId)}
+              >
+                Invite Team Members
+              </Button>
+              <Button
+                variant="neutral"
+                onClick={() => setUpdateOrganization(orgId)}
+              >
+                Configure Organization
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
