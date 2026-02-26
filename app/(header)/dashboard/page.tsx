@@ -31,7 +31,7 @@ export default async function DashboardPage() {
       {organizations.length > 0 ? (
         <>
           {/* Bold lime header with grid background */}
-          <div className="bg-main border-b-2 border-black bg-grid px-6 py-10 md:px-10">
+          <div className="bg-background border-b-2 border-black bg-grid px-6 py-10 md:px-10">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h1 className="text-4xl font-bold tracking-tight">

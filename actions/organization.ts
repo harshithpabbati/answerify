@@ -27,7 +27,9 @@ export async function getOrganizationBySlug(slug: string) {
   const supabase = await createServerClient();
   const { data, error } = await supabase
     .from('organization')
-    .select('id, name, onboarding, inbound_email, autopilot_enabled, autopilot_threshold')
+    .select(
+      'id, name, onboarding, inbound_email, autopilot_enabled, autopilot_threshold'
+    )
     .match({ slug })
     .single();
   return { data, error };
@@ -73,6 +75,7 @@ export async function createOrganization({
       support_email,
       inbound_email: `${crypto.randomUUID()}@inbound.answerify.app`,
       created_by: user.id,
+      onboarding: { step: 'email-forwarding', hasOnboarded: false },
     })
     .select()
     .single();

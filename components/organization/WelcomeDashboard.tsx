@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { updateAutopilotSettings } from '@/actions/organization';
+import { Tables } from '@/database.types';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
 import { useInviteMembers, useUpdateOrganization } from '@/states/organization';
 import {
@@ -10,7 +11,6 @@ import {
   ExternalLinkIcon,
   Link2Icon,
 } from '@radix-ui/react-icons';
-import { Tables } from '@/database.types';
 import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
@@ -23,6 +23,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+
+import { Slider } from '../ui/slider';
 
 interface Props {
   orgId: string;
@@ -98,7 +100,7 @@ export function WelcomeDashboard({
   };
 
   // Show at most this many sources before collapsing the rest into a "N more" button
-  const SOURCE_DISPLAY_LIMIT = 4;
+  const SOURCE_DISPLAY_LIMIT = 5;
   const visibleSources = sources.slice(0, SOURCE_DISPLAY_LIMIT);
   const hiddenCount = sources.length - SOURCE_DISPLAY_LIMIT;
 
@@ -115,7 +117,7 @@ export function WelcomeDashboard({
 
       <div className="grid gap-6 sm:grid-cols-2">
         {/* Inbound Email Card */}
-        <Card className="sm:col-span-2">
+        <Card className="sm:col-span-2 md:col-span-1">
           <CardHeader>
             <CardTitle>📬 Inbound Email Address</CardTitle>
             <CardDescription>
@@ -173,6 +175,42 @@ export function WelcomeDashboard({
               </a>
               .
             </p>
+          </CardContent>
+        </Card>
+
+        {/* Quick Start Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>🚀 Quick Start</CardTitle>
+            <CardDescription>
+              Follow these steps to get Answerify working for your team.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ol className="space-y-3">
+              <li className="flex items-start gap-3">
+                <StepBadge step={1} done={!!inboundEmail} />
+                <span className="text-sm">Copy your inbound email address</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <StepBadge step={2} done={threadsCount > 0} />
+                <span className="text-sm">
+                  Set up email forwarding from your support account
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <StepBadge step={3} done={sources.length > 0} />
+                <span className="text-sm">
+                  Add data sources to power AI replies
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <StepBadge step={4} done={repliesCount > 0} />
+                <span className="text-sm">
+                  Send a test email and watch Answerify reply!
+                </span>
+              </li>
+            </ol>
           </CardContent>
         </Card>
 
@@ -237,140 +275,98 @@ export function WelcomeDashboard({
           </CardContent>
         </Card>
 
-        {/* Quick Start Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>🚀 Quick Start</CardTitle>
-            <CardDescription>
-              Follow these steps to get Answerify working for your team.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ol className="space-y-3">
-              <li className="flex items-start gap-3">
-                <StepBadge step={1} done={!!inboundEmail} />
-                <span className="text-sm">
-                  Copy your inbound email address above
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <StepBadge step={2} done={threadsCount > 0} />
-                <span className="text-sm">
-                  Set up email forwarding from your support account
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <StepBadge step={3} done={sources.length > 0} />
-                <span className="text-sm">
-                  Add data sources to power AI replies
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <StepBadge step={4} done={repliesCount > 0} />
-                <span className="text-sm">
-                  Send a test email and watch Answerify reply!
-                </span>
-              </li>
-            </ol>
-          </CardContent>
-        </Card>
-
-        {/* AI Auto-Reply Card */}
-        <Card className="sm:col-span-2 md:col-span-1">
-          <CardHeader>
-            <CardTitle>🤖 AI Auto-Reply</CardTitle>
-            <CardDescription>
-              When enabled, Answerify automatically sends replies when the AI
-              confidence meets the threshold. Adjust the slider to control how
-              confident the AI must be before sending.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Toggle row */}
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold">Enable Auto-Reply</p>
-                <p className="text-foreground text-xs">
-                  {enabled
-                    ? 'Replies will be sent automatically when confidence is high enough.'
-                    : 'Replies require manual approval before sending.'}
-                </p>
-              </div>
-              <button
-                role="switch"
-                aria-checked={enabled}
-                onClick={handleToggle}
-                disabled={saving}
-                className={cn(
-                  'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black disabled:opacity-50',
-                  enabled ? 'bg-main' : 'bg-white'
-                )}
-              >
-                <span
+        <div className="flex flex-col gap-3">
+          {/* AI Auto-Reply Card */}
+          <Card className="sm:col-span-2 md:col-span-1">
+            <CardHeader>
+              <CardTitle>🤖 AI Auto-Reply</CardTitle>
+              <CardDescription>
+                When enabled, Answerify automatically sends replies when the AI
+                confidence meets the threshold. Adjust the slider to control how
+                confident the AI must be before sending.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Toggle row */}
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold">Enable Auto-Reply</p>
+                  <p className="text-foreground text-xs">
+                    {enabled
+                      ? 'Replies will be sent automatically when confidence is high enough.'
+                      : 'Replies require manual approval before sending.'}
+                  </p>
+                </div>
+                <button
+                  role="switch"
+                  aria-checked={enabled}
+                  onClick={handleToggle}
+                  disabled={saving}
                   className={cn(
-                    'pointer-events-none inline-block size-5 rounded-full border-2 border-black bg-white shadow-sm transition-transform',
-                    enabled ? 'translate-x-5' : 'translate-x-0.5'
+                    'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black disabled:opacity-50',
+                    enabled ? 'bg-main' : 'bg-white'
                   )}
+                >
+                  <span
+                    className={cn(
+                      'pointer-events-none inline-block size-5 rounded-full border-2 border-black bg-white shadow-sm transition-transform',
+                      enabled ? 'translate-x-5' : 'translate-x-0.5'
+                    )}
+                  />
+                </button>
+              </div>
+
+              {/* Threshold slider row */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">Confidence Threshold</p>
+                  <span className="bg-main rounded-base border-2 border-black px-2 py-0.5 text-xs font-bold tabular-nums shadow-base">
+                    {Math.round(threshold * 100)}%
+                  </span>
+                </div>
+                <Slider
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={[threshold]}
+                  onValueChange={(v) => setThreshold(v[0])}
+                  disabled={saving}
+                  onMouseUp={handleThresholdCommit}
+                  onTouchEnd={handleThresholdCommit}
                 />
-              </button>
-            </div>
-
-            {/* Threshold slider row */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">Confidence Threshold</p>
-                <span className="bg-main rounded-base border-2 border-black px-2 py-0.5 text-xs font-bold tabular-nums shadow-base">
-                  {Math.round(threshold * 100)}%
-                </span>
+                <div className="text-foreground flex justify-between text-xs">
+                  <span>0% — Send everything</span>
+                  <span>100% — Only perfect matches</span>
+                </div>
               </div>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={threshold}
-                onChange={(e) => setThreshold(parseFloat(e.target.value))}
-                onMouseUp={handleThresholdCommit}
-                onTouchEnd={handleThresholdCommit}
-                disabled={saving}
-                className="h-2 w-full cursor-pointer appearance-none rounded-full border-2 border-black bg-white accent-black disabled:opacity-50"
-              />
-              <div className="text-foreground flex justify-between text-xs">
-                <span>0% — Send everything</span>
-                <span>100% — Only perfect matches</span>
+            </CardContent>
+          </Card>
+          {/* Quick Actions Card */}
+          <Card className="sm:col-span-2 md:col-span-1">
+            <CardHeader>
+              <CardTitle>⚡ Quick Actions</CardTitle>
+              <CardDescription>
+                Configure your workspace without digging through menus.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="neutral"
+                  onClick={() => setInviteMembers(orgId)}
+                >
+                  Invite Team Members
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={() => setUpdateOrganization(orgId)}
+                >
+                  Settings
+                </Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions Card */}
-        <Card className="sm:col-span-2 md:col-span-1">
-          <CardHeader>
-            <CardTitle>⚡ Quick Actions</CardTitle>
-            <CardDescription>
-              Configure your workspace without digging through menus.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                variant="neutral"
-                onClick={() => setViewDataSource(orgId)}
-              >
-                View Data Sources
-              </Button>
-              <Button variant="neutral" onClick={() => setInviteMembers(orgId)}>
-                Invite Team Members
-              </Button>
-              <Button
-                variant="neutral"
-                onClick={() => setUpdateOrganization(orgId)}
-              >
-                Configure Organization
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
