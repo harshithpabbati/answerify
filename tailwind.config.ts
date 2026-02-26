@@ -19,9 +19,9 @@ const config = {
     },
     extend: {
       colors: {
-        bg: '#1a1d2e',
-        main: '#a78bfa',
-        border: '#2e3348',
+        bg: '#0d0b18',
+        main: '#8b5cf6',
+        border: '#251f3a',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
@@ -62,7 +62,11 @@ const config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       boxShadow: {
-        base: '0 0 10px 0 rgba(139, 92, 246, 0.15)',
+        base: '0 0 16px -2px rgba(139, 92, 246, 0.25), 0 0 6px -1px rgba(139, 92, 246, 0.1)',
+        glow: '0 0 24px -4px rgba(139, 92, 246, 0.35)',
+        'glow-lg': '0 0 24px -4px rgba(139, 92, 246, 0.5)',
+        'glow-icon': '0 0 30px -4px rgba(139, 92, 246, 0.5)',
+        'glow-sm': '0 0 12px -2px rgba(139, 92, 246, 0.3)',
       },
       translate: {
         boxShadowX: '2px',
@@ -73,7 +77,7 @@ const config = {
         heading: '600',
       },
       backgroundImage: {
-        grid: 'linear-gradient(to right, rgba(139, 92, 246, 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(139, 92, 246, 0.06) 1px, transparent 1px)',
+        grid: 'linear-gradient(to right, rgba(139, 92, 246, 0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(139, 92, 246, 0.08) 1px, transparent 1px)',
       },
       keyframes: {
         'accordion-down': {

@@ -46,7 +46,7 @@ const DialogContent = React.forwardRef<
       {/* Lime accent stripe at the top */}
       <div className="bg-main absolute inset-x-0 top-0 h-2 border-b-2 border-border" />
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-3.5 z-10 inline-flex size-8 items-center justify-center rounded-base border-2 border-border bg-card text-card-foreground shadow-base transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none focus:outline-none disabled:pointer-events-none">
+      <DialogPrimitive.Close className="absolute right-4 top-3.5 z-10 inline-flex size-8 items-center justify-center rounded-base border-2 border-border bg-card text-card-foreground shadow-base transition-all hover:border-main/30 hover:shadow-glow-sm focus:outline-none disabled:pointer-events-none">
         <Cross2Icon className="size-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

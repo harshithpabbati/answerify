@@ -9,14 +9,15 @@ export function EmptyState() {
   const [, setCreateOrg] = useCreateOrganization();
 
   return (
-    <div className="flex size-full flex-col items-center justify-center gap-6 px-6 py-20 text-center">
+    <div className="relative flex size-full flex-col items-center justify-center gap-6 px-6 py-20 text-center">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(139,92,246,0.1)_0%,transparent_65%)]" />
       {/* Icon badge */}
-      <div className="bg-main flex size-20 items-center justify-center rounded-full border-2 border-border shadow-base">
+      <div className="relative bg-main flex size-20 items-center justify-center rounded-full border-2 border-border shadow-glow-icon">
         <RocketIcon className="size-9 text-white" />
       </div>
 
       {/* Text */}
-      <div className="max-w-sm space-y-2">
+      <div className="relative max-w-sm space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">
           No organizations yet
         </h1>

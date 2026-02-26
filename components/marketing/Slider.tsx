@@ -19,7 +19,7 @@ export function Slider() {
         return (
           <span
             key={x}
-            className="font-heading mx-10 text-xl sm:text-2xl lg:text-4xl"
+            className="font-heading mx-10 text-xl text-foreground/80 sm:text-2xl lg:text-4xl"
           >
             {x}
           </span>

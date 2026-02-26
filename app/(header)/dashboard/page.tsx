@@ -18,7 +18,7 @@ export const revalidate = 60;
 
 // Deterministic palette for the initial-letter block on each org card
 // lime · slate · yellow · rose · emerald
-const PALETTE = ['#7c3aed', '#4f46e5', '#6d28d9', '#8b5cf6', '#a78bfa'];
+const PALETTE = ['#7c3aed', '#6d28d9', '#5b21b6', '#8b5cf6', '#4f46e5'];
 function orgColor(name: string) {
   return PALETTE[name.charCodeAt(0) % PALETTE.length];
 }
@@ -30,14 +30,15 @@ export default async function DashboardPage() {
     <div className="flex h-full flex-col overflow-auto">
       {organizations.length > 0 ? (
         <>
-          {/* Bold lime header with grid background */}
-          <div className="bg-background border-b-2 border-border bg-grid px-6 py-10 md:px-10">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Dashboard header with grid background */}
+          <div className="relative bg-background border-b-2 border-border bg-grid px-6 py-10 md:px-10">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(139,92,246,0.1)_0%,transparent_60%)]" />
+            <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h1 className="text-4xl font-bold tracking-tight">
                   Your organizations
                 </h1>
-                <p className="mt-1 font-medium">
+                <p className="mt-1 font-medium text-muted-foreground">
                   {organizations.length} workspace
                   {organizations.length !== 1 ? 's' : ''} &mdash; pick one to
                   get started
@@ -60,7 +61,7 @@ export default async function DashboardPage() {
 
                 return (
                   <Link href={href} key={o.slug}>
-                    <Card className="flex h-full flex-col transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none">
+                    <Card className="flex h-full flex-col transition-all hover:shadow-glow-lg">
                       {/* Colored block with large initial */}
                       <div
                         className="flex h-24 items-center border-b-2 border-border px-6"
