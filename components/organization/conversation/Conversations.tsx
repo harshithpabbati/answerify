@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { sendEmail } from '@/actions/email';
 import { Tables } from '@/database.types';
+import DOMPurify from 'isomorphic-dompurify';
+import { toast } from 'sonner';
 
 import { useTiptap } from '@/hooks/useTiptap';
 import { Badge } from '@/components/ui/badge';
@@ -102,16 +104,82 @@ export function Conversations({
   const isDraft = reply?.status === 'draft' || reply?.status === 'approved';
   const isSent = reply?.status === 'sent';
 
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [streamContent, setStreamContent] = useState('');
+
+  const lastEmail = conversations[conversations.length - 1];
+  const isLastFromUser = lastEmail?.role === 'user';
+
   const editor = useTiptap(
-    conversations[conversations.length - 1].role === 'user'
-      ? reply?.content
-      : ''
+    isLastFromUser ? reply?.content : ''
   );
 
   useEffect(() => {
     if (!divRef.current) return;
     divRef.current.scrollTop = divRef.current.scrollHeight;
   }, []);
+
+  const generateReply = async () => {
+    if (!lastEmail || !isLastFromUser) return;
+
+    setIsGenerating(true);
+    setStreamContent('');
+
+    try {
+      const response = await fetch('/api/generate-reply-stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailId: lastEmail.id, threadId }),
+      });
+
+      if (!response.ok || !response.body) {
+        toast.error('Failed to generate reply');
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = '';
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.text) {
+              accumulated += parsed.text;
+              setStreamContent(accumulated);
+            }
+          } catch {
+            // Ignore parse errors from partial/incomplete SSE lines
+          }
+        }
+      }
+
+      if (accumulated) {
+        // Strip optional markdown code fence that the model may wrap the HTML in
+        const html = accumulated.replace(/^```html\s*|\s*```$/g, '');
+        editor?.commands.setContent(html);
+      }
+    } catch (err) {
+      console.error('Failed to generate reply:', err);
+      toast.error('Failed to generate reply');
+    } finally {
+      setIsGenerating(false);
+      setStreamContent('');
+    }
+  };
 
   const handleSubmit = async (
     status: 'open' | 'closed' | undefined = undefined
@@ -168,9 +236,41 @@ export function Conversations({
           </div>
         )}
 
+        {/* Streaming preview while generating */}
+        {isGenerating && (
+          <div className="bg-muted/50 rounded-base mb-3 border p-3">
+            <p className="text-muted-foreground mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue-500" />
+              Generating AI reply…
+            </p>
+            {streamContent && (
+              <div
+                className="email-content text-sm"
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(streamContent),
+                }}
+              />
+            )}
+          </div>
+        )}
+
         <Tiptap editor={editor} />
 
         <div className="mt-4 flex flex-wrap justify-end gap-2">
+          {isLastFromUser && (
+            <Button
+              variant="neutral"
+              onClick={generateReply}
+              disabled={isGenerating}
+              size="lg"
+            >
+              {isGenerating
+                ? 'Generating…'
+                : reply
+                  ? 'Regenerate AI Reply'
+                  : 'Generate AI Reply'}
+            </Button>
+          )}
           <Button variant="neutral" onClick={() => handleSubmit()} size="lg">
             Submit
           </Button>
