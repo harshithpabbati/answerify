@@ -49,12 +49,17 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const statusRef = useRef<'open' | 'closed' | undefined>(undefined);
 
   const [state, dispatch] = useReducer(threadReducer, {
     data: [],
     isLoading: true,
     status: undefined,
   });
+
+  // Keep statusRef in sync so the Realtime callback has the latest value
+  // without needing to tear down the channel on status changes
+  statusRef.current = state.status;
 
   useEffect(() => {
     const newStatus =
@@ -89,7 +94,7 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
           filter: `organization_id=eq.${orgId}`,
         },
         (payload) => {
-          if (state.status === 'closed') return;
+          if (statusRef.current === 'closed') return;
           dispatch({
             type: 'INSERT_THREAD',
             thread: payload.new as Tables<'thread'>,
@@ -101,9 +106,10 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
     return () => {
       if (channelRef.current) {
         channelRef.current.unsubscribe();
+        channelRef.current = null;
       }
     };
-  }, [orgId, state.status]);
+  }, [orgId]);
 
   return (
     <div className="max-h-dvh">
