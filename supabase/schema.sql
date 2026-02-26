@@ -217,21 +217,37 @@ ALTER TABLE ONLY "public"."section"
 ALTER TABLE ONLY "public"."thread"
     ADD CONSTRAINT "thread_pkey" PRIMARY KEY ("id");
 
-CREATE INDEX "email_thread_id_idx" ON "public"."email" USING "btree" ("thread_id");
+CREATE INDEX "email_thread_id_created_at_idx" ON "public"."email" USING "btree" ("thread_id", "created_at");
+
+CREATE INDEX "email_organization_id_idx" ON "public"."email" USING "btree" ("organization_id");
 
 CREATE INDEX "member_organization_id_user_id_idx" ON "public"."member" USING "btree" ("organization_id", "user_id");
 
+CREATE INDEX "member_user_id_idx" ON "public"."member" USING "btree" ("user_id");
+
 CREATE INDEX "organization_inbound_email_idx" ON "public"."organization" USING "btree" ("inbound_email");
 
-CREATE INDEX "reply_edit_reply_id_idx" ON "public"."reply_edit" USING "btree" ("reply_id");
+CREATE INDEX "datasource_org_internal_kb_idx" ON "public"."datasource" USING "btree" ("organization_id", "is_internal_kb");
+
+CREATE INDEX "reply_thread_status_idx" ON "public"."reply" USING "btree" ("thread_id", "status", "is_perfect");
+
+CREATE INDEX "reply_organization_id_idx" ON "public"."reply" USING "btree" ("organization_id");
+
+CREATE INDEX "reply_edit_reply_id_created_at_idx" ON "public"."reply_edit" USING "btree" ("reply_id", "created_at" DESC);
 
 CREATE INDEX "reply_edit_organization_id_idx" ON "public"."reply_edit" USING "btree" ("organization_id");
 
 CREATE INDEX "section_embedding_idx" ON "public"."section" USING "hnsw" ("embedding" "extensions"."vector_ip_ops") WITH (m = 16, ef_construction = 64);
 
-CREATE INDEX "thread_organization_id_created_at_message_id_idx" ON "public"."thread" USING "btree" ("organization_id", "created_at", "message_id");
+CREATE INDEX "section_datasource_id_idx" ON "public"."section" USING "btree" ("datasource_id");
 
-CREATE INDEX "thread_status_idx" ON "public"."thread" USING "btree" ("status");
+CREATE INDEX "section_organization_id_idx" ON "public"."section" USING "btree" ("organization_id");
+
+CREATE INDEX "section_embedding_null_idx" ON "public"."section" USING "btree" ("id") WHERE ("embedding" IS NULL);
+
+CREATE INDEX "thread_org_status_last_msg_idx" ON "public"."thread" USING "btree" ("organization_id", "status", "last_message_created_at" DESC);
+
+CREATE INDEX "thread_message_id_idx" ON "public"."thread" USING "btree" ("message_id");
 
 CREATE OR REPLACE TRIGGER "generate_reply" AFTER INSERT ON "public"."email" FOR EACH ROW EXECUTE FUNCTION "supabase_functions"."http_request"('https://answerify.app/api/webhooks/reply', 'POST', '{"Content-type":"application/json"}', '{}', '5000');
 
