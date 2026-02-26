@@ -51,8 +51,8 @@ export async function POST(request: Request) {
     model: 'gemini-embedding-001',
     contents: record.cleaned_body,
     config: {
-      outputDimensionality: 1536,
-      taskType: 'QUESTION_ANSWERING',
+      outputDimensionality: 768,
+      taskType: 'RETRIEVAL_QUERY',
     },
   });
   const embedding = embeddingResult.embeddings?.[0]?.values;
@@ -82,9 +82,22 @@ export async function POST(request: Request) {
       embedding: embedding as any,
       match_threshold: 0.6,
       organization_id: record.organization_id,
+      match_count: 5,
     })
-    .select('id, content, datasource_id')
-    .limit(5);
+    .select('id, content, datasource_id, similarity');
+
+  // Fetch previous emails in this thread for conversation context
+  const { data: threadEmails, error: threadEmailsError } = await supabase
+    .from('email')
+    .select('role, cleaned_body, created_at')
+    .eq('thread_id', record.thread_id)
+    .neq('id', record.id)
+    .order('created_at', { ascending: true })
+    .limit(10);
+
+  if (threadEmailsError) {
+    console.error('Failed to fetch thread emails:', threadEmailsError);
+  }
 
   if (matchError || !sections || sections.length === 0) {
     // No knowledge base content found – create a draft asking for more info
@@ -136,6 +149,22 @@ export async function POST(request: Request) {
 
   const docs = sections.map((s: any) => s.content).join('\n\n');
 
+  // Build conversation history context
+  const conversationHistory =
+    threadEmails && threadEmails.length > 0
+      ? threadEmails
+          .map((e) => {
+            const label =
+              e.role === 'user'
+                ? 'Customer'
+                : e.role === 'support'
+                  ? 'Support'
+                  : e.role;
+            return `${label}: ${e.cleaned_body}`;
+          })
+          .join('\n\n')
+      : '';
+
   // Build citation footnote HTML
   const citationFootnotes =
     uniqueCitations.length > 0
@@ -148,7 +177,7 @@ export async function POST(request: Request) {
       : '';
 
   const systemPrompt = codeBlock`
-    You're an AI assistant who answers questions about documents.
+    You're an AI assistant who answers customer support questions about documents.
 
     You're a chat bot, so keep your replies clear & organized.
 
@@ -165,17 +194,18 @@ export async function POST(request: Request) {
     Documents:
     ${docs}
 
+    ${conversationHistory ? `Previous conversation:\n${conversationHistory}\n` : ''}
     Reply back in HTML and nothing else, avoid using markdown, and
     format the response accordingly. Also avoid signature at the end of the reply.
   `;
 
   const chatResult = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.0-flash',
     contents: record.cleaned_body,
     config: {
       systemInstruction: systemPrompt,
       maxOutputTokens: 1024,
-      temperature: 0.5,
+      temperature: 0.3,
     },
   });
 
@@ -199,8 +229,8 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ data, error }), { status: 200 });
   }
 
-  // Compute confidence: heuristic based on number of matching sections found
-  const confidence = Math.min(0.6 + sections.length * 0.08, 0.99);
+  // Use the highest similarity score from matched sections as confidence
+  const confidence = Math.max(0, ...sections.map((s) => s.similarity));
 
   const htmlContent =
     rawContent.replace(/^```html\s*|\s*```$/g, '') + citationFootnotes;
