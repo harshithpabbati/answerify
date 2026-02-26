@@ -6,7 +6,7 @@ import { buttonVariants } from '@/components/ui/button';
 
 export function Hero() {
   return (
-    <div className="bg-grid flex h-[80dvh] flex-col items-center justify-center gap-5 bg-[size:70px_70px] p-4">
+    <div className="bg-grid flex h-[80dvh] flex-col items-center justify-center gap-5 bg-[size:70px_70px] p-4 text-foreground">
       <h1 className="font-heading text-center text-3xl md:text-4xl lg:text-5xl">
         {siteConfig.hero.heading}
       </h1>

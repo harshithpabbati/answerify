@@ -42,8 +42,8 @@ function StepBadge({ step, done }: { step: number; done: boolean }) {
   return (
     <span
       className={cn(
-        'flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-black text-xs font-bold',
-        done ? 'bg-main' : 'bg-white'
+        'flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-border text-xs font-bold',
+        done ? 'bg-main text-white' : 'bg-card'
       )}
     >
       {done ? '✓' : step}
@@ -126,7 +126,7 @@ export function WelcomeDashboard({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="bg-bg flex items-center justify-between gap-3 rounded-base border-2 border-black px-4 py-3 shadow-base">
+            <div className="bg-bg flex items-center justify-between gap-3 rounded-base border-2 border-border px-4 py-3 shadow-base">
               <span className="truncate font-mono text-sm font-medium">
                 {inboundEmail || 'Not configured yet'}
               </span>
@@ -225,7 +225,7 @@ export function WelcomeDashboard({
                   generate replies.
                 </CardDescription>
               </div>
-              <span className="bg-main rounded-base shrink-0 border-2 border-black px-2 py-0.5 text-sm font-bold shadow-base">
+              <span className="bg-main text-white rounded-base shrink-0 border-2 border-border px-2 py-0.5 text-sm font-bold shadow-base">
                 {sources.length}
               </span>
             </div>
@@ -245,7 +245,7 @@ export function WelcomeDashboard({
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`Open data source: ${source.url}`}
-                      className="bg-bg flex items-center gap-2 rounded-base border-2 border-black px-3 py-2 text-sm font-medium transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none shadow-base"
+                      className="bg-bg flex items-center gap-2 rounded-base border-2 border-border px-3 py-2 text-sm font-medium transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none shadow-base"
                     >
                       <Link2Icon className="size-3.5 shrink-0" />
                       <span className="truncate">{source.url}</span>
@@ -257,7 +257,7 @@ export function WelcomeDashboard({
                   <li>
                     <button
                       onClick={() => setViewDataSource(orgId)}
-                      className="w-full rounded-base border-2 border-dashed border-black py-2 text-center text-xs font-semibold opacity-70 hover:opacity-100"
+                      className="w-full rounded-base border-2 border-dashed border-border py-2 text-center text-xs font-semibold opacity-70 hover:opacity-100"
                     >
                       +{hiddenCount} more source{hiddenCount !== 1 ? 's' : ''}
                     </button>
@@ -303,13 +303,13 @@ export function WelcomeDashboard({
                   onClick={handleToggle}
                   disabled={saving}
                   className={cn(
-                    'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black disabled:opacity-50',
-                    enabled ? 'bg-main' : 'bg-white'
+                    'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
+                    enabled ? 'bg-main' : 'bg-card'
                   )}
                 >
                   <span
                     className={cn(
-                      'pointer-events-none inline-block size-5 rounded-full border-2 border-black bg-white shadow-sm transition-transform',
+                      'pointer-events-none inline-block size-5 rounded-full border-2 border-border bg-card shadow-sm transition-transform',
                       enabled ? 'translate-x-5' : 'translate-x-0.5'
                     )}
                   />
@@ -320,7 +320,7 @@ export function WelcomeDashboard({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold">Confidence Threshold</p>
-                  <span className="bg-main rounded-base border-2 border-black px-2 py-0.5 text-xs font-bold tabular-nums shadow-base">
+                  <span className="bg-main text-white rounded-base border-2 border-border px-2 py-0.5 text-xs font-bold tabular-nums shadow-base">
                     {Math.round(threshold * 100)}%
                   </span>
                 </div>

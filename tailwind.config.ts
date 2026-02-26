@@ -19,9 +19,9 @@ const config = {
     },
     extend: {
       colors: {
-        bg: '#E0E7F1',
-        main: '#A3E636',
-        border: 'black',
+        bg: '#1a1d2e',
+        main: '#a78bfa',
+        border: '#2e3348',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
@@ -62,18 +62,18 @@ const config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       boxShadow: {
-        base: '4px 4px 0px 0px rgba(0,0,0,1)',
+        base: '0 0 10px 0 rgba(139, 92, 246, 0.15)',
       },
       translate: {
-        boxShadowX: '4px',
-        boxShadowY: '4px',
+        boxShadowX: '2px',
+        boxShadowY: '2px',
       },
       fontWeight: {
         base: '400',
         heading: '600',
       },
       backgroundImage: {
-        grid: 'linear-gradient(to right, #80808033 1px, transparent 1px), linear-gradient(to bottom, #80808033 1px, transparent 1px)',
+        grid: 'linear-gradient(to right, rgba(139, 92, 246, 0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(139, 92, 246, 0.06) 1px, transparent 1px)',
       },
       keyframes: {
         'accordion-down': {

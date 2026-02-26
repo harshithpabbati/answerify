@@ -12,7 +12,7 @@ const items = [
 export function Slider() {
   return (
     <Marquee
-      className="font-base z-1 border-y-2 border-y-black bg-white py-3 sm:py-5"
+      className="font-base z-1 border-y-2 border-y-border bg-card py-3 sm:py-5"
       direction="left"
     >
       {items.map((x) => {

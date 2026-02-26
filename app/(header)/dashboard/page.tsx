@@ -18,7 +18,7 @@ export const revalidate = 60;
 
 // Deterministic palette for the initial-letter block on each org card
 // lime · slate · yellow · rose · emerald
-const PALETTE = ['#A3E636', '#E0E7F1', '#FFD60A', '#FCA5A5', '#6EE7B7'];
+const PALETTE = ['#7c3aed', '#4f46e5', '#6d28d9', '#8b5cf6', '#a78bfa'];
 function orgColor(name: string) {
   return PALETTE[name.charCodeAt(0) % PALETTE.length];
 }
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
       {organizations.length > 0 ? (
         <>
           {/* Bold lime header with grid background */}
-          <div className="bg-background border-b-2 border-black bg-grid px-6 py-10 md:px-10">
+          <div className="bg-background border-b-2 border-border bg-grid px-6 py-10 md:px-10">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h1 className="text-4xl font-bold tracking-tight">
@@ -60,13 +60,13 @@ export default async function DashboardPage() {
 
                 return (
                   <Link href={href} key={o.slug}>
-                    <Card className="flex h-full flex-col transition-all hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none">
+                    <Card className="flex h-full flex-col transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none">
                       {/* Colored block with large initial */}
                       <div
-                        className="flex h-24 items-center border-b-2 border-black px-6"
+                        className="flex h-24 items-center border-b-2 border-border px-6"
                         style={{ backgroundColor: bg }}
                       >
-                        <span className="text-5xl font-bold">{initial}</span>
+                        <span className="text-5xl font-bold text-white">{initial}</span>
                       </div>
 
                       <CardContent className="flex flex-1 flex-col gap-2 p-5">
@@ -75,20 +75,20 @@ export default async function DashboardPage() {
                             <h2 className="text-lg font-bold leading-snug">
                               {o.name}
                             </h2>
-                            <p className="truncate text-sm text-black/60">
+                            <p className="truncate text-sm text-muted-foreground">
                               {o.support_email}
                             </p>
                           </div>
                           <span
                             className={cn(
-                              'shrink-0 rounded-base border-2 border-black px-2 py-0.5 text-xs font-bold',
-                              hasOnboarded ? 'bg-main' : 'bg-white'
+                              'shrink-0 rounded-base border-2 border-border px-2 py-0.5 text-xs font-bold',
+                              hasOnboarded ? 'bg-main text-white' : 'bg-card'
                             )}
                           >
                             {hasOnboarded ? 'Live' : 'Setup'}
                           </span>
                         </div>
-                        <p className="mt-auto text-xs text-black/40 tabular-nums">
+                        <p className="mt-auto text-xs text-muted-foreground tabular-nums">
                           Created{' '}
                           {new Date(o.created_at).toLocaleDateString(
                             undefined,

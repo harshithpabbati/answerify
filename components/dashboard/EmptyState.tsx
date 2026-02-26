@@ -11,8 +11,8 @@ export function EmptyState() {
   return (
     <div className="flex size-full flex-col items-center justify-center gap-6 px-6 py-20 text-center">
       {/* Icon badge */}
-      <div className="bg-main flex size-20 items-center justify-center rounded-full border-2 border-black shadow-base">
-        <RocketIcon className="size-9" />
+      <div className="bg-main flex size-20 items-center justify-center rounded-full border-2 border-border shadow-base">
+        <RocketIcon className="size-9 text-white" />
       </div>
 
       {/* Text */}
@@ -32,7 +32,7 @@ export function EmptyState() {
           (f) => (
             <span
               key={f}
-              className="rounded-base border-2 border-black bg-white px-3 py-1 text-xs font-semibold shadow-base"
+              className="rounded-base border-2 border-border bg-card px-3 py-1 text-xs font-semibold text-card-foreground shadow-base"
             >
               {f}
             </span>

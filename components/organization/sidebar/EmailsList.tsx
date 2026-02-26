@@ -109,7 +109,7 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
     <div className="max-h-dvh">
       <div className="flex h-[60px] items-center justify-between border-b p-4">
         <h3 className="font-semibold">{name}</h3>
-        <div className="flex items-center gap-0.5 rounded-base border-2 border-black p-0.5">
+        <div className="flex items-center gap-0.5 rounded-base border-2 border-border p-0.5">
           {(['open', 'closed'] as const).map((s) => {
             const active = (searchParams.get('status') ?? 'open') === s;
             return (
@@ -118,7 +118,7 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
                 onClick={() => router.push(`?status=${s}`)}
                 className={cn(
                   'rounded px-2.5 py-0.5 text-xs font-medium capitalize transition-colors',
-                  active ? 'bg-main' : 'hover:bg-bg'
+                  active ? 'bg-main text-white' : 'hover:bg-bg'
                 )}
               >
                 {s}

@@ -42,15 +42,15 @@ export function Features() {
   ];
 
   return (
-    <section className="bg-bg font-base border-t-2 border-t-black py-20 lg:py-[100px]">
-      <h2 className="font-heading mb-14 px-5 text-center text-2xl md:text-3xl lg:mb-20 lg:text-4xl">
+    <section className="bg-bg font-base border-t-2 border-t-border py-20 lg:py-[100px]">
+      <h2 className="font-heading mb-14 px-5 text-center text-2xl text-foreground md:text-3xl lg:mb-20 lg:text-4xl">
         Why should you use Answerify?
       </h2>
       <div className="container mx-auto grid grid-cols-1 gap-5 px-5 sm:grid-cols-2 lg:grid-cols-3">
         {features.map((feature) => {
           return (
             <div
-              className="rounded-base shadow-base flex flex-col gap-3 border-2 border-black bg-white p-5"
+              className="rounded-base shadow-base flex flex-col gap-3 border-2 border-border bg-card p-5 text-card-foreground"
               key={feature.title}
             >
               {feature.icon}

@@ -35,7 +35,7 @@ export function ViewDataSourcesForm({ orgId }: Props) {
       {data.map((source) => (
         <li
           key={source.id}
-          className="bg-bg flex items-center gap-3 rounded-base border-2 border-black px-3 py-2 shadow-base"
+          className="bg-bg flex items-center gap-3 rounded-base border-2 border-border px-3 py-2 shadow-base"
         >
           <Link2Icon className="size-4 shrink-0" />
           <a

@@ -5,17 +5,17 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center text-black justify-center whitespace-nowrap rounded-base text-sm font-base ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center text-foreground justify-center whitespace-nowrap rounded-base text-sm font-base ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
         default:
-          'bg-main border-2 border-black shadow-base hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none',
+          'bg-main text-white border-2 border-border shadow-base hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none',
         shadow:
-          'bg-background border-2 border-black shadow-base hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none',
-        noShadow: 'bg-main border-2 border-black',
+          'bg-background border-2 border-border shadow-base hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none',
+        noShadow: 'bg-main text-white border-2 border-border',
         link: 'underline-offset-4 hover:underline',
-        neutral: 'bg-white border-2 border-black',
+        neutral: 'bg-card border-2 border-border',
       },
       size: {
         default: 'h-10 px-4 py-2',
