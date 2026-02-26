@@ -449,20 +449,15 @@ export type Database = {
           embedding: string
           match_threshold: number
           organization_id: string
+          match_count?: number
         }
         Returns: {
           content: string
           datasource_id: string
-          embedding: string | null
           id: string
           organization_id: string
+          similarity: number
         }[]
-        SetofOptions: {
-          from: "*"
-          to: "section"
-          isOneToOne: false
-          isSetofReturn: true
-        }
       }
     }
     Enums: {

@@ -82,9 +82,9 @@ export async function POST(request: Request) {
       embedding: embedding as any,
       match_threshold: 0.6,
       organization_id: record.organization_id,
+      match_count: 5,
     })
-    .select('id, content, datasource_id')
-    .limit(5);
+    .select('id, content, datasource_id, similarity');
 
   // Fetch previous emails in this thread for conversation context
   const { data: threadEmails, error: threadEmailsError } = await supabase
@@ -229,8 +229,8 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ data, error }), { status: 200 });
   }
 
-  // Compute confidence: heuristic based on number of matching sections found
-  const confidence = Math.min(0.6 + sections.length * 0.08, 0.99);
+  // Use the highest similarity score from matched sections as confidence
+  const confidence = Math.max(0, ...sections.map((s) => s.similarity));
 
   const htmlContent =
     rawContent.replace(/^```html\s*|\s*```$/g, '') + citationFootnotes;

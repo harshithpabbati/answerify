@@ -58,21 +58,38 @@ CREATE TABLE IF NOT EXISTS "public"."section" (
 
 ALTER TABLE "public"."section" OWNER TO "postgres";
 
-CREATE OR REPLACE FUNCTION "public"."match_sections"("embedding" "extensions"."vector", "match_threshold" double precision, "organization_id" "uuid") RETURNS SETOF "public"."section"
+CREATE OR REPLACE FUNCTION "public"."match_sections"(
+    "embedding" "extensions"."vector",
+    "match_threshold" double precision,
+    "organization_id" "uuid",
+    "match_count" integer DEFAULT 5
+) RETURNS TABLE (
+    "id" "uuid",
+    "datasource_id" "uuid",
+    "organization_id" "uuid",
+    "content" "text",
+    "similarity" double precision
+)
     LANGUAGE "plpgsql"
     AS $$
 #variable_conflict use_variable
 begin
   return query
-  select *
+  select
+    section.id,
+    section.datasource_id,
+    section.organization_id,
+    section.content,
+    -(section.embedding <#> embedding) as similarity
   from section
-  where section.embedding <#> embedding < -match_threshold
-  and section.organization_id = organization_id
-	order by section.embedding <#> embedding;
+  where -(section.embedding <#> embedding) > match_threshold
+    and section.organization_id = organization_id
+  order by section.embedding <#> embedding
+  limit match_count;
 end;
 $$;
 
-ALTER FUNCTION "public"."match_sections"("embedding" "extensions"."vector", "match_threshold" double precision, "organization_id" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "public"."match_sections"("embedding" "extensions"."vector", "match_threshold" double precision, "organization_id" "uuid", "match_count" integer) OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."datasource" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -210,7 +227,7 @@ CREATE INDEX "reply_edit_reply_id_idx" ON "public"."reply_edit" USING "btree" ("
 
 CREATE INDEX "reply_edit_organization_id_idx" ON "public"."reply_edit" USING "btree" ("organization_id");
 
-CREATE INDEX "section_embedding_idx" ON "public"."section" USING "hnsw" ("embedding" "extensions"."vector_ip_ops");
+CREATE INDEX "section_embedding_idx" ON "public"."section" USING "hnsw" ("embedding" "extensions"."vector_ip_ops") WITH (m = 16, ef_construction = 64);
 
 CREATE INDEX "thread_organization_id_created_at_message_id_idx" ON "public"."thread" USING "btree" ("organization_id", "created_at", "message_id");
 
