@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     model: 'gemini-embedding-001',
     contents: record.cleaned_body,
     config: {
-      outputDimensionality: 768,
+      outputDimensionality: 1536,
       taskType: 'RETRIEVAL_QUERY',
     },
   });

@@ -1,8 +1,6 @@
 import { processMarkdown } from '@/lib/processMarkdown';
 import { createServiceClient } from '@/lib/supabase/service';
 
-export const runtime = 'edge';
-
 const scrapeURL = async (record: any) => {
   if (record.content)
     return {
@@ -56,15 +54,12 @@ export async function POST(request: Request) {
         .delete()
         .match({ datasource_id: record.id });
 
-      const { data: records, error } = await supabase
+      const { error } = await supabase
         .from('section')
         .insert(document_sections);
 
       if (error) {
-        return new Response(
-          JSON.stringify({ error: 'Failed to insert sections' }),
-          { status: 500 }
-        );
+        return new Response(JSON.stringify({ error }), { status: 500 });
       }
 
       await fetch(`${origin}/api/webhooks/embedding`, { method: 'POST' });

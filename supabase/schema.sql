@@ -39,7 +39,7 @@ ALTER FUNCTION "public"."get_organization_owner"("organization_id" "uuid") OWNER
 CREATE OR REPLACE FUNCTION "public"."get_user_organizations"("user_id" "uuid", "role" integer) RETURNS SETOF "uuid"
     LANGUAGE "sql" STABLE SECURITY DEFINER
     AS $_$
-  select organization_id from member where user_id = $1 AND role >= $2 
+  select organization_id from member where user_id = $1 AND role >= $2
 $_$;
 
 ALTER FUNCTION "public"."get_user_organizations"("user_id" "uuid", "role" integer) OWNER TO "postgres";
@@ -51,7 +51,7 @@ SET default_table_access_method = "heap";
 CREATE TABLE IF NOT EXISTS "public"."section" (
     "datasource_id" "uuid" NOT NULL,
     "content" "text" NOT NULL,
-    "embedding" "extensions"."vector"(768),
+    "embedding" "extensions"."vector"(1536),
     "organization_id" "uuid" NOT NULL,
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL
 );

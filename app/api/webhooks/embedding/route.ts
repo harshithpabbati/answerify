@@ -3,8 +3,6 @@ import { GoogleGenAI } from '@google/genai';
 
 import { createServiceClient } from '@/lib/supabase/service';
 
-export const runtime = 'edge';
-
 function getGenAIClient() {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 }
@@ -42,7 +40,7 @@ export async function POST(request: Request) {
         model: 'gemini-embedding-001',
         contents: record.content,
         config: {
-          outputDimensionality: 768,
+          outputDimensionality: 1536,
           taskType: 'RETRIEVAL_DOCUMENT',
         },
       });
