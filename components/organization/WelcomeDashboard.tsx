@@ -1,17 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckIcon, ClipboardCopyIcon } from '@radix-ui/react-icons';
-import { useAddDataSource, useViewDataSource } from '@/states/data-source';
-import {
-  useInviteMembers,
-  useUpdateOrganization,
-} from '@/states/organization';
 import { updateAutopilotSettings } from '@/actions/organization';
+import { useAddDataSource, useViewDataSource } from '@/states/data-source';
+import { useInviteMembers, useUpdateOrganization } from '@/states/organization';
+import { CheckIcon, ClipboardCopyIcon } from '@radix-ui/react-icons';
 import { toast } from 'sonner';
 
-import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { cn } from '@/lib/utils';
+import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -63,10 +60,7 @@ export function WelcomeDashboard({
   const [threshold, setThreshold] = useState(autopilotThreshold);
   const [saving, setSaving] = useState(false);
 
-  const saveAutopilot = async (
-    nextEnabled: boolean,
-    nextThreshold: number
-  ) => {
+  const saveAutopilot = async (nextEnabled: boolean, nextThreshold: number) => {
     setSaving(true);
     const { error } = await updateAutopilotSettings(orgId, {
       autopilot_enabled: nextEnabled,
@@ -233,7 +227,7 @@ export function WelcomeDashboard({
         </Card>
 
         {/* AI Auto-Reply Card */}
-        <Card className="sm:col-span-2">
+        <Card className="sm:col-span-2 md:col-span-1">
           <CardHeader>
             <CardTitle>🤖 AI Auto-Reply</CardTitle>
             <CardDescription>
@@ -301,7 +295,7 @@ export function WelcomeDashboard({
         </Card>
 
         {/* Quick Actions Card */}
-        <Card className="sm:col-span-2">
+        <Card className="sm:col-span-2 md:col-span-1">
           <CardHeader>
             <CardTitle>⚡ Quick Actions</CardTitle>
             <CardDescription>
@@ -310,10 +304,7 @@ export function WelcomeDashboard({
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-3">
-              <Button
-                variant="default"
-                onClick={() => setAddDataSource(slug)}
-              >
+              <Button variant="default" onClick={() => setAddDataSource(slug)}>
                 + Add Data Source
               </Button>
               <Button
@@ -322,10 +313,7 @@ export function WelcomeDashboard({
               >
                 View Data Sources
               </Button>
-              <Button
-                variant="neutral"
-                onClick={() => setInviteMembers(orgId)}
-              >
+              <Button variant="neutral" onClick={() => setInviteMembers(orgId)}>
                 Invite Team Members
               </Button>
               <Button
@@ -341,4 +329,3 @@ export function WelcomeDashboard({
     </div>
   );
 }
-

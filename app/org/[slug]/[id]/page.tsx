@@ -8,7 +8,6 @@ import {
   Conversations,
 } from '@/components/organization/conversation';
 
-// Force dynamic rendering for this page as it shows real-time email conversations
 export const dynamic = 'force-dynamic';
 
 interface Props {
@@ -25,13 +24,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function EmailPage({ params }: Props) {
   const { id } = await params;
-  const { data: thread, error: threadError } = await getThread(id);
-  if (threadError || !thread?.id) return notFound();
+  const [{ data: thread, error: threadError }, { data }, { data: replyData }] =
+    await Promise.all([getThread(id), getEmails(id), getReply(id)]);
 
-  const [{ data }, { data: replyData }] = await Promise.all([
-    getEmails(id),
-    getReply(id),
-  ]);
+  if (threadError || !thread?.id) return notFound();
 
   return (
     <div className="max-h-dvh overflow-hidden">
