@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { updateAutopilotSettings } from '@/actions/organization';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
 import { useInviteMembers, useUpdateOrganization } from '@/states/organization';
-import { CheckIcon, ClipboardCopyIcon } from '@radix-ui/react-icons';
+import {
+  CheckIcon,
+  ClipboardCopyIcon,
+  ExternalLinkIcon,
+  Link2Icon,
+} from '@radix-ui/react-icons';
+import { Tables } from '@/database.types';
 import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
@@ -23,7 +29,9 @@ interface Props {
   orgName: string;
   slug: string;
   inboundEmail: string;
-  sourcesCount: number;
+  sources: Tables<'datasource'>[];
+  threadsCount: number;
+  repliesCount: number;
   autopilotEnabled: boolean;
   autopilotThreshold: number;
 }
@@ -46,7 +54,9 @@ export function WelcomeDashboard({
   orgName,
   slug,
   inboundEmail,
-  sourcesCount,
+  sources,
+  threadsCount,
+  repliesCount,
   autopilotEnabled,
   autopilotThreshold,
 }: Props) {
@@ -68,9 +78,7 @@ export function WelcomeDashboard({
     });
     setSaving(false);
     if (error) {
-      toast.error('Failed to save settings', {
-        description: error.message,
-      });
+      toast.error('Failed to save settings', { description: error.message });
       return false;
     }
     toast.success('Auto-reply settings saved');
@@ -81,13 +89,18 @@ export function WelcomeDashboard({
     const next = !enabled;
     setEnabled(next);
     const ok = await saveAutopilot(next, threshold);
-    if (!ok) setEnabled(!next); // revert on failure
+    if (!ok) setEnabled(!next);
   };
 
   const handleThresholdCommit = async () => {
     if (saving) return;
     await saveAutopilot(enabled, threshold);
   };
+
+  // Show at most this many sources before collapsing the rest into a "N more" button
+  const SOURCE_DISPLAY_LIMIT = 4;
+  const visibleSources = sources.slice(0, SOURCE_DISPLAY_LIMIT);
+  const hiddenCount = sources.length - SOURCE_DISPLAY_LIMIT;
 
   return (
     <div className="flex h-screen flex-col overflow-auto p-6 md:p-10">
@@ -166,25 +179,61 @@ export function WelcomeDashboard({
         {/* Data Sources Card */}
         <Card>
           <CardHeader>
-            <CardTitle>📚 Data Sources</CardTitle>
-            <CardDescription>
-              Knowledge base articles and docs that Answerify uses to generate
-              replies.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-2">
-              <span className="text-5xl font-bold">{sourcesCount}</span>
-              <span className="text-foreground mb-1 text-sm">
-                source{sourcesCount !== 1 ? 's' : ''} configured
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <CardTitle>📚 Data Sources</CardTitle>
+                <CardDescription>
+                  Knowledge base articles and docs that Answerify uses to
+                  generate replies.
+                </CardDescription>
+              </div>
+              <span className="bg-main rounded-base shrink-0 border-2 border-black px-2 py-0.5 text-sm font-bold shadow-base">
+                {sources.length}
               </span>
             </div>
-            {sourcesCount === 0 && (
-              <p className="text-foreground mt-3 text-sm">
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {sources.length === 0 ? (
+              <p className="text-foreground text-sm">
                 No data sources yet. Add links to your docs, help center, or
                 blog to improve AI-generated replies.
               </p>
+            ) : (
+              <ul className="space-y-2">
+                {visibleSources.map((source) => (
+                  <li key={source.id}>
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Open data source: ${source.url}`}
+                      className="bg-bg flex items-center gap-2 rounded-base border-2 border-black px-3 py-2 text-sm font-medium transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none shadow-base"
+                    >
+                      <Link2Icon className="size-3.5 shrink-0" />
+                      <span className="truncate">{source.url}</span>
+                      <ExternalLinkIcon className="ml-auto size-3.5 shrink-0 opacity-50" />
+                    </a>
+                  </li>
+                ))}
+                {hiddenCount > 0 && (
+                  <li>
+                    <button
+                      onClick={() => setViewDataSource(orgId)}
+                      className="w-full rounded-base border-2 border-dashed border-black py-2 text-center text-xs font-semibold opacity-70 hover:opacity-100"
+                    >
+                      +{hiddenCount} more source{hiddenCount !== 1 ? 's' : ''}
+                    </button>
+                  </li>
+                )}
+              </ul>
             )}
+            <Button
+              variant="default"
+              className="w-full"
+              onClick={() => setAddDataSource(slug)}
+            >
+              + Add Data Source
+            </Button>
           </CardContent>
         </Card>
 
@@ -205,19 +254,19 @@ export function WelcomeDashboard({
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <StepBadge step={2} done={false} />
+                <StepBadge step={2} done={threadsCount > 0} />
                 <span className="text-sm">
                   Set up email forwarding from your support account
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <StepBadge step={3} done={sourcesCount > 0} />
+                <StepBadge step={3} done={sources.length > 0} />
                 <span className="text-sm">
                   Add data sources to power AI replies
                 </span>
               </li>
               <li className="flex items-start gap-3">
-                <StepBadge step={4} done={false} />
+                <StepBadge step={4} done={repliesCount > 0} />
                 <span className="text-sm">
                   Send a test email and watch Answerify reply!
                 </span>
@@ -304,9 +353,6 @@ export function WelcomeDashboard({
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-3">
-              <Button variant="default" onClick={() => setAddDataSource(slug)}>
-                + Add Data Source
-              </Button>
               <Button
                 variant="neutral"
                 onClick={() => setViewDataSource(orgId)}

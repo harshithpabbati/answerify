@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getOrganizationBySlug } from '@/actions/organization';
+import { getOrgStats } from '@/actions/email';
 import { getSources } from '@/actions/source';
 import {
   AUTOPILOT_ENABLED_DEFAULT,
@@ -26,7 +27,10 @@ export default async function OrgPage({ params }: Props) {
   const { data: org } = await getOrganizationBySlug(slug);
   if (!org?.id) return notFound();
 
-  const { data: sources } = await getSources(org.id);
+  const [{ data: sources }, { threadCount, replyCount }] = await Promise.all([
+    getSources(org.id),
+    getOrgStats(org.id),
+  ]);
 
   return (
     <WelcomeDashboard
@@ -34,7 +38,9 @@ export default async function OrgPage({ params }: Props) {
       orgName={org.name}
       slug={slug}
       inboundEmail={org.inbound_email ?? ''}
-      sourcesCount={sources?.length ?? 0}
+      sources={sources ?? []}
+      threadsCount={threadCount}
+      repliesCount={replyCount}
       autopilotEnabled={org.autopilot_enabled ?? AUTOPILOT_ENABLED_DEFAULT}
       autopilotThreshold={org.autopilot_threshold ?? AUTOPILOT_THRESHOLD_DEFAULT}
     />
