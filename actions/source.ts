@@ -27,7 +27,7 @@ export async function setupSources(slug: string, sources: { url: string }[]) {
         .map(({ url }) => ({
           organization_id: data.id,
           url,
-          isInternalKb: true,
+          is_internal_kb: true,
         }))
     )
     .select();
