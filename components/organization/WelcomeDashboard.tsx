@@ -1,11 +1,14 @@
 'use client';
 
+import { useState } from 'react';
 import { CheckIcon, ClipboardCopyIcon } from '@radix-ui/react-icons';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
 import {
   useInviteMembers,
   useUpdateOrganization,
 } from '@/states/organization';
+import { updateAutopilotSettings } from '@/actions/organization';
+import { toast } from 'sonner';
 
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { cn } from '@/lib/utils';
@@ -24,6 +27,8 @@ interface Props {
   slug: string;
   inboundEmail: string;
   sourcesCount: number;
+  autopilotEnabled: boolean;
+  autopilotThreshold: number;
 }
 
 function StepBadge({ step, done }: { step: number; done: boolean }) {
@@ -45,12 +50,47 @@ export function WelcomeDashboard({
   slug,
   inboundEmail,
   sourcesCount,
+  autopilotEnabled,
+  autopilotThreshold,
 }: Props) {
   const { copied, copyToClipboard } = useCopyToClipboard();
   const [, setAddDataSource] = useAddDataSource();
   const [, setViewDataSource] = useViewDataSource();
   const [, setInviteMembers] = useInviteMembers();
   const [, setUpdateOrganization] = useUpdateOrganization();
+
+  const [enabled, setEnabled] = useState(autopilotEnabled);
+  const [threshold, setThreshold] = useState(autopilotThreshold);
+  const [saving, setSaving] = useState(false);
+
+  const saveAutopilot = async (
+    nextEnabled: boolean,
+    nextThreshold: number
+  ) => {
+    setSaving(true);
+    const { error } = await updateAutopilotSettings(orgId, {
+      autopilot_enabled: nextEnabled,
+      autopilot_threshold: nextThreshold,
+    });
+    setSaving(false);
+    if (error) {
+      toast.error('Failed to save settings', {
+        description: error.message,
+      });
+    } else {
+      toast.success('Auto-reply settings saved');
+    }
+  };
+
+  const handleToggle = async () => {
+    const next = !enabled;
+    setEnabled(next);
+    await saveAutopilot(next, threshold);
+  };
+
+  const handleThresholdCommit = async () => {
+    await saveAutopilot(enabled, threshold);
+  };
 
   return (
     <div className="flex h-screen flex-col overflow-auto p-6 md:p-10">
@@ -186,6 +226,74 @@ export function WelcomeDashboard({
                 </span>
               </li>
             </ol>
+          </CardContent>
+        </Card>
+
+        {/* AI Auto-Reply Card */}
+        <Card className="sm:col-span-2">
+          <CardHeader>
+            <CardTitle>🤖 AI Auto-Reply</CardTitle>
+            <CardDescription>
+              When enabled, Answerify automatically sends replies when the AI
+              confidence meets the threshold. Adjust the slider to control how
+              confident the AI must be before sending.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Toggle row */}
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold">Enable Auto-Reply</p>
+                <p className="text-foreground text-xs">
+                  {enabled
+                    ? 'Replies will be sent automatically when confidence is high enough.'
+                    : 'Replies require manual approval before sending.'}
+                </p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={enabled}
+                onClick={handleToggle}
+                disabled={saving}
+                className={cn(
+                  'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black disabled:opacity-50',
+                  enabled ? 'bg-main' : 'bg-white'
+                )}
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none inline-block size-5 rounded-full border-2 border-black bg-white shadow-sm transition-transform',
+                    enabled ? 'translate-x-5' : 'translate-x-0.5'
+                  )}
+                />
+              </button>
+            </div>
+
+            {/* Threshold slider row */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">Confidence Threshold</p>
+                <span className="bg-main rounded-base border-2 border-black px-2 py-0.5 text-xs font-bold tabular-nums shadow-base">
+                  {Math.round(threshold * 100)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={threshold}
+                onChange={(e) => setThreshold(parseFloat(e.target.value))}
+                onMouseUp={handleThresholdCommit}
+                onTouchEnd={handleThresholdCommit}
+                disabled={saving}
+                className="h-2 w-full cursor-pointer appearance-none rounded-full border-2 border-black bg-white accent-black disabled:opacity-50"
+              />
+              <div className="text-foreground flex justify-between text-xs">
+                <span>0% — Send everything</span>
+                <span>100% — Only perfect matches</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

@@ -31,6 +31,8 @@ export default async function OrgPage({ params }: Props) {
       slug={slug}
       inboundEmail={org.inbound_email ?? ''}
       sourcesCount={sources?.length ?? 0}
+      autopilotEnabled={org.autopilot_enabled ?? true}
+      autopilotThreshold={org.autopilot_threshold ?? 0.65}
     />
   );
 }
