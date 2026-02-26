@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getSources } from '@/actions/source';
 import { Tables } from '@/database.types';
-
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Link2Icon } from '@radix-ui/react-icons';
 
 interface Props {
   orgId: string;
@@ -24,14 +22,32 @@ export function ViewDataSourcesForm({ orgId }: Props) {
     fetchSources();
   }, [orgId]);
 
+  if (data.length === 0) {
+    return (
+      <p className="text-muted-foreground py-4 text-center text-sm">
+        No data sources configured yet.
+      </p>
+    );
+  }
+
   return (
-    <div>
-      <Label>URLs</Label>
-      <div className="mt-2 flex flex-col gap-2">
-        {data.map((source) => (
-          <Input key={source.id} value={source.url} readOnly />
-        ))}
-      </div>
-    </div>
+    <ul className="space-y-2">
+      {data.map((source) => (
+        <li
+          key={source.id}
+          className="bg-bg flex items-center gap-3 rounded-base border-2 border-black px-3 py-2 shadow-base"
+        >
+          <Link2Icon className="size-4 shrink-0" />
+          <a
+            href={source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="truncate text-sm font-medium underline-offset-2 hover:underline"
+          >
+            {source.url}
+          </a>
+        </li>
+      ))}
+    </ul>
   );
 }

@@ -13,9 +13,10 @@ interface Props {
   orgId: string;
   name: string;
   slug: string;
+  inboundEmail: string;
 }
 
-export async function Sidebar({ orgId, name, slug }: Props) {
+export async function Sidebar({ orgId, name, slug, inboundEmail }: Props) {
   const {
     data: { user },
   } = await getUser();
@@ -47,7 +48,7 @@ export async function Sidebar({ orgId, name, slug }: Props) {
             </div>
           }
         >
-          <EmailsList orgId={orgId} name={name} slug={slug} />
+          <EmailsList orgId={orgId} name={name} slug={slug} inboundEmail={inboundEmail} />
         </Suspense>
       </div>
     </div>

@@ -1,19 +1,13 @@
 'use client';
 
-import React, { useEffect, useReducer, useRef } from 'react';
+import { useEffect, useReducer, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getThreads } from '@/actions/email';
 import { Tables } from '@/database.types';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
 import { createBrowserClient } from '@/lib/supabase/client';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 import { Email } from './Email';
 import { EmailSkeleton } from './EmailSkeleton';
@@ -22,6 +16,7 @@ interface Props {
   orgId: string;
   name: string;
   slug: string;
+  inboundEmail: string;
 }
 
 type ThreadState = {
@@ -50,7 +45,7 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
   }
 }
 
-export function EmailsList({ orgId, name, slug }: Props) {
+export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -114,18 +109,23 @@ export function EmailsList({ orgId, name, slug }: Props) {
     <div className="max-h-dvh">
       <div className="flex h-[60px] items-center justify-between border-b p-4">
         <h3 className="font-semibold">{name}</h3>
-        <Select
-          value={searchParams.get('status') ?? 'open'}
-          onValueChange={(value) => router.push(`?status=${value}`)}
-        >
-          <SelectTrigger className="w-[120px] shadow-none">
-            <SelectValue placeholder="Open" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="open">Open</SelectItem>
-            <SelectItem value="closed">Closed</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-0.5 rounded-base border-2 border-black p-0.5">
+          {(['open', 'closed'] as const).map((s) => {
+            const active = (searchParams.get('status') ?? 'open') === s;
+            return (
+              <button
+                key={s}
+                onClick={() => router.push(`?status=${s}`)}
+                className={cn(
+                  'rounded px-2.5 py-0.5 text-xs font-medium capitalize transition-colors',
+                  active ? 'bg-main' : 'hover:bg-bg'
+                )}
+              >
+                {s}
+              </button>
+            );
+          })}
+        </div>
       </div>
       <div className="flex h-[calc(100dvh-60px)] flex-col overflow-auto">
         {state.isLoading ? (
@@ -136,13 +136,10 @@ export function EmailsList({ orgId, name, slug }: Props) {
           state.data.map((e) => <Email key={e.id} slug={slug} {...e} />)
         ) : (
           <div className="flex size-full flex-col items-center justify-center gap-4 p-4 text-center">
-            <h1 className="text-xl font-bold tracking-tight">
-              We can&apos;t find any emails
-            </h1>
-            <p className="text-foreground">
-              Emails will be listed here once you receive any email, also please
-              check if your forwarding is set correctly if emails are not listed
-              here
+            <h1 className="text-xl font-bold tracking-tight">No emails yet</h1>
+            <p className="text-foreground text-sm">
+              Forward your support emails to the inbound email address to see
+              the magic!
             </p>
           </div>
         )}

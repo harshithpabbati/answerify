@@ -6,6 +6,21 @@ import { Resend } from 'resend';
 import { cleanBody } from '@/lib/cleanBody';
 import { createServerClient } from '@/lib/supabase/server';
 
+export async function getOrgStats(orgId: string) {
+  const supabase = await createServerClient();
+  const [{ count: threadCount }, { count: replyCount }] = await Promise.all([
+    supabase
+      .from('thread')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', orgId),
+    supabase
+      .from('reply')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', orgId),
+  ]);
+  return { threadCount: threadCount ?? 0, replyCount: replyCount ?? 0 };
+}
+
 export async function getThreads(orgId: string, status: 'open' | 'closed') {
   const supabase = await createServerClient();
   const { data, error } = await supabase
