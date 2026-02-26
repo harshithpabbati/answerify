@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { setupSources } from '@/actions/source';
-import { PlusIcon } from '@radix-ui/react-icons';
+import { GlobeIcon, PlusIcon } from '@radix-ui/react-icons';
 import { useFieldArray, useForm } from 'react-hook-form';
 
 import { cn } from '@/lib/utils';
@@ -19,12 +19,17 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 
+import { CrawlDataSourceForm } from './CrawlForm';
+
+type Mode = 'manual' | 'crawl';
+
 interface Props {
   slug: string;
   onAdd?(): void;
 }
 
 export function AddDataSourceForm({ slug, onAdd }: Props) {
+  const [mode, setMode] = useState<Mode>('manual');
   const [error, setError] = useState('');
   const form = useForm<DataSourcesSchema>({
     resolver,
@@ -49,56 +54,88 @@ export function AddDataSourceForm({ slug, onAdd }: Props) {
   };
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(handleSubmit)}
-        className="w-full space-y-6"
-      >
-        {error && (
-          <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              {error ?? 'Something went wrong, please try again'}
-            </AlertDescription>
-          </Alert>
-        )}
-        <div className="space-y-3">
-          {fields.map((field, index) => (
-            <FormField
-              control={form.control}
-              key={field.id}
-              name={`urls.${index}.url`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className={cn(index !== 0 && 'sr-only')}>
-                    URLs
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://example.com/docs" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          ))}
-          <Button
-            type="button"
-            variant="neutral"
-            size="sm"
-            className="mt-2"
-            onClick={() => append({ url: '' })}
-          >
-            <PlusIcon className="mr-2" />
-            Add URL
-          </Button>
-        </div>
-        <Button
-          disabled={form.formState.isSubmitting || !form.formState.isValid}
-          className="w-full"
+    <div className="w-full space-y-4">
+      <div className="flex rounded-base border-2 border-black">
+        <button
+          type="button"
+          onClick={() => setMode('manual')}
+          className={cn(
+            'flex flex-1 items-center justify-center gap-2 py-2 text-sm font-medium transition-colors',
+            mode === 'manual' ? 'bg-main' : 'bg-white hover:bg-gray-50'
+          )}
         >
-          {form.formState.isSubmitting ? 'Saving...' : 'Save'}
-        </Button>
-      </form>
-    </Form>
+          <PlusIcon />
+          Manual
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('crawl')}
+          className={cn(
+            'flex flex-1 items-center justify-center gap-2 border-l-2 border-black py-2 text-sm font-medium transition-colors',
+            mode === 'crawl' ? 'bg-main' : 'bg-white hover:bg-gray-50'
+          )}
+        >
+          <GlobeIcon />
+          Crawl Website
+        </button>
+      </div>
+
+      {mode === 'crawl' ? (
+        <CrawlDataSourceForm slug={slug} onAdd={onAdd} />
+      ) : (
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="w-full space-y-6"
+          >
+            {error && (
+              <Alert variant="destructive">
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-3">
+              {fields.map((field, index) => (
+                <FormField
+                  control={form.control}
+                  key={field.id}
+                  name={`urls.${index}.url`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className={cn(index !== 0 && 'sr-only')}>
+                        URLs
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://example.com/docs"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
+              <Button
+                type="button"
+                variant="neutral"
+                size="sm"
+                className="mt-2"
+                onClick={() => append({ url: '' })}
+              >
+                <PlusIcon className="mr-2" />
+                Add URL
+              </Button>
+            </div>
+            <Button
+              disabled={form.formState.isSubmitting || !form.formState.isValid}
+              className="w-full"
+            >
+              {form.formState.isSubmitting ? 'Saving...' : 'Save'}
+            </Button>
+          </form>
+        </Form>
+      )}
+    </div>
   );
 }
