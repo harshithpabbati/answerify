@@ -1,13 +1,17 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
   reactStrictMode: true,
-  
+
   // Enable compression for better performance
   compress: true,
-  
+
   // Optimize bundle analyzer output
   poweredByHeader: false,
-  
+
+  // Enable React Compiler for automatic memoization
+  reactCompiler: true,
+
   async redirects() {
     return [
       {
