@@ -77,18 +77,21 @@ export function WelcomeDashboard({
       toast.error('Failed to save settings', {
         description: error.message,
       });
-    } else {
-      toast.success('Auto-reply settings saved');
+      return false;
     }
+    toast.success('Auto-reply settings saved');
+    return true;
   };
 
   const handleToggle = async () => {
     const next = !enabled;
     setEnabled(next);
-    await saveAutopilot(next, threshold);
+    const ok = await saveAutopilot(next, threshold);
+    if (!ok) setEnabled(!next); // revert on failure
   };
 
   const handleThresholdCommit = async () => {
+    if (saving) return;
     await saveAutopilot(enabled, threshold);
   };
 

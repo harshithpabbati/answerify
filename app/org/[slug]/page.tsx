@@ -2,6 +2,10 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getOrganizationBySlug } from '@/actions/organization';
 import { getSources } from '@/actions/source';
+import {
+  AUTOPILOT_ENABLED_DEFAULT,
+  AUTOPILOT_THRESHOLD_DEFAULT,
+} from '@/lib/autopilot';
 
 import { WelcomeDashboard } from '@/components/organization/WelcomeDashboard';
 
@@ -31,8 +35,8 @@ export default async function OrgPage({ params }: Props) {
       slug={slug}
       inboundEmail={org.inbound_email ?? ''}
       sourcesCount={sources?.length ?? 0}
-      autopilotEnabled={org.autopilot_enabled ?? true}
-      autopilotThreshold={org.autopilot_threshold ?? 0.65}
+      autopilotEnabled={org.autopilot_enabled ?? AUTOPILOT_ENABLED_DEFAULT}
+      autopilotThreshold={org.autopilot_threshold ?? AUTOPILOT_THRESHOLD_DEFAULT}
     />
   );
 }

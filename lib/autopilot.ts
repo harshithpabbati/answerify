@@ -1,0 +1,2 @@
+export const AUTOPILOT_ENABLED_DEFAULT = true;
+export const AUTOPILOT_THRESHOLD_DEFAULT = 0.65;

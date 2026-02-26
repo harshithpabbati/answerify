@@ -2,9 +2,8 @@ import { GoogleGenAI } from '@google/genai';
 import { codeBlock } from 'common-tags';
 import { Resend } from 'resend';
 
+import { AUTOPILOT_THRESHOLD_DEFAULT } from '@/lib/autopilot';
 import { createServiceClient } from '@/lib/supabase/service';
-
-const AUTOPILOT_CONFIDENCE_THRESHOLD_DEFAULT = 0.65;
 
 function getGenAIClient() {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
@@ -75,7 +74,7 @@ export async function POST(request: Request) {
 
   const autopilotEnabled = org?.autopilot_enabled ?? false;
   const autopilotThreshold =
-    org?.autopilot_threshold ?? AUTOPILOT_CONFIDENCE_THRESHOLD_DEFAULT;
+    org?.autopilot_threshold ?? AUTOPILOT_THRESHOLD_DEFAULT;
 
   const { data: sections, error: matchError } = await supabase
     .rpc('match_sections', {
