@@ -46,7 +46,7 @@ export function splitTreeBy(
 }
 
 /**
- * Splits markdown content by heading for embedding indexing.
+ * Splits markdown content by heading into sections.
  * Keeps heading in each chunk.
  *
  * If a section is still greater than `maxSectionLength`, that section

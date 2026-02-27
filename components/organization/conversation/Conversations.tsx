@@ -24,69 +24,11 @@ const Tiptap = dynamic(
   }
 );
 
-type Citation = {
-  title: string;
-  url: string;
-  datasource_id?: string;
-  snippet?: string;
-};
-
 interface Props {
   threadId: string;
   conversations: Tables<'email'>[];
   reply: Tables<'reply'> | null;
   status: string;
-}
-
-function ConfidenceBadge({ score }: { score: number | null }) {
-  if (score === null || score === undefined) return null;
-  const pct = Math.round(score * 100);
-  const color =
-    pct >= 80
-      ? 'bg-green-500/20 text-green-400 border-green-500/30'
-      : pct >= 65
-        ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-        : 'bg-red-500/20 text-red-400 border-red-500/30';
-  return (
-    <span
-      className={`rounded border px-2 py-0.5 text-xs font-medium ${color}`}
-      title="AI confidence score"
-    >
-      {pct}% confidence
-    </span>
-  );
-}
-
-function CitationsPanel({ citations }: { citations: Citation[] }) {
-  if (!citations || citations.length === 0) return null;
-  return (
-    <div className="bg-muted/50 rounded-base border p-3">
-      <p className="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-wide">
-        Sources
-      </p>
-      <ul className="flex flex-col gap-1">
-        {citations.map((c, i) => (
-          <li key={c.datasource_id ?? i} className="flex items-start gap-1.5">
-            <span className="text-muted-foreground text-xs">[{i + 1}]</span>
-            {c.url ? (
-              <a
-                href={c.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary truncate text-xs underline"
-              >
-                {c.title || c.url}
-              </a>
-            ) : (
-              <span className="text-muted-foreground text-xs">
-                {c.title || 'Source'}
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
 }
 
 export function Conversations({
@@ -98,7 +40,6 @@ export function Conversations({
   const router = useRouter();
   const divRef = useRef<HTMLDivElement>(null);
 
-  const citations = (reply?.citations as Citation[] | null) ?? [];
   const isDraft = reply?.status === 'draft' || reply?.status === 'approved';
   const isSent = reply?.status === 'sent';
 
@@ -157,14 +98,6 @@ export function Conversations({
                 Draft – awaiting review
               </Badge>
             )}
-            <ConfidenceBadge score={reply.confidence_score ?? null} />
-          </div>
-        )}
-
-        {/* Citations panel */}
-        {citations.length > 0 && (
-          <div className="mb-3">
-            <CitationsPanel citations={citations} />
           </div>
         )}
 

@@ -48,49 +48,6 @@ SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
 
-CREATE TABLE IF NOT EXISTS "public"."section" (
-    "datasource_id" "uuid" NOT NULL,
-    "content" "text" NOT NULL,
-    "embedding" "extensions"."vector"(1536),
-    "organization_id" "uuid" NOT NULL,
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL
-);
-
-ALTER TABLE "public"."section" OWNER TO "postgres";
-
-CREATE OR REPLACE FUNCTION "public"."match_sections"(
-    "embedding" "extensions"."vector",
-    "match_threshold" double precision,
-    "organization_id" "uuid",
-    "match_count" integer DEFAULT 5
-) RETURNS TABLE (
-    "id" "uuid",
-    "datasource_id" "uuid",
-    "organization_id" "uuid",
-    "content" "text",
-    "similarity" double precision
-)
-    LANGUAGE "plpgsql"
-    AS $$
-#variable_conflict use_variable
-begin
-  return query
-  select
-    section.id,
-    section.datasource_id,
-    section.organization_id,
-    section.content,
-    -(section.embedding <#> embedding) as similarity
-  from section
-  where -(section.embedding <#> embedding) > match_threshold
-    and section.organization_id = organization_id
-  order by section.embedding <#> embedding
-  limit match_count;
-end;
-$$;
-
-ALTER FUNCTION "public"."match_sections"("embedding" "extensions"."vector", "match_threshold" double precision, "organization_id" "uuid", "match_count" integer) OWNER TO "postgres";
-
 CREATE TABLE IF NOT EXISTS "public"."datasource" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
@@ -211,9 +168,6 @@ ALTER TABLE ONLY "public"."organization"
 ALTER TABLE ONLY "public"."reply"
     ADD CONSTRAINT "reply_pkey" PRIMARY KEY ("id");
 
-ALTER TABLE ONLY "public"."section"
-    ADD CONSTRAINT "section_pkey" PRIMARY KEY ("id");
-
 ALTER TABLE ONLY "public"."thread"
     ADD CONSTRAINT "thread_pkey" PRIMARY KEY ("id");
 
@@ -236,14 +190,6 @@ CREATE INDEX "reply_organization_id_idx" ON "public"."reply" USING "btree" ("org
 CREATE INDEX "reply_edit_reply_id_created_at_idx" ON "public"."reply_edit" USING "btree" ("reply_id", "created_at" DESC);
 
 CREATE INDEX "reply_edit_organization_id_idx" ON "public"."reply_edit" USING "btree" ("organization_id");
-
-CREATE INDEX "section_embedding_idx" ON "public"."section" USING "hnsw" ("embedding" "extensions"."vector_ip_ops") WITH (m = 16, ef_construction = 64);
-
-CREATE INDEX "section_datasource_id_idx" ON "public"."section" USING "btree" ("datasource_id");
-
-CREATE INDEX "section_organization_id_idx" ON "public"."section" USING "btree" ("organization_id");
-
-CREATE INDEX "section_embedding_null_idx" ON "public"."section" USING "btree" ("id") WHERE ("embedding" IS NULL);
 
 CREATE INDEX "thread_org_status_last_msg_idx" ON "public"."thread" USING "btree" ("organization_id", "status", "last_message_created_at" DESC);
 
@@ -282,12 +228,6 @@ ALTER TABLE ONLY "public"."reply_edit"
 
 ALTER TABLE ONLY "public"."reply_edit"
     ADD CONSTRAINT "public_reply_edit_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON UPDATE CASCADE ON DELETE CASCADE;
-
-ALTER TABLE ONLY "public"."section"
-    ADD CONSTRAINT "public_section_datasource_id_fkey" FOREIGN KEY ("datasource_id") REFERENCES "public"."datasource"("id") ON UPDATE CASCADE ON DELETE CASCADE;
-
-ALTER TABLE ONLY "public"."section"
-    ADD CONSTRAINT "public_section_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
 ALTER TABLE ONLY "public"."thread"
     ADD CONSTRAINT "public_thread_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON UPDATE CASCADE ON DELETE CASCADE;
@@ -340,8 +280,6 @@ ALTER TABLE "public"."reply" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."reply_edit" ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE "public"."section" ENABLE ROW LEVEL SECURITY;
-
 ALTER TABLE "public"."thread" ENABLE ROW LEVEL SECURITY;
 
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
@@ -360,10 +298,6 @@ GRANT ALL ON FUNCTION "public"."get_organization_owner"("organization_id" "uuid"
 GRANT ALL ON FUNCTION "public"."get_user_organizations"("user_id" "uuid", "role" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_user_organizations"("user_id" "uuid", "role" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_user_organizations"("user_id" "uuid", "role" integer) TO "service_role";
-
-GRANT ALL ON TABLE "public"."section" TO "anon";
-GRANT ALL ON TABLE "public"."section" TO "authenticated";
-GRANT ALL ON TABLE "public"."section" TO "service_role";
 
 GRANT ALL ON TABLE "public"."datasource" TO "anon";
 GRANT ALL ON TABLE "public"."datasource" TO "authenticated";
