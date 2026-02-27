@@ -114,7 +114,7 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
   return (
     <div className="max-h-dvh">
       <div className="flex h-[60px] items-center justify-between border-b p-4">
-        <h3 className="font-semibold">{name}</h3>
+        <h3 className="truncate font-semibold">{name}</h3>
         <div className="flex items-center gap-0.5 rounded-base border-2 border-black p-0.5">
           {(['open', 'closed'] as const).map((s) => {
             const active = (searchParams.get('status') ?? 'open') === s;
