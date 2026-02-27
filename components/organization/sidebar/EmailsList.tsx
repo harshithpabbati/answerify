@@ -84,7 +84,7 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
 
     const supabase = createBrowserClient();
     channelRef.current = supabase
-      .channel('thread')
+      .channel(`thread:${orgId}`)
       .on(
         'postgres_changes',
         {
