@@ -444,21 +444,42 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      match_sections: {
-        Args: {
-          embedding: string
-          match_threshold: number
-          organization_id: string
-          match_count?: number
-        }
-        Returns: {
-          content: string
-          datasource_id: string
-          id: string
-          organization_id: string
-          similarity: number
-        }[]
-      }
+      match_sections:
+        | {
+            Args: {
+              embedding: string
+              match_threshold: number
+              organization_id: string
+            }
+            Returns: {
+              content: string
+              datasource_id: string
+              embedding: string | null
+              id: string
+              organization_id: string
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "section"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
+        | {
+            Args: {
+              embedding: string
+              match_count?: number
+              match_threshold: number
+              p_organization_id: string
+            }
+            Returns: {
+              content: string
+              datasource_id: string
+              id: string
+              organization_id: string
+              similarity: number
+            }[]
+          }
     }
     Enums: {
       [_ in never]: never

@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     .rpc('match_sections', {
       embedding: embedding as any,
       match_threshold: 0.6,
-      organization_id: record.organization_id,
+      p_organization_id: record.organization_id,
       match_count: 5,
     })
     .select('id, content, datasource_id, similarity');

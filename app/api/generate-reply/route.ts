@@ -8,7 +8,8 @@ export async function POST(request: Request) {
   const { data: record, error } = await supabase
     .from('email')
     .select()
-    .eq('id', id);
+    .eq('id', id)
+    .single();
 
   if (error) {
     return new Response(JSON.stringify({ error: true }), { status: 500 });
