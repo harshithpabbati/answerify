@@ -10,9 +10,14 @@ interface Props {
   slug: string;
 }
 
-export function ConversationHeader({ subject, email_from, status, slug }: Props) {
+export function ConversationHeader({
+  subject,
+  email_from,
+  status,
+  slug,
+}: Props) {
   return (
-    <div className="bg-background flex h-[60px] items-center justify-between border-b px-4 py-2">
+    <div className="bg-background flex h-[60px] items-center justify-between border-b px-2 md:px-4 py-2">
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <Link
           href={`/org/${slug}`}
@@ -21,7 +26,7 @@ export function ConversationHeader({ subject, email_from, status, slug }: Props)
         >
           <ArrowLeftIcon className="size-5" />
         </Link>
-        <div className="flex min-w-0 flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5 max-w-xs md:max-w-none">
           <h3 className="text-foreground truncate font-semibold">{subject}</h3>
           <span className="text-foreground truncate text-xs">{email_from}</span>
         </div>

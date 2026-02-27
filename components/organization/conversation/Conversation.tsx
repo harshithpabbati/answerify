@@ -38,7 +38,9 @@ export function Conversation({ email_from_name, body, role }: Tables<'email'>) {
   });
 
   return (
-    <div className={cn('flex w-full gap-2', flexAlignment)}>
+    <div
+      className={cn('flex w-full gap-2 max-w-sm md:max-w-none', flexAlignment)}
+    >
       <div className="bg-background rounded-base max-w-xl overflow-hidden break-words border p-4 text-sm">
         <div
           className="email-content"

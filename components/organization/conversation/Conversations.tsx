@@ -39,9 +39,6 @@ export function Conversations({
   const router = useRouter();
   const divRef = useRef<HTMLDivElement>(null);
 
-  const isDraft = reply?.status === 'draft' || reply?.status === 'approved';
-  const isSent = reply?.status === 'sent';
-
   const editor = useTiptap(
     conversations[conversations.length - 1].role === 'user'
       ? reply?.content
@@ -83,9 +80,9 @@ export function Conversations({
         ))}
       </div>
 
-      <div className="bg-background w-full border-t p-4">
+      <div className="bg-background w-full border-t p-4 max-w-sm md:max-w-none">
         <Tiptap editor={editor} />
-        <div className="mt-4 flex flex-wrap justify-end gap-2">
+        <div className="mt-2 md:mt-4 flex flex-col md:flex-row flex-wrap justify-end gap-2">
           <Button variant="neutral" onClick={() => handleSubmit()} size="lg">
             Submit
           </Button>
