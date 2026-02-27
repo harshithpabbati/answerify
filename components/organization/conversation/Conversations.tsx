@@ -7,7 +7,6 @@ import { sendEmail } from '@/actions/email';
 import { Tables } from '@/database.types';
 
 import { useTiptap } from '@/hooks/useTiptap';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 import { Conversation } from './Conversation';
@@ -85,24 +84,7 @@ export function Conversations({
       </div>
 
       <div className="bg-background w-full border-t p-4">
-        {/* Autopilot / draft status bar */}
-        {reply && (
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            {isSent && (
-              <Badge className="bg-green-500/20 text-green-400 hover:bg-green-500/20">
-                ✓ Auto-sent by Autopilot
-              </Badge>
-            )}
-            {isDraft && (
-              <Badge variant="neutral" className="text-muted-foreground">
-                Draft – awaiting review
-              </Badge>
-            )}
-          </div>
-        )}
-
         <Tiptap editor={editor} />
-
         <div className="mt-4 flex flex-wrap justify-end gap-2">
           <Button variant="neutral" onClick={() => handleSubmit()} size="lg">
             Submit
