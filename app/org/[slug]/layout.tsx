@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { getOrganizationBySlug } from '@/actions/organization';
 
+import { OrgLayoutClient } from '@/components/organization/OrgLayoutClient';
 import { Sidebar } from '@/components/sidebar';
 
 export default async function OrgLayout({
@@ -18,9 +19,17 @@ export default async function OrgLayout({
     redirect(`/onboarding/${slug}/${onboarding.step}`);
 
   return (
-    <div className="flex size-full max-h-dvh overflow-hidden">
-      <Sidebar orgId={data.id} name={data.name} slug={slug} inboundEmail={data.inbound_email ?? ''} />
-      <div className="hidden flex-1 md:block">{children}</div>
-    </div>
+    <OrgLayoutClient
+      sidebar={
+        <Sidebar
+          orgId={data.id}
+          name={data.name}
+          slug={slug}
+          inboundEmail={data.inbound_email ?? ''}
+        />
+      }
+    >
+      {children}
+    </OrgLayoutClient>
   );
 }
