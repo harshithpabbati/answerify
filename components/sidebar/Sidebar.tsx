@@ -33,7 +33,7 @@ export async function Sidebar({ orgId, name, slug, inboundEmail }: Props) {
           <User user={user} />
         </div>
       </div>
-      <div className="bg-background border-r-none size-full md:w-[40dvw] md:border-r lg:w-[25dvw]">
+      <div className="bg-background border-r-none h-full w-[calc(100dvw-4rem)] md:w-[40dvw] md:border-r lg:w-[25dvw]">
         <Suspense
           fallback={
             <div className="max-h-dvh">
@@ -48,7 +48,12 @@ export async function Sidebar({ orgId, name, slug, inboundEmail }: Props) {
             </div>
           }
         >
-          <EmailsList orgId={orgId} name={name} slug={slug} inboundEmail={inboundEmail} />
+          <EmailsList
+            orgId={orgId}
+            name={name}
+            slug={slug}
+            inboundEmail={inboundEmail}
+          />
         </Suspense>
       </div>
     </div>
