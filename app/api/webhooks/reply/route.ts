@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { codeBlock } from 'common-tags';
 
+import { searchAutoRAG } from '@/lib/cloudflare';
 import { createServiceClient } from '@/lib/supabase/service';
 
 function getGenAIClient() {
@@ -54,9 +55,6 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ data, error }), { status: 200 });
   }
 
-  // Build URL list for Gemini URL context tool
-  const urlList = datasources.map((d) => d.url).join('\n');
-
   // Build conversation history context
   const conversationHistory =
     threadEmails && threadEmails.length > 0
@@ -108,9 +106,27 @@ export async function POST(request: Request) {
     - Do not output anything outside of the HTML response
   `;
 
-  const userMessage = urlList
-    ? `${record.cleaned_body}\n\nReference URLs:\n${urlList}`
-    : record.cleaned_body;
+  // Try Cloudflare AutoRAG first for semantic retrieval, then fall back to
+  // Gemini URL context when AutoRAG credentials are not configured.
+  const autoRagResults = await searchAutoRAG(record.cleaned_body);
+
+  let userMessage: string;
+  let urlContextTools: { urlContext: Record<string, unknown> }[] | undefined;
+
+  if (autoRagResults && autoRagResults.data.length > 0) {
+    // Build context from the retrieved chunks
+    const context = autoRagResults.data
+      .map((chunk, i) => `[${i + 1}] ${chunk.content}`)
+      .join('\n\n');
+    userMessage = `${record.cleaned_body}\n\nRelevant knowledge base content:\n${context}`;
+  } else {
+    // Fall back to Gemini URL context tool using the datasource URLs
+    const urlList = datasources.map((d) => d.url).join('\n');
+    userMessage = urlList
+      ? `${record.cleaned_body}\n\nReference URLs:\n${urlList}`
+      : record.cleaned_body;
+    urlContextTools = [{ urlContext: {} }];
+  }
 
   const chatResult = await ai.models.generateContent({
     model: 'gemini-2.5-flash',
@@ -119,7 +135,7 @@ export async function POST(request: Request) {
       systemInstruction: systemPrompt,
       maxOutputTokens: 1024,
       temperature: 0.7,
-      tools: [{ urlContext: {} }],
+      ...(urlContextTools ? { tools: urlContextTools } : {}),
     },
   });
 
