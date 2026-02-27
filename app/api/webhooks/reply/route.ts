@@ -29,7 +29,7 @@ async function sendReplyViaResend({
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const { data } = await resend.emails.send({
-    from: 'Support <support@answerify.app>',
+    from: 'Support <support@answerify.dev>',
     to: [to],
     subject,
     html: content,

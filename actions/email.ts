@@ -81,7 +81,7 @@ export async function sendEmailWithResend({
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const { data } = await resend.emails.send({
-    from: 'Support <support@answerify.app>',
+    from: 'Support <support@answerify.dev>',
     to: [to],
     subject,
     html: content,
@@ -154,7 +154,7 @@ export async function sendEmail(
       cleaned_body: cleanBody(content),
       embedding: embedding as any,
       role: 'staff',
-      email_from: 'support@answerify.app',
+      email_from: 'support@answerify.dev',
       email_from_name: 'Support',
       is_perfect: true,
     })

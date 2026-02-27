@@ -249,9 +249,9 @@ CREATE INDEX "thread_org_status_last_msg_idx" ON "public"."thread" USING "btree"
 
 CREATE INDEX "thread_message_id_idx" ON "public"."thread" USING "btree" ("message_id");
 
-CREATE OR REPLACE TRIGGER "generate_reply" AFTER INSERT ON "public"."email" FOR EACH ROW EXECUTE FUNCTION "supabase_functions"."http_request"('https://answerify.app/api/webhooks/reply', 'POST', '{"Content-type":"application/json"}', '{}', '5000');
+CREATE OR REPLACE TRIGGER "generate_reply" AFTER INSERT ON "public"."email" FOR EACH ROW EXECUTE FUNCTION "supabase_functions"."http_request"('https://answerify.dev/api/webhooks/reply', 'POST', '{"Content-type":"application/json"}', '{}', '5000');
 
-CREATE OR REPLACE TRIGGER "scrape_datasource" AFTER INSERT ON "public"."datasource" FOR EACH ROW EXECUTE FUNCTION "supabase_functions"."http_request"('https://answerify.app/api/webhooks/data-source', 'POST', '{"Content-type":"application/json"}', '{}', '5000');
+CREATE OR REPLACE TRIGGER "scrape_datasource" AFTER INSERT ON "public"."datasource" FOR EACH ROW EXECUTE FUNCTION "supabase_functions"."http_request"('https://answerify.dev/api/webhooks/data-source', 'POST', '{"Content-type":"application/json"}', '{}', '5000');
 
 ALTER TABLE ONLY "public"."datasource"
     ADD CONSTRAINT "public_datasource_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON UPDATE CASCADE ON DELETE CASCADE;
