@@ -2,7 +2,10 @@ import { GoogleGenAI } from '@google/genai';
 import { codeBlock } from 'common-tags';
 import { Resend } from 'resend';
 
-import { AUTOPILOT_THRESHOLD_DEFAULT } from '@/lib/autopilot';
+import {
+  AUTOPILOT_THRESHOLD_DEFAULT,
+  URL_CONTEXT_FALLBACK_CONFIDENCE,
+} from '@/lib/autopilot';
 import { createServiceClient } from '@/lib/supabase/service';
 
 function getGenAIClient() {
@@ -199,10 +202,19 @@ export async function POST(request: Request) {
     if (!uri || seenUrls.has(uri)) continue;
     seenUrls.add(uri);
 
-    // Match grounding URL to a known datasource
-    const matchedDs = [...datasourceByUrl.entries()].find(([dsUrl]) =>
-      uri.includes(dsUrl)
-    );
+    // Match grounding URL to a known datasource by comparing hostnames and paths
+    const groundingUrl = new URL(uri);
+    const matchedDs = [...datasourceByUrl.entries()].find(([dsUrl]) => {
+      try {
+        const ds = new URL(dsUrl);
+        return (
+          groundingUrl.hostname === ds.hostname &&
+          groundingUrl.pathname.startsWith(ds.pathname)
+        );
+      } catch {
+        return false;
+      }
+    });
 
     citations.push({
       datasource_id: matchedDs?.[1]?.id ?? '',
@@ -212,7 +224,9 @@ export async function POST(request: Request) {
     });
   }
 
-  // Calculate confidence from grounding supports
+  // Average grounding confidence scores to derive an overall confidence.
+  // Averaging reflects how well the response is supported across all claims,
+  // unlike Math.max which only captures the best-supported claim.
   const groundingSupports = groundingMetadata?.groundingSupports ?? [];
   const allScores = groundingSupports.flatMap(
     (s) => s.confidenceScores ?? []
@@ -221,7 +235,7 @@ export async function POST(request: Request) {
     allScores.length > 0
       ? allScores.reduce((sum, s) => sum + s, 0) / allScores.length
       : urlSources.length > 0
-        ? 0.7
+        ? URL_CONTEXT_FALLBACK_CONFIDENCE
         : 0;
 
   // Build citation footnote HTML
