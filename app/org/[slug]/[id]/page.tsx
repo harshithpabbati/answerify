@@ -11,7 +11,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 interface Props {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; slug: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function EmailPage({ params }: Props) {
-  const { id } = await params;
+  const { id, slug } = await params;
   const [{ data: thread, error: threadError }, { data }, { data: replyData }] =
     await Promise.all([getThread(id), getEmails(id), getReply(id)]);
 
@@ -31,7 +31,7 @@ export default async function EmailPage({ params }: Props) {
 
   return (
     <div className="max-h-dvh overflow-hidden">
-      <ConversationHeader {...thread} />
+      <ConversationHeader {...thread} slug={slug} />
       <Conversations
         threadId={thread.id}
         conversations={data ?? []}

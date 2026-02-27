@@ -25,12 +25,12 @@ export function Email({ id, slug, email_from, subject, created_at }: Props) {
         params.id === id ? 'bg-bg' : 'bg-background'
       )}
     >
-      <div className="flex size-full flex-col gap-0.5 overflow-auto">
+      <div className="flex size-full flex-col gap-0.5 overflow-hidden">
         <h3 className="text-foreground truncate text-sm font-medium">
           {subject}
         </h3>
-        <div className="flex items-center justify-between">
-          <span className="text-foreground text-xs">{email_from}</span>
+        <div className="flex min-w-0 items-center justify-between">
+          <span className="text-foreground truncate text-xs">{email_from}</span>
           <HumanizedTime time={created_at} />
         </div>
       </div>
