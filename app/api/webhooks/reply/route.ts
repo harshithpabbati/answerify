@@ -46,23 +46,6 @@ export async function POST(request: Request) {
   }
 
   const ai = getGenAIClient();
-  const embeddingResult = await ai.models.embedContent({
-    model: 'gemini-embedding-001',
-    contents: record.cleaned_body,
-    config: {
-      outputDimensionality: 1536,
-      taskType: 'RETRIEVAL_QUERY',
-    },
-  });
-  const embedding = embeddingResult.embeddings?.[0]?.values;
-
-  if (!embedding?.length) {
-    return new Response(
-      JSON.stringify({ error: 'Not able to create embedding for the input' }),
-      { status: 500 }
-    );
-  }
-
   const supabase = await createServiceClient();
 
   // Fetch org settings for autopilot
@@ -76,14 +59,11 @@ export async function POST(request: Request) {
   const autopilotThreshold =
     org?.autopilot_threshold ?? AUTOPILOT_THRESHOLD_DEFAULT;
 
-  const { data: sections, error: matchError } = await supabase
-    .rpc('match_sections', {
-      embedding: embedding as any,
-      match_threshold: 0.6,
-      p_organization_id: record.organization_id,
-      match_count: 5,
-    })
-    .select('id, content, datasource_id, similarity');
+  // Fetch datasources for the organization
+  const { data: datasources } = await supabase
+    .from('datasource')
+    .select('id, title, url, content')
+    .eq('organization_id', record.organization_id);
 
   // Fetch previous emails in this thread for conversation context
   const { data: threadEmails, error: threadEmailsError } = await supabase
@@ -98,7 +78,7 @@ export async function POST(request: Request) {
     console.error('Failed to fetch thread emails:', threadEmailsError);
   }
 
-  if (matchError || !sections || sections.length === 0) {
+  if (!datasources || datasources.length === 0) {
     // No knowledge base content found – create a draft asking for more info
     const clarifyingContent = `<p>Thank you for reaching out. I wasn't able to find specific information to fully answer your question at this time. Could you please provide more details or clarify your request so we can assist you better?</p>`;
     const { data, error } = await supabase
@@ -116,36 +96,22 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ data, error }), { status: 200 });
   }
 
-  // Fetch datasource metadata for citations
-  const datasourceIds = [
-    ...new Set(sections.map((s: any) => s.datasource_id)),
-  ] as string[];
-  const { data: datasources } = await supabase
-    .from('datasource')
-    .select('id, title, url')
-    .in('id', datasourceIds);
-
-  const datasourceMap = new Map(
-    (datasources ?? []).map((d) => [d.id, { title: d.title, url: d.url }])
+  // Separate URL-based and content-only datasources
+  const urlSources = datasources.filter(
+    (d) => d.url && !d.url.startsWith('internal://')
+  );
+  const contentSources = datasources.filter(
+    (d) => d.content && (!d.url || d.url.startsWith('internal://'))
   );
 
-  // Build citations
-  const citations: Citation[] = sections.map((s: any) => {
-    const ds = datasourceMap.get(s.datasource_id);
-    return {
-      datasource_id: s.datasource_id,
-      title: ds?.title ?? ds?.url ?? 'Source',
-      url: ds?.url ?? '',
-      snippet: s.content.slice(0, 200),
-    };
-  });
+  // Build inline content for content-only datasources (e.g. internal KB)
+  const inlineDocs =
+    contentSources.length > 0
+      ? contentSources.map((d) => d.content).join('\n\n')
+      : '';
 
-  // De-duplicate citations by datasource_id using a Map for O(n) complexity
-  const uniqueCitations = Array.from(
-    new Map(citations.map((c) => [c.datasource_id, c])).values()
-  );
-
-  const docs = sections.map((s: any) => s.content).join('\n\n');
+  // Build URL list for Gemini URL context tool
+  const urlList = urlSources.map((d) => d.url).join('\n');
 
   // Build conversation history context
   const conversationHistory =
@@ -163,35 +129,23 @@ export async function POST(request: Request) {
           .join('\n\n')
       : '';
 
-  // Build citation footnote HTML
-  const citationFootnotes =
-    uniqueCitations.length > 0
-      ? `<hr/><p style="font-size:0.85em;color:#666;"><strong>Sources:</strong> ${uniqueCitations
-          .map(
-            (c, i) =>
-              `<a href="${c.url}" target="_blank" rel="noopener noreferrer">[${i + 1}] ${c.title}</a>`
-          )
-          .join(', ')}</p>`
-      : '';
-
   const systemPrompt = codeBlock`
-    You're an AI assistant who answers customer support questions about documents.
+    You're an AI assistant who answers customer support questions.
 
     You're a chat bot, so keep your replies clear & organized.
 
-    You're only allowed to use the documents below to answer the question.
+    You're only allowed to use the provided URLs and documents to answer the question.
 
-    If the question isn't related to these documents, say:
+    If the question isn't related to these sources, say:
     "NO_INFORMATION"
 
-    If the information isn't available in the below documents, say:
+    If the information isn't available in the provided sources, say:
     "NO_INFORMATION"
 
     Do not go off topic.
 
-    Documents:
-    ${docs}
-
+    ${urlList ? `Reference URLs:\n${urlList}\n` : ''}
+    ${inlineDocs ? `Documents:\n${inlineDocs}\n` : ''}
     ${conversationHistory ? `Previous conversation:\n${conversationHistory}\n` : ''}
     Reply back in HTML and nothing else, avoid using markdown, and
     format the response accordingly. Also avoid signature at the end of the reply.
@@ -204,6 +158,7 @@ export async function POST(request: Request) {
       systemInstruction: systemPrompt,
       maxOutputTokens: 1024,
       temperature: 0.3,
+      tools: [{ urlContext: {} }],
     },
   });
 
@@ -227,8 +182,58 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ data, error }), { status: 200 });
   }
 
-  // Use the highest similarity score from matched sections as confidence
-  const confidence = Math.max(0, ...sections.map((s) => s.similarity));
+  // Build datasource lookup map for matching grounding URLs to datasources
+  const datasourceByUrl = new Map(
+    urlSources.map((d) => [d.url, { id: d.id, title: d.title }])
+  );
+
+  // Extract citations from grounding metadata provided by URL context
+  const groundingMetadata = chatResult.candidates?.[0]?.groundingMetadata;
+  const groundingChunks = groundingMetadata?.groundingChunks ?? [];
+
+  const citations: Citation[] = [];
+  const seenUrls = new Set<string>();
+
+  for (const chunk of groundingChunks) {
+    const uri = chunk.web?.uri;
+    if (!uri || seenUrls.has(uri)) continue;
+    seenUrls.add(uri);
+
+    // Match grounding URL to a known datasource
+    const matchedDs = [...datasourceByUrl.entries()].find(([dsUrl]) =>
+      uri.includes(dsUrl)
+    );
+
+    citations.push({
+      datasource_id: matchedDs?.[1]?.id ?? '',
+      title:
+        chunk.web?.title ?? matchedDs?.[1]?.title ?? new URL(uri).hostname,
+      url: uri,
+    });
+  }
+
+  // Calculate confidence from grounding supports
+  const groundingSupports = groundingMetadata?.groundingSupports ?? [];
+  const allScores = groundingSupports.flatMap(
+    (s) => s.confidenceScores ?? []
+  );
+  const confidence =
+    allScores.length > 0
+      ? allScores.reduce((sum, s) => sum + s, 0) / allScores.length
+      : urlSources.length > 0
+        ? 0.7
+        : 0;
+
+  // Build citation footnote HTML
+  const citationFootnotes =
+    citations.length > 0
+      ? `<hr/><p style="font-size:0.85em;color:#666;"><strong>Sources:</strong> ${citations
+          .map(
+            (c, i) =>
+              `<a href="${c.url}" target="_blank" rel="noopener noreferrer">[${i + 1}] ${c.title}</a>`
+          )
+          .join(', ')}</p>`
+      : '';
 
   const htmlContent =
     rawContent.replace(/^```html\s*|\s*```$/g, '') + citationFootnotes;
@@ -262,7 +267,7 @@ export async function POST(request: Request) {
               content: htmlContent,
               status: 'sent',
               confidence_score: confidence,
-              citations: uniqueCitations,
+              citations: citations,
               sent_at: new Date().toISOString(),
               sent_via: 'resend',
             })
@@ -286,7 +291,7 @@ export async function POST(request: Request) {
       content: htmlContent,
       status: 'draft',
       confidence_score: confidence,
-      citations: uniqueCitations,
+      citations: citations,
     })
     .select()
     .single();
