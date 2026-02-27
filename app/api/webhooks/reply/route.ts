@@ -1,44 +1,10 @@
 import { GoogleGenAI } from '@google/genai';
 import { codeBlock } from 'common-tags';
-import { Resend } from 'resend';
 
-import {
-  AUTOPILOT_THRESHOLD_DEFAULT,
-  URL_CONTEXT_FALLBACK_CONFIDENCE,
-} from '@/lib/autopilot';
 import { createServiceClient } from '@/lib/supabase/service';
 
 function getGenAIClient() {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-}
-
-type Citation = {
-  title: string;
-  url: string;
-  datasource_id: string;
-  snippet?: string;
-};
-
-async function sendReplyViaResend({
-  to,
-  subject,
-  content,
-  messageId,
-}: {
-  to: string;
-  subject: string;
-  content: string;
-  messageId: string;
-}) {
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const { data } = await resend.emails.send({
-    from: 'Support <support@answerify.dev>',
-    to: [to],
-    subject,
-    html: content,
-    headers: { 'In-Reply-To': messageId },
-  });
-  return data;
 }
 
 export async function POST(request: Request) {
@@ -51,21 +17,10 @@ export async function POST(request: Request) {
   const ai = getGenAIClient();
   const supabase = await createServiceClient();
 
-  // Fetch org settings for autopilot
-  const { data: org } = await supabase
-    .from('organization')
-    .select('autopilot_enabled, autopilot_threshold, support_email')
-    .eq('id', record.organization_id)
-    .single();
-
-  const autopilotEnabled = org?.autopilot_enabled ?? false;
-  const autopilotThreshold =
-    org?.autopilot_threshold ?? AUTOPILOT_THRESHOLD_DEFAULT;
-
   // Fetch datasources for the organization
   const { data: datasources } = await supabase
     .from('datasource')
-    .select('id, title, url, content')
+    .select('id, url')
     .eq('organization_id', record.organization_id);
 
   // Fetch previous emails in this thread for conversation context
@@ -99,22 +54,8 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ data, error }), { status: 200 });
   }
 
-  // Separate URL-based and content-only datasources
-  const urlSources = datasources.filter(
-    (d) => d.url && !d.url.startsWith('internal://')
-  );
-  const contentSources = datasources.filter(
-    (d) => d.content && (!d.url || d.url.startsWith('internal://'))
-  );
-
-  // Build inline content for content-only datasources (e.g. internal KB)
-  const inlineDocs =
-    contentSources.length > 0
-      ? contentSources.map((d) => d.content).join('\n\n')
-      : '';
-
   // Build URL list for Gemini URL context tool
-  const urlList = urlSources.map((d) => d.url).join('\n');
+  const urlList = datasources.map((d) => d.url).join('\n');
 
   // Build conversation history context
   const conversationHistory =
@@ -154,7 +95,6 @@ export async function POST(request: Request) {
 
     Do not go off topic.
 
-    ${inlineDocs ? `Documents:\n${inlineDocs}\n` : ''}
     ${conversationHistory ? `Previous conversation:\n${conversationHistory}\n` : ''}
     Reply back in HTML and nothing else, avoid using markdown.
     Format the response as follows:
@@ -203,113 +143,7 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ data, error }), { status: 200 });
   }
 
-  // Build datasource lookup map for matching grounding URLs to datasources
-  const datasourceByUrl = new Map(
-    urlSources.map((d) => [d.url, { id: d.id, title: d.title }])
-  );
-
-  // Extract citations from grounding metadata provided by URL context
-  const groundingMetadata = chatResult.candidates?.[0]?.groundingMetadata;
-  const groundingChunks = groundingMetadata?.groundingChunks ?? [];
-
-  const citations: Citation[] = [];
-  const seenUrls = new Set<string>();
-
-  for (const chunk of groundingChunks) {
-    const uri = chunk.web?.uri;
-    if (!uri || seenUrls.has(uri)) continue;
-    seenUrls.add(uri);
-
-    // Match grounding URL to a known datasource by comparing hostnames and paths
-    const groundingUrl = new URL(uri);
-    const matchedDs = [...datasourceByUrl.entries()].find(([dsUrl]) => {
-      try {
-        const ds = new URL(dsUrl);
-        return (
-          groundingUrl.hostname === ds.hostname &&
-          groundingUrl.pathname.startsWith(ds.pathname)
-        );
-      } catch {
-        return false;
-      }
-    });
-
-    citations.push({
-      datasource_id: matchedDs?.[1]?.id ?? '',
-      title: chunk.web?.title ?? matchedDs?.[1]?.title ?? new URL(uri).hostname,
-      url: uri,
-    });
-  }
-
-  // Average grounding confidence scores to derive an overall confidence.
-  // Averaging reflects how well the response is supported across all claims,
-  // unlike Math.max which only captures the best-supported claim.
-  const groundingSupports = groundingMetadata?.groundingSupports ?? [];
-  const allScores = groundingSupports.flatMap((s) => s.confidenceScores ?? []);
-  const confidence =
-    allScores.length > 0
-      ? allScores.reduce((sum, s) => sum + s, 0) / allScores.length
-      : urlSources.length > 0
-        ? URL_CONTEXT_FALLBACK_CONFIDENCE
-        : 0;
-
-  // Build citation footnote HTML
-  const citationFootnotes =
-    citations.length > 0
-      ? `<hr/><p style="font-size:0.85em;color:#666;"><strong>Sources:</strong> ${citations
-          .map(
-            (c, i) =>
-              `<a href="${c.url}" target="_blank" rel="noopener noreferrer">[${i + 1}] ${c.title}</a>`
-          )
-          .join(', ')}</p>`
-      : '';
-
-  const htmlContent =
-    rawContent.replace(/^```html\s*|\s*```$/g, '') + citationFootnotes;
-
-  // Decide autopilot: send automatically if enabled and above threshold
-  const shouldAutoSend = autopilotEnabled && confidence >= autopilotThreshold;
-
-  if (shouldAutoSend) {
-    // Fetch thread info to send the email
-    const { data: thread } = await supabase
-      .from('thread')
-      .select('email_from, subject, message_id')
-      .eq('id', record.thread_id)
-      .single();
-
-    if (thread) {
-      try {
-        const resendResult = await sendReplyViaResend({
-          to: thread.email_from,
-          subject: thread.subject,
-          content: htmlContent,
-          messageId: thread.message_id,
-        });
-
-        if (resendResult?.id) {
-          const { data, error } = await supabase
-            .from('reply')
-            .insert({
-              organization_id: record.organization_id,
-              thread_id: record.thread_id,
-              content: htmlContent,
-              status: 'sent',
-              confidence_score: confidence,
-              citations: citations,
-              sent_at: new Date().toISOString(),
-              sent_via: 'resend',
-            })
-            .select()
-            .single();
-          return new Response(JSON.stringify({ data, error }), { status: 200 });
-        }
-      } catch (e) {
-        console.error('Autopilot send failed:', e);
-        // Fall through to draft
-      }
-    }
-  }
+  const htmlContent = rawContent.replace(/^```html\s*|\s*```$/g, '');
 
   // Save as draft
   const { data, error } = await supabase
@@ -319,8 +153,6 @@ export async function POST(request: Request) {
       thread_id: record.thread_id,
       content: htmlContent,
       status: 'draft',
-      confidence_score: confidence,
-      citations: citations,
     })
     .select()
     .single();

@@ -16,33 +16,24 @@ export type Database = {
     Tables: {
       datasource: {
         Row: {
-          content: string | null
           created_at: string
           id: string
           is_internal_kb: boolean | null
-          metadata: Json | null
           organization_id: string
-          title: string | null
           url: string
         }
         Insert: {
-          content?: string | null
           created_at?: string
           id?: string
           is_internal_kb?: boolean | null
-          metadata?: Json | null
           organization_id?: string
-          title?: string | null
           url: string
         }
         Update: {
-          content?: string | null
           created_at?: string
           id?: string
           is_internal_kb?: boolean | null
-          metadata?: Json | null
           organization_id?: string
-          title?: string | null
           url?: string
         }
         Relationships: [
@@ -188,8 +179,6 @@ export type Database = {
       }
       reply: {
         Row: {
-          citations: Json | null
-          confidence_score: number | null
           content: string
           created_at: string
           id: string
@@ -199,8 +188,6 @@ export type Database = {
           thread_id: string
         }
         Insert: {
-          citations?: Json | null
-          confidence_score?: number | null
           content: string
           created_at?: string
           id?: string
@@ -210,8 +197,6 @@ export type Database = {
           thread_id?: string
         }
         Update: {
-          citations?: Json | null
-          confidence_score?: number | null
           content?: string
           created_at?: string
           id?: string
@@ -233,83 +218,6 @@ export type Database = {
             columns: ["thread_id"]
             isOneToOne: false
             referencedRelation: "thread"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      reply_edit: {
-        Row: {
-          created_at: string
-          final_content: string
-          id: string
-          learned: boolean
-          organization_id: string
-          original_content: string
-          reply_id: string
-        }
-        Insert: {
-          created_at?: string
-          final_content: string
-          id?: string
-          learned?: boolean
-          organization_id: string
-          original_content: string
-          reply_id: string
-        }
-        Update: {
-          created_at?: string
-          final_content?: string
-          id?: string
-          learned?: boolean
-          organization_id?: string
-          original_content?: string
-          reply_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "public_reply_edit_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organization"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "public_reply_edit_reply_id_fkey"
-            columns: ["reply_id"]
-            isOneToOne: false
-            referencedRelation: "reply"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      source: {
-        Row: {
-          created_at: string
-          id: string
-          job_id: string
-          organization_id: string
-          url: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          job_id: string
-          organization_id?: string
-          url: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          job_id?: string
-          organization_id?: string
-          url?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "source_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organization"
             referencedColumns: ["id"]
           },
         ]
