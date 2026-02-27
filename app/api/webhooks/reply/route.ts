@@ -133,34 +133,52 @@ export async function POST(request: Request) {
       : '';
 
   const systemPrompt = codeBlock`
-    You're an AI assistant who answers customer support questions.
+    You are a friendly and helpful customer support agent. You write like a real person,
+    not a documentation bot. Keep your tone warm, conversational, and to the point.
 
-    You're a chat bot, so keep your replies clear & organized.
+    When answering:
+    - Address the customer directly
+    - Don't use section headers or bold titles unless truly necessary
+    - Avoid bullet points for simple answers; use them only when listing steps or options
+    - Don't narrate what you're about to do (e.g. avoid "Here's a breakdown of..." or "Now I will answer...")
+    - Do not include any internal reasoning, planning, or thinking in your response
+    - Get straight to the answer
+    - Keep it concise but complete
+    - Do not include citation markers like [cite: 1] or [1] inline in the text
 
     You're only allowed to use the provided URLs and documents to answer the question.
 
-    If the question isn't related to these sources, say:
-    "NO_INFORMATION"
-
-    If the information isn't available in the provided sources, say:
-    "NO_INFORMATION"
+    If the question isn't related to these sources, respond with only the text: NO_INFORMATION
+    If the information isn't available in the provided sources, respond with only the text: NO_INFORMATION
+    Do not explain why. Do not apologize. Do not add anything else. Just respond with NO_INFORMATION.
 
     Do not go off topic.
 
-    ${urlList ? `Reference URLs:\n${urlList}\n` : ''}
     ${inlineDocs ? `Documents:\n${inlineDocs}\n` : ''}
     ${conversationHistory ? `Previous conversation:\n${conversationHistory}\n` : ''}
-    Reply back in HTML and nothing else, avoid using markdown, and
-    format the response accordingly. Also avoid signature at the end of the reply.
+    Reply back in HTML and nothing else, avoid using markdown.
+    Format the response as follows:
+    - Use <p> tags for each distinct topic or thought
+    - When answering multiple questions, use a <p><strong>Topic</strong></p> followed by a <p> for the answer
+    - Use <ul> and <li> only for genuine lists (3+ items or step-by-step options)
+    - Add a short friendly opening line in its own <p>
+    - Keep paragraphs short (2-4 sentences max)
+    - Do not use <h1>, <h2>, <h3> tags
+    - Avoid signature at the end of the reply
+    - Do not output anything outside of the HTML response
   `;
 
+  const userMessage = urlList
+    ? `${record.cleaned_body}\n\nReference URLs:\n${urlList}`
+    : record.cleaned_body;
+
   const chatResult = await ai.models.generateContent({
-    model: 'gemini-2.0-flash',
-    contents: record.cleaned_body,
+    model: 'gemini-2.5-flash',
+    contents: userMessage,
     config: {
       systemInstruction: systemPrompt,
       maxOutputTokens: 1024,
-      temperature: 0.3,
+      temperature: 0.7,
       tools: [{ urlContext: {} }],
     },
   });
@@ -218,8 +236,7 @@ export async function POST(request: Request) {
 
     citations.push({
       datasource_id: matchedDs?.[1]?.id ?? '',
-      title:
-        chunk.web?.title ?? matchedDs?.[1]?.title ?? new URL(uri).hostname,
+      title: chunk.web?.title ?? matchedDs?.[1]?.title ?? new URL(uri).hostname,
       url: uri,
     });
   }
@@ -228,9 +245,7 @@ export async function POST(request: Request) {
   // Averaging reflects how well the response is supported across all claims,
   // unlike Math.max which only captures the best-supported claim.
   const groundingSupports = groundingMetadata?.groundingSupports ?? [];
-  const allScores = groundingSupports.flatMap(
-    (s) => s.confidenceScores ?? []
-  );
+  const allScores = groundingSupports.flatMap((s) => s.confidenceScores ?? []);
   const confidence =
     allScores.length > 0
       ? allScores.reduce((sum, s) => sum + s, 0) / allScores.length
