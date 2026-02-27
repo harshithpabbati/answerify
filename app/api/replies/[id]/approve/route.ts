@@ -40,7 +40,7 @@ export async function POST(
 
   const resend = new Resend(process.env.RESEND_API_KEY);
   const { data: resendData } = await resend.emails.send({
-    from: 'Support <support@answerify.app>',
+    from: 'Support <support@answerify.dev>',
     to: [thread.email_from],
     subject: thread.subject,
     html: finalContent,

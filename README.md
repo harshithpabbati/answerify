@@ -138,6 +138,6 @@ GRANT ALL ON TABLE "public"."reply_edit" TO "service_role";
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
 | `SUPABASE_SERVICE_KEY` | Supabase service-role key (used in webhooks) |
-| `NEXT_PUBLIC_BASE_URL` | Base URL of your deployment (e.g. `https://answerify.app`) |
+| `NEXT_PUBLIC_BASE_URL` | Base URL of your deployment (e.g. `https://answerify.dev`) |
 | `RESEND_API_KEY` | Resend API key for sending emails |
 | `GEMINI_API_KEY` | Google Gemini API key for embeddings (`gemini-embedding-001`) and completions (`gemini-3-flash-preview`) |

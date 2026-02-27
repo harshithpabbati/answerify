@@ -73,7 +73,7 @@ export async function createOrganization({
       name,
       slug: slugify(name),
       support_email,
-      inbound_email: `${crypto.randomUUID()}@inbound.answerify.app`,
+      inbound_email: `${crypto.randomUUID()}@inbound.answerify.dev`,
       created_by: user.id,
       onboarding: { step: 'email-forwarding', hasOnboarded: false },
     })

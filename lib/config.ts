@@ -3,7 +3,7 @@ const description =
 
 export const siteConfig = {
   name: 'Answerify',
-  url: 'https://answerify.app',
+  url: 'https://answerify.dev',
   description,
   hero: {
     heading: 'Your AI-Powered Support Ticket Superhero',
