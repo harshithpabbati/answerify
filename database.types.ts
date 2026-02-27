@@ -64,7 +64,6 @@ export type Database = {
           email_cc: string[] | null
           email_from: string
           email_from_name: string
-          embedding: string | null
           id: string
           is_perfect: boolean | null
           organization_id: string
@@ -79,7 +78,6 @@ export type Database = {
           email_cc?: string[] | null
           email_from: string
           email_from_name: string
-          embedding?: string | null
           id?: string
           is_perfect?: boolean | null
           organization_id: string
@@ -94,7 +92,6 @@ export type Database = {
           email_cc?: string[] | null
           email_from?: string
           email_from_name?: string
-          embedding?: string | null
           id?: string
           is_perfect?: boolean | null
           organization_id?: string
@@ -285,45 +282,6 @@ export type Database = {
           },
         ]
       }
-      section: {
-        Row: {
-          content: string
-          datasource_id: string
-          embedding: string | null
-          id: string
-          organization_id: string
-        }
-        Insert: {
-          content: string
-          datasource_id: string
-          embedding?: string | null
-          id?: string
-          organization_id: string
-        }
-        Update: {
-          content?: string
-          datasource_id?: string
-          embedding?: string | null
-          id?: string
-          organization_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "public_section_datasource_id_fkey"
-            columns: ["datasource_id"]
-            isOneToOne: false
-            referencedRelation: "datasource"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "public_section_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organization"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       source: {
         Row: {
           created_at: string
@@ -416,70 +374,6 @@ export type Database = {
         Args: { role: number; user_id: string }
         Returns: string[]
       }
-      match_email_sections: {
-        Args: {
-          content_embedding: string
-          match_threshold: number
-          org_id: string
-        }
-        Returns: {
-          body: string
-          cleaned_body: string | null
-          created_at: string
-          email_bcc: string[] | null
-          email_cc: string[] | null
-          email_from: string
-          email_from_name: string
-          embedding: string | null
-          id: string
-          is_perfect: boolean | null
-          organization_id: string
-          role: string
-          thread_id: string
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "email"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
-      match_sections:
-        | {
-            Args: {
-              embedding: string
-              match_threshold: number
-              organization_id: string
-            }
-            Returns: {
-              content: string
-              datasource_id: string
-              embedding: string | null
-              id: string
-              organization_id: string
-            }[]
-            SetofOptions: {
-              from: "*"
-              to: "section"
-              isOneToOne: false
-              isSetofReturn: true
-            }
-          }
-        | {
-            Args: {
-              embedding: string
-              match_count?: number
-              match_threshold: number
-              p_organization_id: string
-            }
-            Returns: {
-              content: string
-              datasource_id: string
-              id: string
-              organization_id: string
-              similarity: number
-            }[]
-          }
     }
     Enums: {
       [_ in never]: never

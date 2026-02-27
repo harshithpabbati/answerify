@@ -29,7 +29,7 @@ export function AddDataSource() {
   const handleOnAdd = useCallback(() => {
     setOpen(false);
     toast.success('Successfully added new data-sources', {
-      description: 'Generating embeddings for the new sources',
+      description: 'Processing the new sources',
     });
   }, [setOpen]);
 

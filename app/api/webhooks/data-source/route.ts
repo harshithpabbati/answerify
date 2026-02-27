@@ -1,4 +1,3 @@
-import { processMarkdown } from '@/lib/processMarkdown';
 import { createServiceClient } from '@/lib/supabase/service';
 
 const scrapeURL = async (record: any) => {
@@ -31,7 +30,6 @@ const scrapeURL = async (record: any) => {
 };
 
 export async function POST(request: Request) {
-  const { origin } = new URL(request.url);
   const { record } = await request.json();
 
   try {
@@ -42,27 +40,6 @@ export async function POST(request: Request) {
         .from('datasource')
         .update({ content: data.data.markdown, metadata: data.data.metadata })
         .match({ id: record.id });
-
-      const { sections } = processMarkdown(data.data.markdown);
-      const document_sections = sections.map(({ content }) => ({
-        datasource_id: record.id,
-        organization_id: record.organization_id,
-        content,
-      }));
-      await supabase
-        .from('section')
-        .delete()
-        .match({ datasource_id: record.id });
-
-      const { error } = await supabase
-        .from('section')
-        .insert(document_sections);
-
-      if (error) {
-        return new Response(JSON.stringify({ error }), { status: 500 });
-      }
-
-      await fetch(`${origin}/api/webhooks/embedding`, { method: 'POST' });
     }
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (err) {

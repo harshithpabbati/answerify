@@ -1,6 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
-
-import { processMarkdown } from '@/lib/processMarkdown';
 import { createServiceClient } from '@/lib/supabase/service';
 
 export async function POST(
@@ -80,40 +77,11 @@ export async function POST(
       .eq('id', kbDatasource.id);
   }
 
-  // Chunk content into sections and generate embeddings
-  const { sections } = processMarkdown(learnContent);
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-
-  for (const section of sections) {
-    if (!section.content.trim()) continue;
-
-    const embeddingResult = await ai.models.embedContent({
-      model: 'gemini-embedding-001',
-      contents: section.content,
-      config: {
-        outputDimensionality: 1536,
-        taskType: 'QUESTION_ANSWERING',
-      },
-    });
-    const embedding = embeddingResult.embeddings?.[0]?.values;
-    if (!embedding) continue;
-
-    await supabase.from('section').insert({
-      datasource_id: kbDatasource.id,
-      organization_id: reply.organization_id,
-      content: section.content,
-      embedding: embedding as any,
-    });
-  }
-
   // Mark edit log as learned
   await supabase
     .from('reply_edit')
     .update({ learned: true })
     .eq('reply_id', id);
 
-  return new Response(
-    JSON.stringify({ ok: true, sections_added: sections.length }),
-    { status: 200 }
-  );
+  return new Response(JSON.stringify({ ok: true }), { status: 200 });
 }
