@@ -73,7 +73,7 @@ export async function createOrganization({
       name,
       slug: slugify(name),
       support_email,
-      inbound_email: `${crypto.randomUUID()}@inbound.answerify.dev`,
+      inbound_email: `${crypto.randomUUID()}@answerify.dev`,
       created_by: user.id,
       onboarding: { step: 'email-forwarding', hasOnboarded: false },
     })
@@ -162,7 +162,11 @@ export async function inviteMember(
   const supabase = await createServerClient();
   return await supabase
     .from('member')
-    .insert({ organization_id: orgId, user_id: foundUserId, role: parseInt(role) })
+    .insert({
+      organization_id: orgId,
+      user_id: foundUserId,
+      role: parseInt(role),
+    })
     .select()
     .single();
 }
