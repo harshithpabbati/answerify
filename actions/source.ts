@@ -1,5 +1,6 @@
 'use server';
 
+import { indexUrlInAutoRAG } from '@/lib/cloudflare';
 import { createServerClient } from '@/lib/supabase/server';
 
 export async function getSources(id: string) {
@@ -19,7 +20,7 @@ export async function setupSources(slug: string, sources: { url: string }[]) {
     .single();
   if (error || !data?.id) return { data: null, error };
 
-  return await supabase
+  const result = await supabase
     .from('datasource')
     .insert(
       sources
@@ -31,4 +32,18 @@ export async function setupSources(slug: string, sources: { url: string }[]) {
         }))
     )
     .select();
+
+  // Index each URL in Cloudflare AutoRAG so it can be semantically searched.
+  // Use the organization_id from the inserted records to guarantee each URL is
+  // indexed under the correct tenant.  Failures are non-fatal — the URLs are
+  // already persisted in Supabase.
+  if (!result.error && result.data) {
+    await Promise.allSettled(
+      result.data.map((source) =>
+        indexUrlInAutoRAG(source.url, source.organization_id)
+      )
+    );
+  }
+
+  return result;
 }

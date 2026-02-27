@@ -106,9 +106,12 @@ export async function POST(request: Request) {
     - Do not output anything outside of the HTML response
   `;
 
-  // Try Cloudflare AutoRAG first for semantic retrieval, then fall back to
-  // Gemini URL context when AutoRAG credentials are not configured.
-  const autoRagResults = await searchAutoRAG(record.cleaned_body);
+  // Try Cloudflare AutoRAG first for semantic retrieval scoped to this org,
+  // then fall back to Gemini URL context when AutoRAG credentials are not configured.
+  const autoRagResults = await searchAutoRAG(
+    record.cleaned_body,
+    record.organization_id
+  );
 
   let userMessage: string;
   let urlContextTools: { urlContext: Record<string, unknown> }[] | undefined;
