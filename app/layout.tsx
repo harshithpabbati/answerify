@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
 import { ViewTransitions } from 'next-view-transitions';
 
 import { siteConfig } from '@/lib/config';
@@ -36,8 +37,9 @@ export default function RootLayout({
       <html lang="en" suppressHydrationWarning>
         <body
           className={cn(
-            'bg-muted flex max-h-dvh min-h-dvh flex-col',
-            GeistSans.className
+            'bg-black flex max-h-dvh min-h-dvh flex-col',
+            GeistSans.className,
+            GeistMono.variable
           )}
         >
           <Providers>

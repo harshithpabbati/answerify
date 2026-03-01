@@ -16,9 +16,11 @@ export async function Header({ isDashboard = true }: Props) {
   } = await getUser();
 
   return (
-    <header className="bg-background sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b px-4 md:px-6">
+    <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b border-[#FF4500] bg-black px-4 md:px-6">
       <Link href="/">
-        <h1 className="text-lg font-semibold">Answerify</h1>
+        <h1 className="font-mono text-base font-bold uppercase tracking-[0.2em] text-white">
+          <span className="text-[#FF4500]">ANSWER</span>IFY
+        </h1>
       </Link>
       {user?.id ? (
         <>

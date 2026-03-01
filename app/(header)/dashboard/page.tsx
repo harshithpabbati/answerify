@@ -16,9 +16,8 @@ export const metadata: Metadata = {
 // Revalidate every 60 seconds to keep dashboard fresh
 export const revalidate = 60;
 
-// Deterministic palette for the initial-letter block on each org card
-// lime · slate · yellow · rose · emerald
-const PALETTE = ['#A3E636', '#E0E7F1', '#FFD60A', '#FCA5A5', '#6EE7B7'];
+// Deterministic dark palette for the initial-letter block on each org card
+const PALETTE = ['#FF4500', '#FF6A00', '#CC3700', '#E63E00', '#FF5722'];
 function orgColor(name: string) {
   return PALETTE[name.charCodeAt(0) % PALETTE.length];
 }
@@ -30,14 +29,23 @@ export default async function DashboardPage() {
     <div className="flex h-full flex-col overflow-auto">
       {organizations.length > 0 ? (
         <>
-          {/* Bold lime header with grid background */}
-          <div className="bg-background border-b-2 border-black bg-grid px-6 py-10 md:px-10">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Dark header with orange grid background */}
+          <div className="relative border-b border-[#FF4500]/30 bg-black px-6 py-10 md:px-10 overflow-hidden">
+            <div
+              className="pointer-events-none absolute inset-0 opacity-10"
+              style={{
+                backgroundImage:
+                  'linear-gradient(to right, #FF4500 1px, transparent 1px), linear-gradient(to bottom, #FF4500 1px, transparent 1px)',
+                backgroundSize: '60px 60px',
+              }}
+            />
+            <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h1 className="text-4xl font-bold tracking-tight">
+                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500] mb-2">// WORKSPACE</p>
+                <h1 className="font-display text-4xl font-black uppercase tracking-tight text-white">
                   Your organizations
                 </h1>
-                <p className="mt-1 font-medium">
+                <p className="font-mono mt-1 text-sm text-gray-400">
                   {organizations.length} workspace
                   {organizations.length !== 1 ? 's' : ''} &mdash; pick one to
                   get started
@@ -60,35 +68,37 @@ export default async function DashboardPage() {
 
                 return (
                   <Link href={href} key={o.slug}>
-                    <Card className="flex h-full flex-col transition-all hover:translate-x-[4px] hover:translate-y-[4px] hover:shadow-none">
+                    <Card className="flex h-full flex-col transition-all hover:border-[#FF4500]/80">
                       {/* Colored block with large initial */}
                       <div
-                        className="flex h-24 items-center border-b-2 border-black px-6"
-                        style={{ backgroundColor: bg }}
+                        className="flex h-24 items-center border-b border-[#FF4500]/40 px-6"
+                        style={{ backgroundColor: bg + '22' }}
                       >
-                        <span className="text-5xl font-bold">{initial}</span>
+                        <span className="font-display text-5xl font-black uppercase" style={{ color: bg }}>{initial}</span>
                       </div>
 
                       <CardContent className="flex flex-1 flex-col gap-2 p-5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <h2 className="text-lg font-bold leading-snug">
+                            <h2 className="font-display text-lg font-black uppercase tracking-tight text-white leading-snug">
                               {o.name}
                             </h2>
-                            <p className="truncate text-sm text-black/60">
+                            <p className="font-mono truncate text-xs text-gray-500">
                               {o.support_email}
                             </p>
                           </div>
                           <span
                             className={cn(
-                              'shrink-0 rounded-base border-2 border-black px-2 py-0.5 text-xs font-bold',
-                              hasOnboarded ? 'bg-main' : 'bg-white'
+                              'font-mono shrink-0 border px-2 py-0.5 text-xs font-bold uppercase tracking-widest',
+                              hasOnboarded
+                                ? 'border-[#FF4500] text-[#FF4500] bg-[#FF4500]/10'
+                                : 'border-gray-600 text-gray-400'
                             )}
                           >
                             {hasOnboarded ? 'Live' : 'Setup'}
                           </span>
                         </div>
-                        <p className="mt-auto text-xs text-black/40 tabular-nums">
+                        <p className="font-mono mt-auto text-xs text-gray-600 tabular-nums">
                           Created{' '}
                           {new Date(o.created_at).toLocaleDateString(
                             undefined,

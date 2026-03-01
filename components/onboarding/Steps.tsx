@@ -14,14 +14,16 @@ function Step({ title, current, index }: StepProps) {
   return (
     <div
       className={cn(
-        'relative flex size-full flex-col items-start gap-1 p-4',
-        current ? 'bg-main shadow-base rounded-base border' : ''
+        'relative flex size-full flex-col items-start gap-1 p-4 transition-colors',
+        current
+          ? 'border border-[#FF4500] bg-[#FF4500]/10'
+          : 'border border-transparent'
       )}
     >
-      <p className="text-foreground text-xs font-semibold uppercase">
+      <p className={cn('font-mono text-xs font-semibold uppercase tracking-widest', current ? 'text-[#FF4500]' : 'text-gray-600')}>
         Step {index}
       </p>
-      <h2 className="text-lg font-medium">{title}</h2>
+      <h2 className={cn('font-display text-lg font-black uppercase tracking-tight', current ? 'text-white' : 'text-gray-600')}>{title}</h2>
     </div>
   );
 }

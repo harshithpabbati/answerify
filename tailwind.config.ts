@@ -19,9 +19,9 @@ const config = {
     },
     extend: {
       colors: {
-        bg: '#E0E7F1',
-        main: '#A3E636',
-        border: 'black',
+        bg: '#000000',
+        main: '#FF4500',
+        border: '#FF4500',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
@@ -56,13 +56,13 @@ const config = {
         },
       },
       borderRadius: {
-        base: '5px',
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        base: '0px',
+        lg: '0px',
+        md: '0px',
+        sm: '0px',
       },
       boxShadow: {
-        base: '4px 4px 0px 0px rgba(0,0,0,1)',
+        base: '4px 4px 0px 0px #FF4500',
       },
       translate: {
         boxShadowX: '4px',
@@ -105,7 +105,14 @@ const config = {
       },
       fontFamily: {
         sans: ['var(--font-geist-sans)'],
-        mono: ['var(--font-geist-mono)'],
+        mono: ['var(--font-geist-mono)', 'monospace'],
+        display: [
+          'Georgia',
+          '"Palatino Linotype"',
+          'Palatino',
+          '"Book Antiqua"',
+          'serif',
+        ],
       },
     },
   },
