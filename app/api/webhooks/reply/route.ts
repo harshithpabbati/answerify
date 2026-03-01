@@ -11,6 +11,50 @@ function getGenAIClient() {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 }
 
+const CLOUDFLARE_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+
+/**
+ * Call Cloudflare Workers AI via the REST API.
+ * Used as a fallback when Gemini is unavailable (e.g. rate limited).
+ */
+async function runCloudflareAgent(systemPrompt: string, userPrompt: string): Promise<string> {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+
+  if (!accountId || !apiToken) {
+    throw new Error('Cloudflare credentials not configured');
+  }
+
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${CLOUDFLARE_MODEL}`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        max_tokens: 1024,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Cloudflare AI request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const text = (data as { result?: { response?: string } }).result?.response ?? '';
+  if (!text) {
+    console.warn('Cloudflare AI returned an empty response');
+  }
+  return text;
+}
+
 /**
  * Derive a 0–1 confidence score from Gemini grounding metadata.
  * Falls back to URL_CONTEXT_FALLBACK_CONFIDENCE when the URL context tool
@@ -99,7 +143,7 @@ async function runResearchAgent(
   subject: string,
   question: string,
   urlList: string,
-): Promise<{ findings: string; candidates: any[] | undefined }> {
+): Promise<{ findings: string; candidates: any[] | undefined; usedFallback?: boolean }> {
   const researchPrompt = codeBlock`
     You are a research assistant for a customer support team.
     Your job is to find and extract the most relevant information from the provided URLs
@@ -113,18 +157,43 @@ async function runResearchAgent(
     - If no relevant information can be found, respond with only: NO_INFORMATION
   `;
 
-  const result = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `Subject: ${subject}\nCustomer question:\n${question}\n\nURLs to search:\n${urlList}`,
-    config: {
-      systemInstruction: researchPrompt,
-      maxOutputTokens: 1024,
-      temperature: 0.3,
-      tools: [{ urlContext: {} }],
-    },
-  });
+  try {
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Subject: ${subject}\nCustomer question:\n${question}\n\nURLs to search:\n${urlList}`,
+      config: {
+        systemInstruction: researchPrompt,
+        maxOutputTokens: 1024,
+        temperature: 0.3,
+        tools: [{ urlContext: {} }],
+      },
+    });
 
-  return { findings: result.text ?? '', candidates: result.candidates };
+    return { findings: result.text ?? '', candidates: result.candidates };
+  } catch (err) {
+    console.warn('Gemini research agent failed, falling back to Cloudflare AI:', err);
+
+    const cloudflareResearchPrompt = codeBlock`
+      You are a research assistant for a customer support team.
+      Your job is to extract the most relevant information to answer a customer's question.
+
+      - Extract only information that is directly relevant to the question
+      - Organise the findings as concise bullet points or short paragraphs
+      - Include specific details: steps, values, settings, or policies that apply
+      - Do not write the final reply – only gather and present the raw facts
+      - If you cannot find relevant information, respond with only: NO_INFORMATION
+    `;
+
+    // Note: unlike Gemini's urlContext tool, Cloudflare AI cannot fetch URL
+    // content. The URLs are listed as context so the model can reference them
+    // in its answer, but the response is based on the model's training data.
+    const findings = await runCloudflareAgent(
+      cloudflareResearchPrompt,
+      `Subject: ${subject}\nCustomer question:\n${question}\n\nKnowledge base sources:\n${urlList}`,
+    );
+
+    return { findings, candidates: undefined, usedFallback: true };
+  }
 }
 
 /**
@@ -176,17 +245,24 @@ async function runWritingAgent(
     - Do not output anything outside of the HTML response
   `;
 
-  const result = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `Subject: ${subject}\nCustomer question:\n${question}\n\nResearch findings:\n${findings}`,
-    config: {
-      systemInstruction: writingPrompt,
-      maxOutputTokens: 1024,
-      temperature: 0.7,
-    },
-  });
+  const userContent = `Subject: ${subject}\nCustomer question:\n${question}\n\nResearch findings:\n${findings}`;
 
-  return result.text ?? '';
+  try {
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: userContent,
+      config: {
+        systemInstruction: writingPrompt,
+        maxOutputTokens: 1024,
+        temperature: 0.7,
+      },
+    });
+
+    return result.text ?? '';
+  } catch (err) {
+    console.warn('Gemini writing agent failed, falling back to Cloudflare AI:', err);
+    return runCloudflareAgent(writingPrompt, userContent);
+  }
 }
 
 export async function POST(request: Request) {
@@ -267,15 +343,23 @@ export async function POST(request: Request) {
   // Fetch and synthesise relevant information from the datasource URLs.
   // Confidence is derived from the grounding metadata of this step because it
   // is the step that actually reads from the knowledge-base URLs.
-  const { findings, candidates: researchCandidates } = await runResearchAgent(
+  const {
+    findings,
+    candidates: researchCandidates,
+    usedFallback,
+  } = await runResearchAgent(
     ai,
     thread?.subject ?? '',
     record.cleaned_body,
     urlList,
   );
 
-  const confidence = computeConfidence(researchCandidates, datasources.length);
-  const citations = extractCitations(researchCandidates);
+  // When using the Cloudflare fallback, grounding metadata is unavailable so
+  // we use a fixed conservative confidence score to keep the reply as a draft.
+  const confidence = usedFallback
+    ? 0.5
+    : computeConfidence(researchCandidates, datasources.length);
+  const citations = usedFallback ? [] : extractCitations(researchCandidates);
 
   if (!findings || findings.trim() === 'NO_INFORMATION') {
     // Generate clarifying question draft instead of erroring out
