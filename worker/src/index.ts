@@ -18,21 +18,22 @@
  *       e. Email record insertion
  *       f. Research Agent – fetches relevant info from datasource URLs
  *       g. Writing Agent  – produces a polished HTML reply
- *       h. Auto-send via Resend (or save as draft for human review)
+ *       h. Auto-send via this.replyToEmail() (or save as draft for human review)
+ *
+ * Sending replies uses Cloudflare's native email.reply() via this.replyToEmail().
+ * This ensures the reply lands in the customer's existing email thread automatically
+ * (In-Reply-To / References headers are set correctly) without any external
+ * email-sending service.
  *
  * Each email thread gets its own isolated Durable Object instance so parallel
  * threads never block each other and pipeline state survives transient errors.
  *
  * An optional HTTP path (onRequest) lets the Next.js dashboard manually
- * trigger AI reply generation for a specific email ID.
- *
- * Outbound emails set Reply-To to support+<threadId>@<domain> so that
- * customer replies are routed back to the same EmailReplyAgent instance via
- * sub-address routing, without relying on signed headers that email clients
- * often strip.
+ * trigger AI reply generation for a specific email ID; it always saves a draft
+ * for human review rather than auto-sending.
  */
 
-import { Agent, getAgentByName, routeAgentEmail, routeAgentRequest } from 'agents';
+import { Agent, routeAgentEmail, routeAgentRequest } from 'agents';
 import { isAutoReplyEmail } from 'agents/email';
 import { codeBlock } from 'common-tags';
 import PostalMime from 'postal-mime';
@@ -48,7 +49,6 @@ export interface Env {
   GEMINI_API_KEY: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_KEY: string;
-  RESEND_API_KEY: string;
   /**
    * Shared secret used to authenticate HTTP requests from the Next.js app to
    * the Worker's onRequest handler.
@@ -381,13 +381,12 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
 
     // Run the AI reply pipeline
     await this.generateReply({
+      email,
       organizationId,
       threadId,
       emailId: emailId ?? '',
       cleanedBody: text ?? '',
       subject,
-      emailFrom: fromAddress,
-      messageId: messageId ?? '',
     });
   }
 
@@ -458,8 +457,6 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
       emailId: record.id,
       cleanedBody: record.cleaned_body,
       subject: thread?.subject ?? '',
-      emailFrom: thread?.email_from ?? '',
-      messageId: thread?.message_id ?? '',
     });
 
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
@@ -467,18 +464,23 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
 
   // -------------------------------------------------------------------------
   // generateReply – shared AI pipeline (used by both onEmail and onRequest)
+  //
+  // When `email` is provided (i.e. called from onEmail), auto-send uses
+  // this.replyToEmail() so Cloudflare sets In-Reply-To correctly and the
+  // reply lands in the customer's existing thread natively.
+  //
+  // When called from onRequest (dashboard HTTP trigger), `email` is absent
+  // and the result is always saved as a draft for human review.
   // -------------------------------------------------------------------------
   private async generateReply(params: {
+    email?: AgentEmail;
     organizationId: string;
     threadId: string;
     emailId: string;
     cleanedBody: string;
     subject: string;
-    emailFrom: string;
-    messageId: string;
   }): Promise<void> {
-    const { organizationId, threadId, emailId, cleanedBody, subject, emailFrom, messageId } =
-      params;
+    const { email, organizationId, threadId, emailId, cleanedBody, subject } = params;
     const supabaseUrl = this.env.SUPABASE_URL;
     const serviceKey = this.env.SUPABASE_SERVICE_KEY;
 
@@ -569,19 +571,22 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
     const org = orgRows?.[0];
     const autopilotEnabled = org?.autopilot_enabled ?? false;
     const autopilotThreshold = org?.autopilot_threshold ?? 0.65;
-    const shouldAutoSend = autopilotEnabled && confidence >= autopilotThreshold;
+    // Auto-send is only available from the email path (email object present).
+    // The onRequest/dashboard path always creates a draft for human review.
+    const shouldAutoSend = email !== undefined && autopilotEnabled && confidence >= autopilotThreshold;
 
     // --- Step 3: Send or draft ---
-    if (shouldAutoSend) {
-      const sent = await this.sendEmail({
-        emailFrom,
-        subject,
-        messageId,
-        htmlContent,
-        threadId,
-      });
+    if (shouldAutoSend && email) {
+      try {
+        // Use Cloudflare's native reply – sets In-Reply-To automatically so
+        // the reply lands in the customer's existing email thread.
+        await this.replyToEmail(email, {
+          fromName: 'Support',
+          body: htmlContent,
+          contentType: 'text/html',
+          secret: null,
+        });
 
-      if (sent) {
         await supabaseFetch(supabaseUrl, serviceKey, 'email', {
           method: 'POST',
           body: JSON.stringify({
@@ -592,7 +597,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
             // so both complete tags and unclosed/partial tags (e.g. '<script') are removed.
             cleaned_body: htmlContent.replace(/<[^>]*(>|$)/gm, ''),
             role: 'staff',
-            email_from: 'support@answerify.dev',
+            email_from: email.to,
             email_from_name: 'Support',
             is_perfect: true,
           }),
@@ -612,6 +617,9 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
 
         await this.setState({ ...this.state, status: 'complete' });
         return;
+      } catch (err) {
+        console.error(`replyToEmail failed for thread ${threadId}, email ${emailId}:`, err);
+        // Fall through to save as draft
       }
     }
 
@@ -721,50 +729,6 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
   }
 
   // -------------------------------------------------------------------------
-  // Send email via Resend.
-  // Reply-To is set to support+<threadId>@<domain> so that the customer's
-  // reply is routed back to this exact agent instance via sub-address routing.
-  // -------------------------------------------------------------------------
-  private async sendEmail(params: {
-    emailFrom: string;
-    subject: string;
-    messageId: string;
-    htmlContent: string;
-    threadId: string;
-  }): Promise<boolean> {
-    const { emailFrom, subject, messageId, htmlContent, threadId } = params;
-
-    // Derive the reply-to domain from the recipient's own address so replies
-    // land on the same Cloudflare Email Routing domain.
-    const inboundDomain = emailFrom.split('@')[1] ?? 'answerify.dev';
-    const replyTo = `support+${threadId}@${inboundDomain}`;
-
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Support <support@answerify.dev>',
-        to: [emailFrom],
-        reply_to: replyTo,
-        subject,
-        html: htmlContent,
-        headers: { 'In-Reply-To': messageId },
-      }),
-    });
-
-    if (!response.ok) {
-      console.error('Resend error:', await response.text());
-      return false;
-    }
-
-    const data = (await response.json()) as { id?: string };
-    return Boolean(data?.id);
-  }
-
-  // -------------------------------------------------------------------------
   // Insert a clarifying-question draft reply
   // -------------------------------------------------------------------------
   private async insertClarifyingDraft(
@@ -792,11 +756,13 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
 // Thread-aware email resolver
 //
 // Routing strategy (tried in order):
-//  1. Sub-address routing – if the recipient is "local+<threadId>@domain" the
-//     sub-address IS the thread ID (covers replies via our custom Reply-To).
-//  2. In-Reply-To lookup – look up the original message's thread in Supabase
-//     to handle clients that honour In-Reply-To but strip sub-addresses.
-//  3. New email – generate a fresh UUID; the agent will create the thread.
+//  1. In-Reply-To header – look up the thread in Supabase by the original
+//     message-id. Handles customer replies in any email client.
+//  2. New email – generate a fresh UUID; the agent will create the thread.
+//
+// Note: sub-address routing is no longer needed because outbound replies use
+// this.replyToEmail() which sets In-Reply-To natively via Cloudflare, so
+// customer replies always carry the correct In-Reply-To header.
 // ---------------------------------------------------------------------------
 
 async function resolveEmailToAgent(
@@ -805,13 +771,7 @@ async function resolveEmailToAgent(
 ): Promise<{ agentName: string; agentId: string } | null> {
   const AGENT_NAME = 'email-reply-agent';
 
-  // 1. Sub-address: support+<threadId>@domain → route to that thread's agent
-  const subAddressMatch = email.to.match(/^[^+@]+\+([^@]+)@/);
-  if (subAddressMatch) {
-    return { agentName: AGENT_NAME, agentId: subAddressMatch[1] };
-  }
-
-  // 2. In-Reply-To header → look up thread by message_id in Supabase
+  // 1. In-Reply-To header → look up thread by message_id in Supabase
   const inReplyTo = email.headers.get('in-reply-to');
   if (inReplyTo) {
     try {
@@ -828,7 +788,7 @@ async function resolveEmailToAgent(
     }
   }
 
-  // 3. New email – generate a fresh UUID for a new thread
+  // 2. New email – generate a fresh UUID for a new thread
   return { agentName: AGENT_NAME, agentId: crypto.randomUUID() };
 }
 

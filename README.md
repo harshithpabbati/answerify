@@ -159,7 +159,7 @@ The `worker/` directory contains a [Cloudflare Agents](https://agents.cloudflare
 | State persistence | None – stateless per request | Built-in SQLite per agent instance |
 | Parallelism | One function per request | One Durable Object per email thread |
 | Observability | Logs only | State introspection + scheduling |
-| Reply routing | Lookup by message-id | Sub-address routing (`support+<threadId>@domain`) |
+| Outbound reply | Resend API with manual `In-Reply-To` header | `this.replyToEmail()` – Cloudflare sets `In-Reply-To` natively; reply lands in customer's existing thread |
 
 The `EmailReplyAgent` extends the Cloudflare [`Agent`](https://agents.cloudflare.com/) class. Each email thread gets its own Durable Object instance, so parallel threads are fully isolated and never block each other. Agent state (`status`, `findings`, `reply`, `confidence`) is persisted across the research and writing steps, enabling safe retries if any step fails.
 
@@ -174,7 +174,6 @@ npm run deploy        # wrangler deploy
 wrangler secret put GEMINI_API_KEY
 wrangler secret put SUPABASE_URL
 wrangler secret put SUPABASE_SERVICE_KEY
-wrangler secret put RESEND_API_KEY
 wrangler secret put INBOUND_WEBHOOK_SECRET   # shared with Next.js CLOUDFLARE_AGENT_SECRET
 ```
 
@@ -195,9 +194,8 @@ Cloudflare Email Routing
         ▼
 Worker email handler
         │  resolveEmailToAgent():
-        │   1. sub-address routing  support+<threadId>@domain → existing thread
-        │   2. In-Reply-To lookup   → existing thread via Supabase
-        │   3. new UUID             → new thread
+        │   1. In-Reply-To lookup   → existing thread via Supabase
+        │   2. new UUID             → new thread
         │
         ▼  routeAgentEmail()
 EmailReplyAgent (Durable Object, one per thread)
@@ -211,14 +209,16 @@ EmailReplyAgent (Durable Object, one per thread)
         │   └─ generateReply() ──────────────────────────────────────┐
         │                                                             │
         └─ onRequest()  ◄── Next.js /api/generate-reply              │
-            (manual trigger from dashboard)                           │
+            (manual trigger from dashboard → always saves draft)      │
             └─ generateReply() ────────────────────────────────────► │
                                                                       ▼
                                               Step 1: Research Agent (Gemini + URL context)
                                                        grounding metadata → confidence score
                                               Step 2: Writing Agent (Gemini)
                                                        produces polished HTML reply
-                                              Step 3: Auto-send (Resend) or save as draft
-                                                       Reply-To: support+<threadId>@domain
-                                                       so customer replies route back here
+                                              Step 3: Auto-send or draft
+                                                       • email path: this.replyToEmail() – Cloudflare
+                                                         sets In-Reply-To natively; reply lands in the
+                                                         customer's existing thread automatically
+                                                       • HTTP path: always saves draft for review
 ```
