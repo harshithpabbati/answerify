@@ -109,7 +109,9 @@ export function WelcomeDashboard({
   return (
     <div className="flex h-screen flex-col overflow-auto p-6 md:p-10">
       <div className="mb-8">
-        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500] mb-2">// WORKSPACE</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500] mb-2">
+          {`// WORKSPACE`}
+        </p>
         <h1 className="font-display text-3xl font-black uppercase tracking-tight text-foreground">
           Welcome to {orgName}
         </h1>
@@ -118,9 +120,9 @@ export function WelcomeDashboard({
         </p>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Inbound Email Card */}
-        <Card className="sm:col-span-2 md:col-span-1">
+        <Card className="sm:col-span-2 lg:col-span-1">
           <CardHeader>
             <CardTitle>📬 Inbound Email Address</CardTitle>
             <CardDescription>
@@ -193,7 +195,9 @@ export function WelcomeDashboard({
             <ol className="space-y-3">
               <li className="flex items-start gap-3">
                 <StepBadge step={1} done={!!inboundEmail} />
-                <span className="font-mono text-sm text-gray-300">Copy your inbound email address</span>
+                <span className="font-mono text-sm text-gray-300">
+                  Copy your inbound email address
+                </span>
               </li>
               <li className="flex items-start gap-3">
                 <StepBadge step={2} done={threadsCount > 0} />
@@ -280,7 +284,7 @@ export function WelcomeDashboard({
 
         <div className="flex flex-col gap-3">
           {/* AI Auto-Reply Card */}
-          <Card className="sm:col-span-2 md:col-span-1">
+          <Card className="sm:col-span-2 lg:col-span-1">
             <CardHeader>
               <CardTitle>🤖 AI Auto-Reply</CardTitle>
               <CardDescription>
@@ -293,7 +297,9 @@ export function WelcomeDashboard({
               {/* Toggle row */}
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="font-mono text-sm font-semibold text-foreground">Enable Auto-Reply</p>
+                  <p className="font-mono text-sm font-semibold text-foreground">
+                    Enable Auto-Reply
+                  </p>
                   <p className="font-mono text-gray-400 text-xs">
                     {enabled
                       ? 'Replies will be sent automatically when confidence is high enough.'
@@ -307,13 +313,17 @@ export function WelcomeDashboard({
                   disabled={saving}
                   className={cn(
                     'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4500] disabled:opacity-50',
-                    enabled ? 'border-[#FF4500] bg-[#FF4500]' : 'border-[#FF4500]/30 bg-background'
+                    enabled
+                      ? 'border-[#FF4500] bg-[#FF4500]'
+                      : 'border-[#FF4500]/30 bg-background'
                   )}
                 >
                   <span
                     className={cn(
                       'pointer-events-none inline-block size-5 border-2 bg-white shadow-sm transition-transform',
-                      enabled ? 'translate-x-5 border-white' : 'translate-x-0.5 border-[#FF4500]/40'
+                      enabled
+                        ? 'translate-x-5 border-white'
+                        : 'translate-x-0.5 border-[#FF4500]/40'
                     )}
                   />
                 </button>
@@ -322,7 +332,9 @@ export function WelcomeDashboard({
               {/* Threshold slider row */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="font-mono text-sm font-semibold text-foreground">Confidence Threshold</p>
+                  <p className="font-mono text-sm font-semibold text-foreground">
+                    Confidence Threshold
+                  </p>
                   <span className="border border-[#FF4500] bg-[#FF4500]/10 px-2 py-0.5 text-xs font-bold font-mono tabular-nums text-[#FF4500]">
                     {Math.round(threshold * 100)}%
                   </span>
@@ -345,7 +357,7 @@ export function WelcomeDashboard({
             </CardContent>
           </Card>
           {/* Quick Actions Card */}
-          <Card className="sm:col-span-2 md:col-span-1">
+          <Card className="sm:col-span-2 lg:col-span-1">
             <CardHeader>
               <CardTitle>⚡ Quick Actions</CardTitle>
               <CardDescription>

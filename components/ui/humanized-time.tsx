@@ -23,6 +23,7 @@ export function HumanizedTime({ time }: { time: string }) {
   );
 
   useEffect(() => {
+    // eslint-disable-next-line
     setCurrentTime(calculateCurrentTime(time));
     const timer = setInterval(
       () => setCurrentTime(calculateCurrentTime(time)),

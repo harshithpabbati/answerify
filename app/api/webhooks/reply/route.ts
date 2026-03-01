@@ -1,13 +1,67 @@
 import { GoogleGenAI } from '@google/genai';
 import { codeBlock } from 'common-tags';
+import { Resend } from 'resend';
 
+import { cleanBody } from '@/lib/cleanBody';
 import { createServiceClient } from '@/lib/supabase/service';
+import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
+import { firstPathSegment } from '@/lib/url-section';
 
 function getGenAIClient() {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 }
 
+/**
+ * Derive a 0–1 confidence score from Gemini grounding metadata.
+ * Falls back to URL_CONTEXT_FALLBACK_CONFIDENCE when the URL context tool
+ * was used but no explicit grounding scores are returned.
+ */
+function computeConfidence(
+   
+  candidates: any[] | undefined,
+  datasourceCount: number
+): number {
+  if (!candidates || candidates.length === 0) return URL_CONTEXT_FALLBACK_CONFIDENCE;
+
+  const candidate = candidates[0];
+  const supports =
+    candidate?.groundingMetadata?.groundingSupports as
+      | Array<{ confidenceScores?: number[] }>
+      | undefined;
+
+  if (supports && supports.length > 0) {
+    // Average all per-chunk confidence scores
+    const allScores = supports.flatMap((s) => s.confidenceScores ?? []);
+    if (allScores.length > 0) {
+      const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+      // Clamp to [0, 0.99]: we never claim 100% certainty so agents can always
+      // override the autopilot decision when confidence is borderline.
+      return Math.min(0.99, Math.max(0, avg));
+    }
+  }
+
+  // URL context was used (datasources > 0) but no explicit scores returned
+  if (datasourceCount > 0) return URL_CONTEXT_FALLBACK_CONFIDENCE;
+
+  return 0;
+}
+
+/**
+ * Extract cited source URLs from Gemini grounding chunks.
+ */
+ 
+function extractCitations(candidates: any[] | undefined): string[] {
+  if (!candidates || candidates.length === 0) return [];
+  const chunks =
+    candidates[0]?.groundingMetadata?.groundingChunks as
+      | Array<{ web?: { uri?: string } }>
+      | undefined;
+  if (!chunks) return [];
+  return [...new Set(chunks.map((c) => c.web?.uri).filter(Boolean) as string[])];
+}
+
 export async function POST(request: Request) {
+  const { origin } = new URL(request.url);
   const { record } = await request.json();
 
   if (record.role !== 'user') {
@@ -17,11 +71,18 @@ export async function POST(request: Request) {
   const ai = getGenAIClient();
   const supabase = await createServiceClient();
 
-  // Fetch datasources for the organization
-  const { data: datasources } = await supabase
-    .from('datasource')
-    .select('id, url')
-    .eq('organization_id', record.organization_id);
+  // Fetch datasources and organization autopilot settings in parallel
+  const [{ data: datasources }, { data: org }] = await Promise.all([
+    supabase
+      .from('datasource')
+      .select('id, url')
+      .eq('organization_id', record.organization_id),
+    supabase
+      .from('organization')
+      .select('autopilot_enabled, autopilot_threshold')
+      .eq('id', record.organization_id)
+      .single(),
+  ]);
 
   // Fetch previous emails in this thread for conversation context
   const { data: threadEmails, error: threadEmailsError } = await supabase
@@ -54,8 +115,11 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ data, error }), { status: 200 });
   }
 
-  // Build URL list for Gemini URL context tool
-  const urlList = datasources.map((d) => d.url).join('\n');
+  // Build URL list for Gemini URL context tool.
+  // Deduplicate by section prefix so Gemini is never overwhelmed: when many
+  // URLs share the same origin + first path segment, use the prefix URL as a
+  // representative (e.g. /docs/ instead of 50 individual doc pages).
+  const urlList = deduplicateForGemini(datasources.map((d) => d.url)).join('\n');
 
   // Build conversation history context
   const conversationHistory =
@@ -145,7 +209,72 @@ export async function POST(request: Request) {
 
   const htmlContent = rawContent.replace(/^```html\s*|\s*```$/g, '');
 
-  // Save as draft
+  const confidence = computeConfidence(chatResult.candidates, datasources.length);
+  const citations = extractCitations(chatResult.candidates);
+
+  // Determine whether autopilot should auto-send this reply
+  const autopilotEnabled = org?.autopilot_enabled ?? false;
+  const autopilotThreshold = org?.autopilot_threshold ?? 0.65;
+  const shouldAutoSend = autopilotEnabled && confidence >= autopilotThreshold;
+
+  if (shouldAutoSend) {
+    // Auto-send: fetch thread details to send the email
+    const { data: thread } = await supabase
+      .from('thread')
+      .select('email_from, subject, message_id')
+      .eq('id', record.thread_id)
+      .single();
+
+    if (thread) {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const sentEmail = await resend.emails.send({
+        from: 'Support <support@answerify.dev>',
+        to: [thread.email_from],
+        subject: thread.subject,
+        html: htmlContent,
+        headers: { 'In-Reply-To': thread.message_id },
+      });
+
+      if (sentEmail?.data?.id) {
+        // Record the sent staff email
+        await supabase.from('email').insert({
+          organization_id: record.organization_id,
+          thread_id: record.thread_id,
+          body: htmlContent,
+          cleaned_body: cleanBody(htmlContent),
+          role: 'staff',
+          email_from: 'support@answerify.dev',
+          email_from_name: 'Support',
+          is_perfect: true,
+        });
+
+        // Save reply as sent
+        const { data, error } = await supabase
+          .from('reply')
+          .insert({
+            organization_id: record.organization_id,
+            thread_id: record.thread_id,
+            content: htmlContent,
+            status: 'sent',
+            confidence_score: confidence,
+            citations,
+          })
+          .select()
+          .single();
+
+        // Trigger learning-loop via approve endpoint so edits are stored
+        fetch(`${origin}/api/replies/${data?.id}/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: htmlContent }),
+        }).catch((err) => console.error('Learning-loop approve failed:', err));
+
+        return new Response(JSON.stringify({ data, error }), { status: 200 });
+      }
+    }
+  }
+
+  // Save as draft for human review
   const { data, error } = await supabase
     .from('reply')
     .insert({
@@ -153,9 +282,51 @@ export async function POST(request: Request) {
       thread_id: record.thread_id,
       content: htmlContent,
       status: 'draft',
+      confidence_score: confidence,
+      citations,
     })
     .select()
     .single();
 
   return new Response(JSON.stringify({ data, error }), { status: 200 });
+}
+
+/**
+ * Reduce a potentially large list of datasource URLs to a manageable set for
+ * Gemini's URL context tool.
+ *
+ * Strategy: group by origin + first path segment. When a section has more than
+ * one URL, replace all of them with the section prefix URL (e.g. turning 50
+ * individual "/docs/…" pages into a single "https://example.com/docs/" entry).
+ * This prevents Gemini from being overwhelmed while still pointing it at every
+ * distinct content area.
+ *
+ * A hard cap of MAX_GEMINI_URLS is applied after deduplication.
+ */
+const MAX_GEMINI_URLS = 20;
+
+function deduplicateForGemini(urls: string[]): string[] {
+  if (urls.length <= MAX_GEMINI_URLS) return urls;
+
+  const groups = new Map<string, string[]>();
+  for (const url of urls) {
+    let key: string;
+    try {
+      const parsed = new URL(url);
+      const seg = firstPathSegment(url);
+      key = seg ? `${parsed.origin}/${seg}/` : `${parsed.origin}/`;
+    } catch {
+      key = url;
+    }
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(url);
+  }
+
+  const result: string[] = [];
+  for (const [prefix, groupUrls] of groups) {
+    // More than one URL in this section → use the prefix as representative
+    result.push(groupUrls.length > 1 ? prefix : groupUrls[0]);
+    if (result.length >= MAX_GEMINI_URLS) break;
+  }
+  return result;
 }

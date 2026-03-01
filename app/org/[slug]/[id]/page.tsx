@@ -8,8 +8,6 @@ import {
   Conversations,
 } from '@/components/organization/conversation';
 
-export const dynamic = 'force-dynamic';
-
 interface Props {
   params: Promise<{ id: string; slug: string }>;
 }

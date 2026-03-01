@@ -57,7 +57,7 @@ export function Features() {
     <section className="border-t border-[#FF4500] bg-background py-20 lg:py-[100px]">
       <div className="mb-14 px-5 text-center lg:mb-20">
         <p className="font-mono mb-3 text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
-          // SYSTEM CAPABILITIES
+          {`// SYSTEM CAPABILITIES`}
         </p>
         <h2 className="font-display text-2xl font-black uppercase tracking-tight text-foreground md:text-3xl lg:text-4xl">
           Why should you use Answerify?

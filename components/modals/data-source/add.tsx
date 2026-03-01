@@ -1,7 +1,10 @@
-import { useCallback } from 'react';
+'use client';
+
+import { useCallback, useState } from 'react';
 import { useAddDataSource } from '@/states/data-source';
 import { toast } from 'sonner';
 
+import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import {
   Dialog,
@@ -20,7 +23,46 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 
-import { AddDataSourceForm } from './forms';
+import { AddDataSourceForm, DomainImportForm } from './forms';
+
+type Tab = 'manual' | 'domain';
+
+function TabBar({ active, onChange }: { active: Tab; onChange(t: Tab): void }) {
+  return (
+    <div className="flex gap-1 rounded border p-1 text-sm">
+      {(['manual', 'domain'] as Tab[]).map((t) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => onChange(t)}
+          className={cn(
+            'flex-1 rounded px-3 py-1 transition-colors',
+            active === t
+              ? 'bg-foreground text-background font-medium'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {t === 'manual' ? 'Add URLs' : 'Import from domain'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DataSourceContent({ slug, onAdd }: { slug: string; onAdd(): void }) {
+  const [tab, setTab] = useState<Tab>('manual');
+
+  return (
+    <div className="space-y-4 overflow-auto">
+      <TabBar active={tab} onChange={setTab} />
+      {tab === 'manual' ? (
+        <AddDataSourceForm slug={slug} onAdd={onAdd} />
+      ) : (
+        <DomainImportForm slug={slug} onAdd={onAdd} />
+      )}
+    </div>
+  );
+}
 
 export function AddDataSource() {
   const isMobile = useIsMobile();
@@ -35,7 +77,7 @@ export function AddDataSource() {
 
   if (isMobile) {
     return (
-      <Drawer open={Boolean(open)} onOpenChange={setOpen}>
+      <Drawer open={Boolean(slug)} onOpenChange={setOpen}>
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>Add data-source to your organization</DrawerTitle>
@@ -43,7 +85,9 @@ export function AddDataSource() {
               Add your links to the docs, blogs & other help center docs
             </DrawerDescription>
           </DrawerHeader>
-          <AddDataSourceForm onAdd={handleOnAdd} slug={slug as string} />
+          <div className="px-4 pb-4">
+            <DataSourceContent slug={slug as string} onAdd={handleOnAdd} />
+          </div>
         </DrawerContent>
         <DrawerFooter>
           <DrawerClose />
@@ -61,7 +105,7 @@ export function AddDataSource() {
             Add your links to the docs, blogs & other help center docs
           </DialogDescription>
         </DialogHeader>
-        <AddDataSourceForm onAdd={handleOnAdd} slug={slug as string} />
+        <DataSourceContent slug={slug as string} onAdd={handleOnAdd} />
       </DialogContent>
     </Dialog>
   );
