@@ -41,8 +41,10 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
       return { ...state, isLoading: true };
     case 'FETCH_SUCCESS':
       return { data: action.data, status: action.status, isLoading: false };
-    case 'INSERT_THREAD':
+    case 'INSERT_THREAD': {
+      if (state.data.some((t) => t.id === action.thread.id)) return state;
       return { ...state, data: [action.thread, ...state.data] };
+    }
     case 'UPDATE_THREAD': {
       const existsInList = state.data.some((t) => t.id === action.thread.id);
       if (action.thread.status !== state.status) {
