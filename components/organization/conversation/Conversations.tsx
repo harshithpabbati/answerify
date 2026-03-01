@@ -38,9 +38,7 @@ function confidenceLabel(score: number): string {
   return 'None';
 }
 
-function confidenceVariant(
-  score: number
-): 'default' | 'neutral' {
+function confidenceVariant(score: number): 'default' | 'neutral' {
   if (score >= 0.65) return 'default';
   return 'neutral';
 }
@@ -87,7 +85,7 @@ export function Conversations({
   const confidenceScore = reply?.confidence_score ?? 0;
 
   return (
-    <div className="flex h-[calc(100dvh-4rem)] flex-col items-start justify-between">
+    <div className="flex h-[calc(100dvh-60px)] flex-col items-start justify-between">
       <div
         ref={divRef}
         className="flex size-full flex-col gap-4 overflow-scroll p-4"
@@ -97,11 +95,16 @@ export function Conversations({
         ))}
       </div>
 
-      <div className="bg-background border-b border-[#FF4500]/20 w-full border-t p-4 max-w-sm md:max-w-none">
+      <div className="bg-background border-b border-[#FF4500]/20 w-full border-t p-4">
         {reply && (
           <div className="mb-2 flex items-center gap-2">
-            <span className="text-muted-foreground text-xs">AI confidence:</span>
-            <Badge variant={confidenceVariant(confidenceScore)} className="text-xs">
+            <span className="text-muted-foreground text-xs">
+              AI confidence:
+            </span>
+            <Badge
+              variant={confidenceVariant(confidenceScore)}
+              className="text-xs"
+            >
               {confidenceLabel(confidenceScore)}{' '}
               {confidenceScore > 0
                 ? `(${Math.round(confidenceScore * 100)}%)`

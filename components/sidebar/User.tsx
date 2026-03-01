@@ -1,8 +1,9 @@
 'use client';
 
 import { signOut } from '@/actions/auth';
-import { ExitIcon } from '@radix-ui/react-icons';
+import { ExitIcon, MoonIcon, SunIcon } from '@radix-ui/react-icons';
 import { User as SupabaseUser } from '@supabase/supabase-js';
+import { useTheme } from 'next-themes';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,8 @@ interface Props {
 }
 
 export function User({ user }: Props) {
+  const { theme, setTheme } = useTheme();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -41,6 +44,15 @@ export function User({ user }: Props) {
             </p>
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+          {theme === 'dark' ? (
+            <SunIcon className="mr-2 size-4" />
+          ) : (
+            <MoonIcon className="mr-2 size-4" />
+          )}
+          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => signOut()}>
           <ExitIcon className="mr-2 size-4" />

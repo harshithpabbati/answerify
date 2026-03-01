@@ -30,7 +30,7 @@ export function Email({ id, slug, email_from, subject, created_at }: Props) {
           {subject}
         </h3>
         <div className="flex min-w-0 items-center justify-between">
-          <span className="font-mono truncate text-xs text-gray-500">{email_from}</span>
+          <span className="font-mono truncate text-xs text-muted-foreground">{email_from}</span>
           <HumanizedTime time={created_at} />
         </div>
       </div>
