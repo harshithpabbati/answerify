@@ -42,8 +42,10 @@ function StepBadge({ step, done }: { step: number; done: boolean }) {
   return (
     <span
       className={cn(
-        'flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-black text-xs font-bold',
-        done ? 'bg-main' : 'bg-white'
+        'flex size-6 shrink-0 items-center justify-center border-2 text-xs font-bold font-mono',
+        done
+          ? 'border-[#FF4500] bg-[#FF4500] text-white'
+          : 'border-[#FF4500]/40 bg-black text-gray-400'
       )}
     >
       {done ? '✓' : step}
@@ -107,10 +109,11 @@ export function WelcomeDashboard({
   return (
     <div className="flex h-screen flex-col overflow-auto p-6 md:p-10">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Welcome to {orgName} 👋
+        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500] mb-2">// WORKSPACE</p>
+        <h1 className="font-display text-3xl font-black uppercase tracking-tight text-white">
+          Welcome to {orgName}
         </h1>
-        <p className="text-foreground mt-2">
+        <p className="font-mono mt-2 text-sm text-gray-400">
           Here&apos;s everything you need to get started with Answerify.
         </p>
       </div>
@@ -126,8 +129,8 @@ export function WelcomeDashboard({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="bg-bg flex items-center justify-between gap-3 rounded-base border-2 border-black px-4 py-3 shadow-base">
-              <span className="truncate font-mono text-sm font-medium">
+            <div className="flex items-center justify-between gap-3 border border-[#FF4500]/30 bg-[#0a0a0a] px-4 py-3">
+              <span className="truncate font-mono text-sm font-medium text-white">
                 {inboundEmail || 'Not configured yet'}
               </span>
               {inboundEmail && (
@@ -144,7 +147,7 @@ export function WelcomeDashboard({
                 </button>
               )}
             </div>
-            <p className="text-foreground mt-3 text-sm">
+            <p className="text-gray-400 mt-3 text-sm font-mono">
               Set up email forwarding from your support account to this address.
               See guides for{' '}
               <a
@@ -190,23 +193,23 @@ export function WelcomeDashboard({
             <ol className="space-y-3">
               <li className="flex items-start gap-3">
                 <StepBadge step={1} done={!!inboundEmail} />
-                <span className="text-sm">Copy your inbound email address</span>
+                <span className="font-mono text-sm text-gray-300">Copy your inbound email address</span>
               </li>
               <li className="flex items-start gap-3">
                 <StepBadge step={2} done={threadsCount > 0} />
-                <span className="text-sm">
+                <span className="font-mono text-sm text-gray-300">
                   Set up email forwarding from your support account
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <StepBadge step={3} done={sources.length > 0} />
-                <span className="text-sm">
+                <span className="font-mono text-sm text-gray-300">
                   Add data sources to power AI replies
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <StepBadge step={4} done={repliesCount > 0} />
-                <span className="text-sm">
+                <span className="font-mono text-sm text-gray-300">
                   Send a test email and watch Answerify reply!
                 </span>
               </li>
@@ -225,14 +228,14 @@ export function WelcomeDashboard({
                   generate replies.
                 </CardDescription>
               </div>
-              <span className="bg-main rounded-base shrink-0 border-2 border-black px-2 py-0.5 text-sm font-bold shadow-base">
+              <span className="border border-[#FF4500] bg-[#FF4500]/10 shrink-0 px-2 py-0.5 text-sm font-bold font-mono text-[#FF4500]">
                 {sources.length}
               </span>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {sources.length === 0 ? (
-              <p className="text-foreground text-sm">
+              <p className="font-mono text-gray-400 text-sm">
                 No data sources yet. Add links to your docs, help center, or
                 blog to improve AI-generated replies.
               </p>
@@ -245,7 +248,7 @@ export function WelcomeDashboard({
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`Open data source: ${source.url}`}
-                      className="bg-bg flex items-center gap-2 rounded-base border-2 border-black px-3 py-2 text-sm font-medium transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none shadow-base"
+                      className="flex items-center gap-2 border border-[#FF4500]/20 bg-[#0a0a0a] px-3 py-2 text-sm font-mono font-medium text-white transition-all hover:border-[#FF4500]/60"
                     >
                       <Link2Icon className="size-3.5 shrink-0" />
                       <span className="truncate">{source.url}</span>
@@ -257,7 +260,7 @@ export function WelcomeDashboard({
                   <li>
                     <button
                       onClick={() => setViewDataSource(orgId)}
-                      className="w-full rounded-base border-2 border-dashed border-black py-2 text-center text-xs font-semibold opacity-70 hover:opacity-100"
+                      className="w-full border border-dashed border-[#FF4500]/30 py-2 text-center text-xs font-mono font-semibold text-gray-500 hover:border-[#FF4500] hover:text-[#FF4500]"
                     >
                       +{hiddenCount} more source{hiddenCount !== 1 ? 's' : ''}
                     </button>
@@ -290,8 +293,8 @@ export function WelcomeDashboard({
               {/* Toggle row */}
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold">Enable Auto-Reply</p>
-                  <p className="text-foreground text-xs">
+                  <p className="font-mono text-sm font-semibold text-white">Enable Auto-Reply</p>
+                  <p className="font-mono text-gray-400 text-xs">
                     {enabled
                       ? 'Replies will be sent automatically when confidence is high enough.'
                       : 'Replies require manual approval before sending.'}
@@ -303,14 +306,14 @@ export function WelcomeDashboard({
                   onClick={handleToggle}
                   disabled={saving}
                   className={cn(
-                    'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 border-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black disabled:opacity-50',
-                    enabled ? 'bg-main' : 'bg-white'
+                    'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4500] disabled:opacity-50',
+                    enabled ? 'border-[#FF4500] bg-[#FF4500]' : 'border-[#FF4500]/30 bg-black'
                   )}
                 >
                   <span
                     className={cn(
-                      'pointer-events-none inline-block size-5 rounded-full border-2 border-black bg-white shadow-sm transition-transform',
-                      enabled ? 'translate-x-5' : 'translate-x-0.5'
+                      'pointer-events-none inline-block size-5 border-2 bg-white shadow-sm transition-transform',
+                      enabled ? 'translate-x-5 border-white' : 'translate-x-0.5 border-[#FF4500]/40'
                     )}
                   />
                 </button>
@@ -319,8 +322,8 @@ export function WelcomeDashboard({
               {/* Threshold slider row */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">Confidence Threshold</p>
-                  <span className="bg-main rounded-base border-2 border-black px-2 py-0.5 text-xs font-bold tabular-nums shadow-base">
+                  <p className="font-mono text-sm font-semibold text-white">Confidence Threshold</p>
+                  <span className="border border-[#FF4500] bg-[#FF4500]/10 px-2 py-0.5 text-xs font-bold font-mono tabular-nums text-[#FF4500]">
                     {Math.round(threshold * 100)}%
                   </span>
                 </div>
@@ -334,7 +337,7 @@ export function WelcomeDashboard({
                   onMouseUp={handleThresholdCommit}
                   onTouchEnd={handleThresholdCommit}
                 />
-                <div className="text-foreground flex justify-between text-xs">
+                <div className="font-mono text-gray-500 flex justify-between text-xs">
                   <span>0% — Send everything</span>
                   <span>100% — Only perfect matches</span>
                 </div>

@@ -11,16 +11,16 @@ export function EmptyState() {
   return (
     <div className="flex size-full flex-col items-center justify-center gap-6 px-6 py-20 text-center">
       {/* Icon badge */}
-      <div className="bg-main flex size-20 items-center justify-center rounded-full border-2 border-black shadow-base">
-        <RocketIcon className="size-9" />
+      <div className="flex size-20 items-center justify-center border border-[#FF4500] bg-[#FF4500]/10">
+        <RocketIcon className="size-9 text-[#FF4500]" />
       </div>
 
       {/* Text */}
       <div className="max-w-sm space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">
+        <h1 className="font-display text-2xl font-black uppercase tracking-tight text-white">
           No organizations yet
         </h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="font-mono text-sm text-gray-400">
           Create your first organization and let Answerify handle support emails
           automatically — powered by AI.
         </p>
@@ -28,11 +28,11 @@ export function EmptyState() {
 
       {/* Feature pills */}
       <div className="flex flex-wrap justify-center gap-2">
-        {['📬 Inbound Email', '🤖 AI Replies', '📚 Knowledge Base', '⚡ Autopilot'].map(
+        {['INBOUND EMAIL', 'AI REPLIES', 'KNOWLEDGE BASE', 'AUTOPILOT'].map(
           (f) => (
             <span
               key={f}
-              className="rounded-base border-2 border-black bg-white px-3 py-1 text-xs font-semibold shadow-base"
+              className="font-mono border border-[#FF4500]/40 bg-black px-3 py-1 text-xs font-semibold tracking-widest text-[#FF4500]"
             >
               {f}
             </span>

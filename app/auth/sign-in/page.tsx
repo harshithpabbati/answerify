@@ -19,7 +19,15 @@ export const metadata: Metadata = {
 
 export default function SignInPage() {
   return (
-    <div className="bg-grid z-10 flex flex-1 items-center justify-center bg-[size:70px_70px]">
+    <div className="relative z-10 flex flex-1 items-center justify-center bg-black">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-10"
+        style={{
+          backgroundImage:
+            'linear-gradient(to right, #FF4500 1px, transparent 1px), linear-gradient(to bottom, #FF4500 1px, transparent 1px)',
+          backgroundSize: '60px 60px',
+        }}
+      />
       <Card className="w-[25rem] max-w-[calc(100vw-5vw)]">
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
@@ -30,19 +38,19 @@ export default function SignInPage() {
             <SocialLogins />
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+                <span className="w-full border-t border-[#FF4500]/20" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background text-foreground px-2">Or</span>
+                <span className="bg-black font-mono px-2 text-gray-500 tracking-widest">Or</span>
               </div>
             </div>
             <SignIn />
           </>
         </CardContent>
         <CardFooter className="flex flex-col items-start gap-1 text-sm">
-          <p>
+          <p className="font-mono text-gray-400">
             No account?{' '}
-            <Link className="text-foreground underline" href="/auth/sign-up">
+            <Link className="text-[#FF4500] underline" href="/auth/sign-up">
               Sign up
             </Link>
           </p>

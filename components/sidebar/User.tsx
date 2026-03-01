@@ -23,7 +23,7 @@ export function User({ user }: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="neutral" className="size-9 rounded-full">
+        <Button variant="neutral" className="size-9 p-0">
           <Avatar className="size-9">
             <AvatarImage src={user?.user_metadata?.avatar_url} />
             <AvatarFallback>{user?.user_metadata?.fallback}</AvatarFallback>

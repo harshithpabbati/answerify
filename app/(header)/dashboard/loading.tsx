@@ -4,7 +4,7 @@ export default function DashboardLoading() {
   return (
     <div className="flex h-full flex-col overflow-auto">
       {/* Header skeleton */}
-      <div className="bg-background border-b-2 border-black bg-grid px-6 py-10 md:px-10">
+      <div className="border-b border-[#FF4500]/20 bg-black px-6 py-10 md:px-10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <Skeleton className="h-10 w-64" />
@@ -20,7 +20,7 @@ export default function DashboardLoading() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="overflow-hidden rounded-base border-2 border-black shadow-base"
+              className="overflow-hidden border border-[#FF4500]/20"
             >
               <Skeleton className="h-24 w-full rounded-none" />
               <div className="space-y-3 p-5">

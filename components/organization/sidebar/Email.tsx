@@ -21,16 +21,16 @@ export function Email({ id, slug, email_from, subject, created_at }: Props) {
     <Link
       href={`/org/${slug}/${id}?${searchParams.toString()}`}
       className={cn(
-        'hover:bg-bg border-b px-4 py-3',
-        params.id === id ? 'bg-bg' : 'bg-background'
+        'border-b border-[#FF4500]/10 px-4 py-3 transition-colors',
+        params.id === id ? 'bg-[#FF4500]/10' : 'bg-black hover:bg-[#FF4500]/5'
       )}
     >
       <div className="flex size-full flex-col gap-0.5 overflow-hidden">
-        <h3 className="text-foreground truncate text-sm font-medium">
+        <h3 className="font-mono truncate text-sm font-medium text-white">
           {subject}
         </h3>
         <div className="flex min-w-0 items-center justify-between">
-          <span className="text-foreground truncate text-xs">{email_from}</span>
+          <span className="font-mono truncate text-xs text-gray-500">{email_from}</span>
           <HumanizedTime time={created_at} />
         </div>
       </div>

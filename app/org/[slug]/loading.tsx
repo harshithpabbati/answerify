@@ -14,7 +14,7 @@ export default function OrgLoading() {
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="space-y-3 rounded-base border-2 border-black p-5 shadow-base"
+            className="space-y-3 border border-[#FF4500]/20 p-5"
           >
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-4 w-full" />
