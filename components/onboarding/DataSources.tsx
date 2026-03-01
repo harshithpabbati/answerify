@@ -19,7 +19,7 @@ export function DataSources() {
 
   return (
     <div>
-      <h2 className="font-display text-3xl font-black uppercase tracking-tight text-white">Setup Datasources</h2>
+      <h2 className="font-display text-3xl font-black uppercase tracking-tight text-foreground">Setup Datasources</h2>
       <p className="font-mono mt-1 text-sm text-gray-400">
         Add your links to the docs, blogs & other help center docs
       </p>

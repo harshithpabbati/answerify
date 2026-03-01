@@ -18,7 +18,7 @@ export function Organization() {
 
   return (
     <div>
-      <h2 className="font-display text-3xl font-black uppercase tracking-tight text-white">Create organization</h2>
+      <h2 className="font-display text-3xl font-black uppercase tracking-tight text-foreground">Create organization</h2>
       <p className="font-mono mt-1 text-sm text-gray-400">Tell us about your organization</p>
       <div className="mt-4">
         <CreateOrganizationForm onCreate={handleOnCreate} />
