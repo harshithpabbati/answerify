@@ -35,10 +35,9 @@
 
 import { Agent, routeAgentEmail, routeAgentRequest } from 'agents';
 import { isAutoReplyEmail } from 'agents/email';
+import type { AgentEmail } from 'agents/email';
 import { codeBlock } from 'common-tags';
 import PostalMime from 'postal-mime';
-
-import type { AgentEmail } from 'agents/email';
 
 // ---------------------------------------------------------------------------
 // Environment bindings (wrangler.toml / Cloudflare dashboard secrets)
@@ -80,7 +79,7 @@ async function supabaseFetch<T = unknown>(
   supabaseUrl: string,
   serviceKey: string,
   path: string,
-  options: RequestInit = {},
+  options: RequestInit = {}
 ): Promise<T> {
   const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
     ...options,
@@ -96,7 +95,7 @@ async function supabaseFetch<T = unknown>(
   if (!response.ok) {
     const body = await response.text();
     throw new Error(
-      `Supabase ${options.method ?? 'GET'} /${path} failed (${response.status}): ${body}`,
+      `Supabase ${options.method ?? 'GET'} /${path} failed (${response.status}): ${body}`
     );
   }
 
@@ -116,7 +115,7 @@ async function geminiGenerateContent(
   systemInstruction: string,
   maxOutputTokens: number,
   temperature: number,
-  tools?: object[],
+  tools?: object[]
 ): Promise<{ text: string; candidates: unknown[] }> {
   const body: Record<string, unknown> = {
     contents: [{ role: 'user', parts: [{ text: contents }] }],
@@ -133,7 +132,7 @@ async function geminiGenerateContent(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    },
+    }
   );
 
   if (!response.ok) {
@@ -160,10 +159,11 @@ async function geminiGenerateContent(
  */
 function computeConfidence(
   candidates: unknown[],
-  datasourceCount: number,
+  datasourceCount: number
 ): number {
   const URL_CONTEXT_FALLBACK_CONFIDENCE = 0.7;
-  if (!candidates || candidates.length === 0) return URL_CONTEXT_FALLBACK_CONFIDENCE;
+  if (!candidates || candidates.length === 0)
+    return URL_CONTEXT_FALLBACK_CONFIDENCE;
 
   const candidate = candidates[0] as {
     groundingMetadata?: {
@@ -175,7 +175,8 @@ function computeConfidence(
   if (supports && supports.length > 0) {
     const allScores = supports.flatMap((s) => s.confidenceScores ?? []);
     if (allScores.length > 0) {
-      const avg = allScores.reduce((a: number, b: number) => a + b, 0) / allScores.length;
+      const avg =
+        allScores.reduce((a: number, b: number) => a + b, 0) / allScores.length;
       return Math.min(0.99, Math.max(0, avg));
     }
   }
@@ -198,7 +199,7 @@ function extractCitations(candidates: unknown[]): string[] {
   if (!chunks) return [];
   return [
     ...new Set(
-      chunks.map((c) => c.web?.uri).filter((u): u is string => Boolean(u)),
+      chunks.map((c) => c.web?.uri).filter((u): u is string => Boolean(u))
     ),
   ];
 }
@@ -263,7 +264,10 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
   // -------------------------------------------------------------------------
   async onEmail(email: AgentEmail): Promise<void> {
     // Ignore auto-generated messages (out-of-office, delivery receipts, etc.)
-    const headersList = [...email.headers.entries()].map(([key, value]) => ({ key, value }));
+    const headersList = [...email.headers.entries()].map(([key, value]) => ({
+      key,
+      value,
+    }));
     if (isAutoReplyEmail(headersList)) {
       email.setReject('Auto-replies are not accepted');
       return;
@@ -288,7 +292,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
     const orgRows = await supabaseFetch<Array<{ id: string }>>(
       supabaseUrl,
       serviceKey,
-      `organization?inbound_email=eq.${encodeURIComponent(email.to)}&select=id&limit=1`,
+      `organization?inbound_email=eq.${encodeURIComponent(email.to)}&select=id&limit=1`
     );
 
     if (!orgRows || orgRows.length === 0) {
@@ -308,32 +312,31 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
       // Reply to an existing thread – resolver already looked up the thread
       // and set this.name to its ID, so we can use it directly.
       threadId = this.name;
-      const threadRows = await supabaseFetch<Array<{ id: string; status: string }>>(
+      const threadRows = await supabaseFetch<
+        Array<{ id: string; status: string }>
+      >(
         supabaseUrl,
         serviceKey,
-        `thread?id=eq.${encodeURIComponent(threadId)}&select=id,status&limit=1`,
+        `thread?id=eq.${encodeURIComponent(threadId)}&select=id,status&limit=1`
       );
       if (threadRows && threadRows.length > 0) {
         threadStatus = threadRows[0].status;
       }
     } else {
       // New thread – create it in Supabase using this.name as the ID
-      const created = await supabaseFetch<Array<{ id: string; status: string }>>(
-        supabaseUrl,
-        serviceKey,
-        'thread',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            id: this.name,
-            organization_id: organizationId,
-            email_from: fromAddress,
-            email_from_name: fromName,
-            subject,
-            message_id: messageId,
-          }),
-        },
-      );
+      const created = await supabaseFetch<
+        Array<{ id: string; status: string }>
+      >(supabaseUrl, serviceKey, 'thread', {
+        method: 'POST',
+        body: JSON.stringify({
+          id: this.name,
+          organization_id: organizationId,
+          email_from: fromAddress,
+          email_from_name: fromName,
+          subject,
+          message_id: messageId,
+        }),
+      });
       if (!created || created.length === 0) {
         console.error('Failed to create thread');
         return;
@@ -351,10 +354,15 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
 
     // Re-open closed threads when a customer writes again
     if (threadStatus === 'closed') {
-      await supabaseFetch(supabaseUrl, serviceKey, `thread?id=eq.${encodeURIComponent(threadId)}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'open' }),
-      });
+      await supabaseFetch(
+        supabaseUrl,
+        serviceKey,
+        `thread?id=eq.${encodeURIComponent(threadId)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'open' }),
+        }
+      );
     }
 
     // Store the inbound email record
@@ -373,7 +381,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
           cleaned_body: text,
           role: 'user',
         }),
-      },
+      }
     );
 
     const emailId = emailRows?.[0]?.id;
@@ -422,7 +430,11 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
         cleaned_body: string;
         role: string;
       }>
-    >(supabaseUrl, serviceKey, `email?id=eq.${encodeURIComponent(emailId)}&limit=1`);
+    >(
+      supabaseUrl,
+      serviceKey,
+      `email?id=eq.${encodeURIComponent(emailId)}&limit=1`
+    );
 
     if (!emailRows || emailRows.length === 0) {
       return new Response('Email not found', { status: 404 });
@@ -439,7 +451,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
     >(
       supabaseUrl,
       serviceKey,
-      `thread?id=eq.${encodeURIComponent(record.thread_id)}&select=email_from,subject,message_id&limit=1`,
+      `thread?id=eq.${encodeURIComponent(record.thread_id)}&select=email_from,subject,message_id&limit=1`
     );
     const thread = threadRows?.[0];
 
@@ -480,7 +492,8 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
     cleanedBody: string;
     subject: string;
   }): Promise<void> {
-    const { email, organizationId, threadId, emailId, cleanedBody, subject } = params;
+    const { email, organizationId, threadId, emailId, cleanedBody, subject } =
+      params;
     const supabaseUrl = this.env.SUPABASE_URL;
     const serviceKey = this.env.SUPABASE_SERVICE_KEY;
 
@@ -489,17 +502,19 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
       supabaseFetch<Array<{ id: string; url: string }>>(
         supabaseUrl,
         serviceKey,
-        `datasource?organization_id=eq.${encodeURIComponent(organizationId)}&select=id,url`,
+        `datasource?organization_id=eq.${encodeURIComponent(organizationId)}&select=id,url`
       ),
-      supabaseFetch<Array<{ autopilot_enabled: boolean; autopilot_threshold: number }>>(
+      supabaseFetch<
+        Array<{ autopilot_enabled: boolean; autopilot_threshold: number }>
+      >(
         supabaseUrl,
         serviceKey,
-        `organization?id=eq.${encodeURIComponent(organizationId)}&select=autopilot_enabled,autopilot_threshold&limit=1`,
+        `organization?id=eq.${encodeURIComponent(organizationId)}&select=autopilot_enabled,autopilot_threshold&limit=1`
       ),
       supabaseFetch<Array<{ role: string; cleaned_body: string }>>(
         supabaseUrl,
         serviceKey,
-        `email?thread_id=eq.${encodeURIComponent(threadId)}&id=neq.${encodeURIComponent(emailId)}&select=role,cleaned_body&order=created_at.asc&limit=10`,
+        `email?thread_id=eq.${encodeURIComponent(threadId)}&id=neq.${encodeURIComponent(emailId)}&select=role,cleaned_body&order=created_at.asc&limit=10`
       ),
     ]);
 
@@ -508,20 +523,26 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
         supabaseUrl,
         serviceKey,
         organizationId,
-        threadId,
+        threadId
       );
       await this.setState({ ...this.state, status: 'complete' });
       return;
     }
 
-    const urlList = deduplicateForGemini(datasourceRows.map((d) => d.url)).join('\n');
+    const urlList = deduplicateForGemini(datasourceRows.map((d) => d.url)).join(
+      '\n'
+    );
 
     const conversationHistory =
       historyRows && historyRows.length > 0
         ? historyRows
             .map((e) => {
               const label =
-                e.role === 'user' ? 'Customer' : e.role === 'support' ? 'Support' : e.role;
+                e.role === 'user'
+                  ? 'Customer'
+                  : e.role === 'support'
+                    ? 'Support'
+                    : e.role;
               return `${label}: ${e.cleaned_body}`;
             })
             .join('\n\n')
@@ -535,32 +556,64 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
       findings = result.findings;
       researchCandidates = result.candidates;
     } catch (err) {
-      await this.setState({ ...this.state, status: 'error', error: String(err) });
+      await this.setState({
+        ...this.state,
+        status: 'error',
+        error: String(err),
+      });
       return;
     }
 
-    const confidence = computeConfidence(researchCandidates, datasourceRows.length);
+    const confidence = computeConfidence(
+      researchCandidates,
+      datasourceRows.length
+    );
     const citations = extractCitations(researchCandidates);
 
     if (!findings || findings.trim() === 'NO_INFORMATION') {
-      await this.insertClarifyingDraft(supabaseUrl, serviceKey, organizationId, threadId);
+      await this.insertClarifyingDraft(
+        supabaseUrl,
+        serviceKey,
+        organizationId,
+        threadId
+      );
       await this.setState({ ...this.state, status: 'complete' });
       return;
     }
 
-    await this.setState({ ...this.state, status: 'writing', findings, confidence, citations });
+    await this.setState({
+      ...this.state,
+      status: 'writing',
+      findings,
+      confidence,
+      citations,
+    });
 
     // --- Step 2: Writing Agent ---
     let rawContent: string;
     try {
-      rawContent = await this.runWritingAgent(subject, cleanedBody, findings, conversationHistory);
+      rawContent = await this.runWritingAgent(
+        subject,
+        cleanedBody,
+        findings,
+        conversationHistory
+      );
     } catch (err) {
-      await this.setState({ ...this.state, status: 'error', error: String(err) });
+      await this.setState({
+        ...this.state,
+        status: 'error',
+        error: String(err),
+      });
       return;
     }
 
     if (!rawContent || rawContent.trim() === 'NO_INFORMATION') {
-      await this.insertClarifyingDraft(supabaseUrl, serviceKey, organizationId, threadId);
+      await this.insertClarifyingDraft(
+        supabaseUrl,
+        serviceKey,
+        organizationId,
+        threadId
+      );
       await this.setState({ ...this.state, status: 'complete' });
       return;
     }
@@ -573,7 +626,10 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
     const autopilotThreshold = org?.autopilot_threshold ?? 0.65;
     // Auto-send is only available from the email path (email object present).
     // The onRequest/dashboard path always creates a draft for human review.
-    const shouldAutoSend = email !== undefined && autopilotEnabled && confidence >= autopilotThreshold;
+    const shouldAutoSend =
+      email !== undefined &&
+      autopilotEnabled &&
+      confidence >= autopilotThreshold;
 
     // --- Step 3: Send or draft ---
     if (shouldAutoSend && email) {
@@ -618,7 +674,10 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
         await this.setState({ ...this.state, status: 'complete' });
         return;
       } catch (err) {
-        console.error(`replyToEmail failed for thread ${threadId}, email ${emailId}:`, err);
+        console.error(
+          `replyToEmail failed for thread ${threadId}, email ${emailId}:`,
+          err
+        );
         // Fall through to save as draft
       }
     }
@@ -645,7 +704,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
   private async runResearchAgent(
     subject: string,
     question: string,
-    urlList: string,
+    urlList: string
   ): Promise<{ findings: string; candidates: unknown[] }> {
     const systemInstruction = codeBlock`
       You are a research assistant for a customer support team.
@@ -667,7 +726,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
       systemInstruction,
       1024,
       0.3,
-      [{ urlContext: {} }],
+      [{ urlContext: {} }]
     );
 
     return { findings: text, candidates };
@@ -680,7 +739,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
     subject: string,
     question: string,
     findings: string,
-    conversationHistory: string,
+    conversationHistory: string
   ): Promise<string> {
     const systemInstruction = codeBlock`
       You are a friendly and helpful customer support agent. You write like a real person,
@@ -722,7 +781,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
       `Subject: ${subject}\nCustomer question:\n${question}\n\nResearch findings:\n${findings}`,
       systemInstruction,
       1024,
-      0.7,
+      0.7
     );
 
     return text;
@@ -736,7 +795,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
     serviceKey: string,
     organizationId: string,
     threadId: string,
-    content: string = CLARIFYING_CONTENT,
+    content: string = CLARIFYING_CONTENT
   ): Promise<void> {
     await supabaseFetch(supabaseUrl, serviceKey, 'reply', {
       method: 'POST',
@@ -767,7 +826,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
 
 async function resolveEmailToAgent(
   email: ForwardableEmailMessage,
-  env: Env,
+  env: Env
 ): Promise<{ agentName: string; agentId: string } | null> {
   const AGENT_NAME = 'email-reply-agent';
 
@@ -778,7 +837,7 @@ async function resolveEmailToAgent(
       const rows = await supabaseFetch<Array<{ id: string }>>(
         env.SUPABASE_URL,
         env.SUPABASE_SERVICE_KEY,
-        `thread?message_id=eq.${encodeURIComponent(inReplyTo)}&select=id&limit=1`,
+        `thread?message_id=eq.${encodeURIComponent(inReplyTo)}&select=id&limit=1`
       );
       if (rows && rows.length > 0) {
         return { agentName: AGENT_NAME, agentId: rows[0].id };
@@ -826,4 +885,3 @@ export default {
     );
   },
 };
-

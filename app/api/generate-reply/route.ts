@@ -36,7 +36,10 @@ export async function POST(request: Request) {
       });
 
       if (!agentResponse.ok) {
-        console.error('Cloudflare Agent request failed:', await agentResponse.text());
+        console.error(
+          'Cloudflare Agent request failed:',
+          await agentResponse.text()
+        );
       }
     } catch (err) {
       console.error('Cloudflare Agent request error:', err);

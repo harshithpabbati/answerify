@@ -16,4 +16,3 @@ new_sqlite_classes = ["EmailReplyAgent"]
 # SUPABASE_URL
 # SUPABASE_SERVICE_KEY
 # INBOUND_WEBHOOK_SECRET
-
