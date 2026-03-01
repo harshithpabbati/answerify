@@ -21,14 +21,14 @@ export function ConversationHeader({
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <Link
           href={`/org/${slug}`}
-          className="md:hidden shrink-0 p-1 text-gray-400 hover:text-[#FF4500]"
+          className="md:hidden shrink-0 p-1 text-muted-foreground hover:text-[#FF4500]"
           aria-label="Back to inbox"
         >
           <ArrowLeftIcon className="size-5" />
         </Link>
         <div className="flex min-w-0 flex-col gap-0.5 max-w-xs md:max-w-none">
           <h3 className="font-mono text-foreground truncate font-semibold uppercase tracking-wide">{subject}</h3>
-          <span className="font-mono text-gray-500 truncate text-xs">{email_from}</span>
+          <span className="font-mono text-muted-foreground truncate text-xs">{email_from}</span>
         </div>
       </div>
       {status === 'closed' && <Badge className="px-2 py-1">Closed</Badge>}

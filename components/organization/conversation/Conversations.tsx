@@ -70,7 +70,7 @@ export function Conversations({
   };
 
   return (
-    <div className="flex h-[calc(100dvh-4rem)] flex-col items-start justify-between">
+    <div className="flex h-[calc(100dvh-60px)] flex-col items-start justify-between">
       <div
         ref={divRef}
         className="flex size-full flex-col gap-4 overflow-scroll p-4"
@@ -80,7 +80,7 @@ export function Conversations({
         ))}
       </div>
 
-      <div className="bg-background border-b border-[#FF4500]/20 w-full border-t p-4 max-w-sm md:max-w-none">
+      <div className="bg-background border-b border-[#FF4500]/20 w-full border-t p-4">
         <Tiptap editor={editor} />
         <div className="mt-2 md:mt-4 flex flex-col md:flex-row flex-wrap justify-end gap-2">
           <Button variant="neutral" onClick={() => handleSubmit()} size="lg">
