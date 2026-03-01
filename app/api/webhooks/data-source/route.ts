@@ -31,6 +31,9 @@ export async function POST(request: Request) {
     const response = await fetch(`https://markdown.new/${record.url}`, {
       headers: { 'User-Agent': 'Answerify/1.0 (knowledge-base indexer)' },
     });
+    if (!response.ok) {
+      throw new Error(`markdown.new returned ${response.status}`);
+    }
     textContent = (await response.text()).trim();
   } catch (error) {
     console.error('Failed to fetch datasource URL:', error);
