@@ -1,7 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { JSDOM } from 'jsdom';
 
-import { generateEmbeddings } from '@/lib/embeddings';
+import { generateEmbeddings, serializeEmbedding } from '@/lib/embeddings';
 import { processMarkdown } from '@/lib/processMarkdown';
 import { createServiceClient } from '@/lib/supabase/service';
 
@@ -42,7 +42,14 @@ export async function POST(request: Request) {
   }
 
   const dom = new JSDOM(html);
-  const textContent = dom.window.document.body?.textContent?.trim() ?? '';
+  const doc = dom.window.document;
+
+  // Remove script, style, and hidden elements before extracting text
+  doc.querySelectorAll('script, style, noscript, [hidden], [aria-hidden="true"]').forEach(
+    (el) => el.remove(),
+  );
+
+  const textContent = doc.body?.textContent?.trim() ?? '';
 
   if (!textContent) {
     return new Response(
@@ -78,7 +85,7 @@ export async function POST(request: Request) {
     organization_id: record.organization_id,
     content: s.content,
     heading: s.heading ?? null,
-    embedding: `[${embeddings[i].join(',')}]`,
+    embedding: serializeEmbedding(embeddings[i]),
   }));
 
   const { error } = await supabase.from('section').insert(sectionRows as never);

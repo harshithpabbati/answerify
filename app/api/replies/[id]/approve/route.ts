@@ -1,12 +1,14 @@
 import { GoogleGenAI } from '@google/genai';
 
-import { generateEmbeddings } from '@/lib/embeddings';
+import { generateEmbeddings, serializeEmbedding } from '@/lib/embeddings';
 import { processMarkdown } from '@/lib/processMarkdown';
 import { createServiceClient } from '@/lib/supabase/service';
 
 function getGenAIClient() {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 }
+
+const INTERNAL_KB_URL = 'internal://knowledge-base';
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -70,7 +72,7 @@ export async function POST(request: Request, { params }: Params) {
         .from('datasource')
         .insert({
           organization_id: reply.organization_id,
-          url: 'internal://knowledge-base',
+          url: INTERNAL_KB_URL,
           is_internal_kb: true,
         } as never)
         .select('id')
@@ -93,7 +95,7 @@ export async function POST(request: Request, { params }: Params) {
           organization_id: reply.organization_id,
           content: s.content,
           heading: s.heading ?? null,
-          embedding: `[${embeddings[i].join(',')}]`,
+          embedding: serializeEmbedding(embeddings[i]),
         }));
 
         await supabase.from('section').insert(sectionRows as never);

@@ -3,7 +3,7 @@ import { codeBlock } from 'common-tags';
 import { Resend } from 'resend';
 
 import { cleanBody } from '@/lib/cleanBody';
-import { generateEmbedding } from '@/lib/embeddings';
+import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
 import { createServiceClient } from '@/lib/supabase/service';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { firstPathSegment } from '@/lib/url-section';
@@ -123,7 +123,7 @@ async function retrieveSections(
   if (questionEmbedding.length === 0) return [];
 
   const { data, error } = await supabase.rpc('match_sections', {
-    embedding: `[${questionEmbedding.join(',')}]`,
+    embedding: serializeEmbedding(questionEmbedding),
     match_threshold: 0.4,
     organization_id: organizationId,
     match_count: 5,
