@@ -19,6 +19,7 @@ interface StatsData {
   dayLabels: string[];
   threadsByDay: number[];
   repliesByDay: number[];
+  dayRange: number;
 }
 
 interface Props {
@@ -176,14 +177,14 @@ export function StatsPage({ orgName, stats }: Props) {
         <StatCard label="Total Threads" value={totalThreads} />
         <StatCard label="Open Threads" value={stats.openThreads} accent />
         <StatCard label="Total Replies" value={stats.totalReplies} />
-        <StatCard label="AI Accuracy" value={accuracyPct} accent />
+        <StatCard label="AI Accuracy (%)" value={accuracyPct} accent />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Activity Chart */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>📊 Activity — Last 7 Days</CardTitle>
+            <CardTitle>📊 Activity — Last {stats.dayRange} Days</CardTitle>
             <CardDescription>
               Daily breakdown of incoming threads and AI-generated replies.
             </CardDescription>

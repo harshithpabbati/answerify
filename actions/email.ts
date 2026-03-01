@@ -23,8 +23,9 @@ export async function getOrgStats(orgId: string) {
 export async function getDetailedOrgStats(orgId: string) {
   const supabase = await createServerClient();
 
+  const STATS_DAY_RANGE = 7;
   const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - (STATS_DAY_RANGE - 1));
   sevenDaysAgo.setHours(0, 0, 0, 0);
   const since = sevenDaysAgo.toISOString();
 
@@ -77,7 +78,7 @@ export async function getDetailedOrgStats(orgId: string) {
   const repliesByDay: number[] = [];
   const threads: { created_at: string }[] = recentThreads ?? [];
   const recentRepliesList: { created_at: string }[] = recentReplies ?? [];
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < STATS_DAY_RANGE; i++) {
     const d = new Date(sevenDaysAgo);
     d.setDate(d.getDate() + i);
     const label = d.toLocaleDateString('en-US', { weekday: 'short' });
@@ -102,6 +103,7 @@ export async function getDetailedOrgStats(orgId: string) {
     dayLabels,
     threadsByDay,
     repliesByDay,
+    dayRange: STATS_DAY_RANGE,
   };
 }
 
