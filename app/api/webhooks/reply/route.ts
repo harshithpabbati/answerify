@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { codeBlock } from 'common-tags';
+import { JSDOM } from 'jsdom';
 import { Resend } from 'resend';
 
 import { cleanBody } from '@/lib/cleanBody';
@@ -12,6 +13,51 @@ function getGenAIClient() {
 }
 
 const CLOUDFLARE_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+
+// Maximum number of URLs to fetch when running the Cloudflare fallback.
+// Kept intentionally small because we download page content ourselves.
+const MAX_FALLBACK_URLS = 5;
+
+// Maximum plain-text characters to include per fetched URL in the prompt.
+const FALLBACK_URL_CONTENT_LENGTH = 4000;
+
+// Timeout in milliseconds for each URL fetch in the fallback path.
+const URL_FETCH_TIMEOUT_MS = 5000;
+
+/**
+ * Fetch the plain-text content of a URL for use as AI context.
+ *
+ * Any LLM can "read" a knowledge-base URL when the page text is fetched
+ * server-side and injected directly into the prompt, so this approach works
+ * for any fallback model — not just Gemini's native urlContext tool.
+ *
+ * Returns null when the URL cannot be reached or returns no usable text.
+ */
+async function fetchUrlContent(url: string): Promise<{ url: string; text: string } | null> {
+  try {
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'Answerify/1.0 (+https://answerify.dev)' },
+      signal: AbortSignal.timeout(URL_FETCH_TIMEOUT_MS),
+    });
+
+    if (!response.ok) return null;
+
+    const html = await response.text();
+
+    // Use JSDOM to safely parse and extract plain text — more robust than
+    // regex stripping, which can leave residual tag fragments.
+    const dom = new JSDOM(html);
+    dom.window.document.querySelectorAll('script, style').forEach((el) => el.remove());
+    const text = (dom.window.document.body?.textContent ?? '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, FALLBACK_URL_CONTENT_LENGTH);
+
+    return text ? { url, text } : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Call Cloudflare Workers AI via the REST API.
@@ -184,12 +230,25 @@ async function runResearchAgent(
       - If you cannot find relevant information, respond with only: NO_INFORMATION
     `;
 
-    // Note: unlike Gemini's urlContext tool, Cloudflare AI cannot fetch URL
-    // content. The URLs are listed as context so the model can reference them
-    // in its answer, but the response is based on the model's training data.
+    // Fetch the actual content of the knowledge-base URLs so the model has
+    // real page text to work with. Any LLM can support URL-based knowledge
+    // bases this way — no native URL tool required.
+    const urls = urlList.split('\n').filter(Boolean).slice(0, MAX_FALLBACK_URLS);
+    const settledPages = await Promise.allSettled(urls.map(fetchUrlContent));
+    const fetchedPages = settledPages
+      .filter((r): r is PromiseFulfilledResult<{ url: string; text: string }> =>
+        r.status === 'fulfilled' && r.value !== null,
+      )
+      .map((r) => r.value);
+
+    const urlContext =
+      fetchedPages.length > 0
+        ? fetchedPages.map((p) => `[${p.url}]\n${p.text}`).join('\n\n---\n\n')
+        : urlList;
+
     const findings = await runCloudflareAgent(
       cloudflareResearchPrompt,
-      `Subject: ${subject}\nCustomer question:\n${question}\n\nKnowledge base sources:\n${urlList}`,
+      `Subject: ${subject}\nCustomer question:\n${question}\n\nKnowledge base content:\n${urlContext}`,
     );
 
     return { findings, candidates: undefined, usedFallback: true };
