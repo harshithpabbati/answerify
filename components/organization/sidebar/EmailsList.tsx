@@ -114,7 +114,7 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
   return (
     <div className="max-h-dvh">
       <div className="flex h-[60px] items-center justify-between border-b border-[#FF4500]/20 p-4">
-        <h3 className="font-mono truncate font-semibold text-white uppercase tracking-wider text-sm">{name}</h3>
+        <h3 className="font-mono truncate font-semibold text-foreground uppercase tracking-wider text-sm">{name}</h3>
         <div className="flex items-center gap-0.5 border border-[#FF4500]/40 p-0.5">
           {(['open', 'closed'] as const).map((s) => {
             const active = (searchParams.get('status') ?? 'open') === s;
@@ -124,7 +124,7 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
                 onClick={() => router.push(`?status=${s}`)}
                 className={cn(
                   'px-2.5 py-0.5 text-xs font-mono font-medium uppercase tracking-wider transition-colors',
-                  active ? 'bg-[#FF4500] text-white' : 'text-gray-400 hover:text-white'
+                  active ? 'bg-[#FF4500] text-white' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
                 {s}
@@ -142,8 +142,8 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
           state.data.map((e) => <Email key={e.id} slug={slug} {...e} />)
         ) : (
           <div className="flex size-full flex-col items-center justify-center gap-4 p-4 text-center">
-            <h1 className="font-display text-xl font-black uppercase tracking-tight text-white">No emails yet</h1>
-            <p className="font-mono text-gray-400 text-sm">
+            <h1 className="font-display text-xl font-black uppercase tracking-tight text-foreground">No emails yet</h1>
+            <p className="font-mono text-muted-foreground text-sm">
               Forward your support emails to the inbound email address to see
               the magic!
             </p>

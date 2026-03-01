@@ -45,7 +45,7 @@ export default async function DashboardPage() {
                 <h1 className="font-display text-4xl font-black uppercase tracking-tight text-foreground">
                   Your organizations
                 </h1>
-                <p className="font-mono mt-1 text-sm text-gray-400">
+                <p className="font-mono mt-1 text-sm text-muted-foreground">
                   {organizations.length} workspace
                   {organizations.length !== 1 ? 's' : ''} &mdash; pick one to
                   get started
@@ -80,10 +80,10 @@ export default async function DashboardPage() {
                       <CardContent className="flex flex-1 flex-col gap-2 p-5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <h2 className="font-display text-lg font-black uppercase tracking-tight text-white leading-snug">
+                            <h2 className="font-display text-lg font-black uppercase tracking-tight text-foreground leading-snug">
                               {o.name}
                             </h2>
-                            <p className="font-mono truncate text-xs text-gray-500">
+                            <p className="font-mono truncate text-xs text-muted-foreground">
                               {o.support_email}
                             </p>
                           </div>
@@ -98,7 +98,7 @@ export default async function DashboardPage() {
                             {hasOnboarded ? 'Live' : 'Setup'}
                           </span>
                         </div>
-                        <p className="font-mono mt-auto text-xs text-gray-600 tabular-nums">
+                        <p className="font-mono mt-auto text-xs text-muted-foreground tabular-nums">
                           Created{' '}
                           {new Date(o.created_at).toLocaleDateString(
                             undefined,
