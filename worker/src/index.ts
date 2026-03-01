@@ -588,9 +588,9 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
             organization_id: organizationId,
             thread_id: threadId,
             body: htmlContent,
-            // Strip complete tags first, then any remaining '<' to prevent
-            // partial tags like '<script' from surviving into the plain-text field.
-            cleaned_body: htmlContent.replace(/<[^>]*>/g, '').replace(/</g, ''),
+            // Single-pass strip: matches from '<' to the next '>' OR end-of-string,
+            // so both complete tags and unclosed/partial tags (e.g. '<script') are removed.
+            cleaned_body: htmlContent.replace(/<[^>]*(>|$)/gm, ''),
             role: 'staff',
             email_from: 'support@answerify.dev',
             email_from_name: 'Support',
