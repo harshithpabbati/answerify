@@ -37,7 +37,7 @@ export default function RootLayout({
       <html lang="en" suppressHydrationWarning>
         <body
           className={cn(
-            'bg-black flex max-h-dvh min-h-dvh flex-col',
+            'bg-background flex max-h-dvh min-h-dvh flex-col',
             GeistSans.className,
             GeistMono.variable
           )}

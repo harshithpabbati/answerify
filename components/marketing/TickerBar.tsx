@@ -15,7 +15,7 @@ const tickerItems = [
 
 export function TickerBar() {
   return (
-    <div className="border-b border-[#FF4500] bg-black py-1.5">
+    <div className="border-b border-[#FF4500] bg-background py-1.5">
       <Marquee speed={50} gradient={false}>
         {tickerItems.map((item) => (
           <span
@@ -23,7 +23,7 @@ export function TickerBar() {
             className="font-mono mx-8 flex items-center gap-2 text-[11px] uppercase tracking-widest"
           >
             <span className="text-[#FF4500]">{item.label}</span>
-            <span className="font-bold text-white">{item.value}</span>
+            <span className="font-bold text-foreground">{item.value}</span>
             <span
               className={
                 item.up === true

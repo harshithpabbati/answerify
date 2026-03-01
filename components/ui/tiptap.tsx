@@ -55,12 +55,12 @@ export const Tiptap = ({ editor }: Props) => {
 
   return (
     <div className="relative mt-4">
-      <div className="flex items-center justify-between border border-[#FF4500]/30 bg-black p-1">
+      <div className="flex items-center justify-between border border-[#FF4500]/30 bg-background p-1">
         <div className="flex items-center justify-center gap-1">
           <select
             value={headingLevel}
             onChange={handleHeadingChange}
-            className="h-9 bg-black px-2 text-sm text-white hover:bg-[#111] focus:outline-none"
+            className="h-9 bg-background px-2 text-sm text-foreground hover:bg-muted focus:outline-none"
             aria-label="Text style"
           >
             <option value="0">Normal</option>
@@ -134,7 +134,7 @@ export const Tiptap = ({ editor }: Props) => {
       </div>
       <div className="relative">
         <EditorContent
-          className="font-mono border border-[#FF4500]/30 border-t-0 bg-black text-sm text-white"
+          className="font-mono border border-[#FF4500]/30 border-t-0 bg-background text-sm text-foreground"
           editor={editor}
         />
         {isEmpty && (

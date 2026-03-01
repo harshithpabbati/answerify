@@ -17,7 +17,7 @@ export function ConversationHeader({
   slug,
 }: Props) {
   return (
-    <div className="bg-black flex h-[60px] items-center justify-between border-b border-[#FF4500]/20 px-2 md:px-4 py-2">
+    <div className="bg-background flex h-[60px] items-center justify-between border-b border-[#FF4500]/20 px-2 md:px-4 py-2">
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <Link
           href={`/org/${slug}`}
@@ -27,7 +27,7 @@ export function ConversationHeader({
           <ArrowLeftIcon className="size-5" />
         </Link>
         <div className="flex min-w-0 flex-col gap-0.5 max-w-xs md:max-w-none">
-          <h3 className="font-mono text-white truncate font-semibold uppercase tracking-wide">{subject}</h3>
+          <h3 className="font-mono text-foreground truncate font-semibold uppercase tracking-wide">{subject}</h3>
           <span className="font-mono text-gray-500 truncate text-xs">{email_from}</span>
         </div>
       </div>

@@ -4,7 +4,7 @@ export default function DashboardLoading() {
   return (
     <div className="flex h-full flex-col overflow-auto">
       {/* Header skeleton */}
-      <div className="border-b border-[#FF4500]/20 bg-black px-6 py-10 md:px-10">
+      <div className="border-b border-[#FF4500]/20 bg-background px-6 py-10 md:px-10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <Skeleton className="h-10 w-64" />

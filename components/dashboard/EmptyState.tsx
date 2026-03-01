@@ -17,7 +17,7 @@ export function EmptyState() {
 
       {/* Text */}
       <div className="max-w-sm space-y-2">
-        <h1 className="font-display text-2xl font-black uppercase tracking-tight text-white">
+        <h1 className="font-display text-2xl font-black uppercase tracking-tight text-foreground">
           No organizations yet
         </h1>
         <p className="font-mono text-sm text-gray-400">
@@ -32,7 +32,7 @@ export function EmptyState() {
           (f) => (
             <span
               key={f}
-              className="font-mono border border-[#FF4500]/40 bg-black px-3 py-1 text-xs font-semibold tracking-widest text-[#FF4500]"
+              className="font-mono border border-[#FF4500]/40 bg-background px-3 py-1 text-xs font-semibold tracking-widest text-[#FF4500]"
             >
               {f}
             </span>

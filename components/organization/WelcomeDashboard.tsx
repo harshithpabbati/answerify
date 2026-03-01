@@ -45,7 +45,7 @@ function StepBadge({ step, done }: { step: number; done: boolean }) {
         'flex size-6 shrink-0 items-center justify-center border-2 text-xs font-bold font-mono',
         done
           ? 'border-[#FF4500] bg-[#FF4500] text-white'
-          : 'border-[#FF4500]/40 bg-black text-gray-400'
+          : 'border-[#FF4500]/40 bg-background text-muted-foreground'
       )}
     >
       {done ? '✓' : step}
@@ -110,7 +110,7 @@ export function WelcomeDashboard({
     <div className="flex h-screen flex-col overflow-auto p-6 md:p-10">
       <div className="mb-8">
         <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500] mb-2">// WORKSPACE</p>
-        <h1 className="font-display text-3xl font-black uppercase tracking-tight text-white">
+        <h1 className="font-display text-3xl font-black uppercase tracking-tight text-foreground">
           Welcome to {orgName}
         </h1>
         <p className="font-mono mt-2 text-sm text-gray-400">
@@ -129,8 +129,8 @@ export function WelcomeDashboard({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between gap-3 border border-[#FF4500]/30 bg-[#0a0a0a] px-4 py-3">
-              <span className="truncate font-mono text-sm font-medium text-white">
+            <div className="flex items-center justify-between gap-3 border border-[#FF4500]/30 bg-muted px-4 py-3">
+              <span className="truncate font-mono text-sm font-medium text-foreground">
                 {inboundEmail || 'Not configured yet'}
               </span>
               {inboundEmail && (
@@ -248,7 +248,7 @@ export function WelcomeDashboard({
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`Open data source: ${source.url}`}
-                      className="flex items-center gap-2 border border-[#FF4500]/20 bg-[#0a0a0a] px-3 py-2 text-sm font-mono font-medium text-white transition-all hover:border-[#FF4500]/60"
+                      className="flex items-center gap-2 border border-[#FF4500]/20 bg-muted px-3 py-2 text-sm font-mono font-medium text-foreground transition-all hover:border-[#FF4500]/60"
                     >
                       <Link2Icon className="size-3.5 shrink-0" />
                       <span className="truncate">{source.url}</span>
@@ -293,7 +293,7 @@ export function WelcomeDashboard({
               {/* Toggle row */}
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="font-mono text-sm font-semibold text-white">Enable Auto-Reply</p>
+                  <p className="font-mono text-sm font-semibold text-foreground">Enable Auto-Reply</p>
                   <p className="font-mono text-gray-400 text-xs">
                     {enabled
                       ? 'Replies will be sent automatically when confidence is high enough.'
@@ -307,7 +307,7 @@ export function WelcomeDashboard({
                   disabled={saving}
                   className={cn(
                     'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4500] disabled:opacity-50',
-                    enabled ? 'border-[#FF4500] bg-[#FF4500]' : 'border-[#FF4500]/30 bg-black'
+                    enabled ? 'border-[#FF4500] bg-[#FF4500]' : 'border-[#FF4500]/30 bg-background'
                   )}
                 >
                   <span
@@ -322,7 +322,7 @@ export function WelcomeDashboard({
               {/* Threshold slider row */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="font-mono text-sm font-semibold text-white">Confidence Threshold</p>
+                  <p className="font-mono text-sm font-semibold text-foreground">Confidence Threshold</p>
                   <span className="border border-[#FF4500] bg-[#FF4500]/10 px-2 py-0.5 text-xs font-bold font-mono tabular-nums text-[#FF4500]">
                     {Math.round(threshold * 100)}%
                   </span>

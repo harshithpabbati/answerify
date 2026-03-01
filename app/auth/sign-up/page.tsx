@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function SignUpPage() {
   return (
-    <div className="relative z-10 flex flex-1 items-center justify-center bg-black">
+    <div className="relative z-10 flex flex-1 items-center justify-center bg-background">
       <div
         className="pointer-events-none absolute inset-0 opacity-10"
         style={{
@@ -39,7 +39,7 @@ export default function SignUpPage() {
               <span className="w-full border-t border-[#FF4500]/20" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-black font-mono px-2 text-gray-500 tracking-widest">Or</span>
+              <span className="bg-background font-mono px-2 text-muted-foreground tracking-widest">Or</span>
             </div>
           </div>
           <SignUp />

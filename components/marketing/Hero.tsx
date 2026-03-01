@@ -6,7 +6,7 @@ import { buttonVariants } from '@/components/ui/button';
 
 export function Hero() {
   return (
-    <div className="relative flex h-[80dvh] flex-col items-center justify-center gap-6 overflow-hidden bg-black p-4">
+    <div className="relative flex h-[80dvh] flex-col items-center justify-center gap-6 overflow-hidden bg-background p-4">
       {/* grid overlay */}
       <div
         className="pointer-events-none absolute inset-0 opacity-10"
@@ -19,7 +19,7 @@ export function Hero() {
       <p className="font-mono z-10 text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
         // AI-POWERED SUPPORT INTELLIGENCE
       </p>
-      <h1 className="font-display z-10 text-center text-4xl font-black uppercase leading-none tracking-tight text-white md:text-6xl lg:text-7xl">
+      <h1 className="font-display z-10 text-center text-4xl font-black uppercase leading-none tracking-tight text-foreground md:text-6xl lg:text-7xl">
         {siteConfig.hero.heading}
       </h1>
       <p className="font-mono z-10 max-w-3xl text-center text-sm leading-relaxed text-gray-400 md:text-base">
@@ -53,7 +53,7 @@ export function Hero() {
           BUILD: <span className="text-[#FF4500]">v2.4.1</span>
         </span>
         <span>
-          NODES: <span className="text-white">1,047</span>
+          NODES: <span className="text-foreground">1,047</span>
         </span>
       </div>
     </div>

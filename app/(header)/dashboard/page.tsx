@@ -30,7 +30,7 @@ export default async function DashboardPage() {
       {organizations.length > 0 ? (
         <>
           {/* Dark header with orange grid background */}
-          <div className="relative border-b border-[#FF4500]/30 bg-black px-6 py-10 md:px-10 overflow-hidden">
+          <div className="relative border-b border-[#FF4500]/30 bg-background px-6 py-10 md:px-10 overflow-hidden">
             <div
               className="pointer-events-none absolute inset-0 opacity-10"
               style={{
@@ -42,7 +42,7 @@ export default async function DashboardPage() {
             <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500] mb-2">// WORKSPACE</p>
-                <h1 className="font-display text-4xl font-black uppercase tracking-tight text-white">
+                <h1 className="font-display text-4xl font-black uppercase tracking-tight text-foreground">
                   Your organizations
                 </h1>
                 <p className="font-mono mt-1 text-sm text-gray-400">

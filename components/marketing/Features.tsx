@@ -54,12 +54,12 @@ export function Features() {
   ];
 
   return (
-    <section className="border-t border-[#FF4500] bg-black py-20 lg:py-[100px]">
+    <section className="border-t border-[#FF4500] bg-background py-20 lg:py-[100px]">
       <div className="mb-14 px-5 text-center lg:mb-20">
         <p className="font-mono mb-3 text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
           // SYSTEM CAPABILITIES
         </p>
-        <h2 className="font-display text-2xl font-black uppercase tracking-tight text-white md:text-3xl lg:text-4xl">
+        <h2 className="font-display text-2xl font-black uppercase tracking-tight text-foreground md:text-3xl lg:text-4xl">
           Why should you use Answerify?
         </h2>
       </div>
@@ -67,12 +67,12 @@ export function Features() {
         {features.map((feature) => {
           return (
             <div
-              className="flex flex-col gap-3 border border-[#FF4500]/20 bg-black p-6 transition-colors hover:bg-[#FF4500]/5"
+              className="flex flex-col gap-3 border border-[#FF4500]/20 bg-background p-6 transition-colors hover:bg-[#FF4500]/5"
               key={feature.title}
             >
               {feature.icon}
               <div className="mt-1 flex items-baseline justify-between">
-                <h4 className="font-display text-lg font-black uppercase tracking-tight text-white">
+                <h4 className="font-display text-lg font-black uppercase tracking-tight text-foreground">
                   {feature.title}
                 </h4>
                 <div className="text-right">
