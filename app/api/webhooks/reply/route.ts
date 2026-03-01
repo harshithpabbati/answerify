@@ -5,6 +5,7 @@ import { Resend } from 'resend';
 import { cleanBody } from '@/lib/cleanBody';
 import { createServiceClient } from '@/lib/supabase/service';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
+import { firstPathSegment } from '@/lib/url-section';
 
 function getGenAIClient() {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
@@ -114,8 +115,11 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ data, error }), { status: 200 });
   }
 
-  // Build URL list for Gemini URL context tool
-  const urlList = datasources.map((d) => d.url).join('\n');
+  // Build URL list for Gemini URL context tool.
+  // Deduplicate by section prefix so Gemini is never overwhelmed: when many
+  // URLs share the same origin + first path segment, use the prefix URL as a
+  // representative (e.g. /docs/ instead of 50 individual doc pages).
+  const urlList = deduplicateForGemini(datasources.map((d) => d.url)).join('\n');
 
   // Build conversation history context
   const conversationHistory =
@@ -285,4 +289,44 @@ export async function POST(request: Request) {
     .single();
 
   return new Response(JSON.stringify({ data, error }), { status: 200 });
+}
+
+/**
+ * Reduce a potentially large list of datasource URLs to a manageable set for
+ * Gemini's URL context tool.
+ *
+ * Strategy: group by origin + first path segment. When a section has more than
+ * one URL, replace all of them with the section prefix URL (e.g. turning 50
+ * individual "/docs/…" pages into a single "https://example.com/docs/" entry).
+ * This prevents Gemini from being overwhelmed while still pointing it at every
+ * distinct content area.
+ *
+ * A hard cap of MAX_GEMINI_URLS is applied after deduplication.
+ */
+const MAX_GEMINI_URLS = 20;
+
+function deduplicateForGemini(urls: string[]): string[] {
+  if (urls.length <= MAX_GEMINI_URLS) return urls;
+
+  const groups = new Map<string, string[]>();
+  for (const url of urls) {
+    let key: string;
+    try {
+      const parsed = new URL(url);
+      const seg = firstPathSegment(url);
+      key = seg ? `${parsed.origin}/${seg}/` : `${parsed.origin}/`;
+    } catch {
+      key = url;
+    }
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(url);
+  }
+
+  const result: string[] = [];
+  for (const [prefix, groupUrls] of groups) {
+    // More than one URL in this section → use the prefix as representative
+    result.push(groupUrls.length > 1 ? prefix : groupUrls[0]);
+    if (result.length >= MAX_GEMINI_URLS) break;
+  }
+  return result;
 }

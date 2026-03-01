@@ -6,10 +6,13 @@
  *  2. Falls back to well-known sitemap paths if none are found in robots.txt
  *  3. Parses sitemap XML — follows <sitemapindex> references, collects <urlset> <loc> entries
  *
- * Returns: { baseUrl, pages, sitemapUrls }
+ * Returns: { baseUrl, pages, sitemapUrls, groups }
  *   pages       – individual content page URLs extracted from sitemap urlset entries
  *   sitemapUrls – sitemap XML files that were successfully fetched
+ *   groups      – pages keyed by first path segment (e.g. /docs, /blog) for UI grouping
  */
+
+import { firstPathSegment } from '@/lib/url-section';
 
 const FETCH_TIMEOUT_MS = 5_000;
 const MAX_SITEMAPS = 20; // max sitemap files to fetch per request
@@ -149,5 +152,21 @@ export async function GET(request: Request) {
   // Step 3 — crawl sitemaps to gather individual page URLs
   const { pages, sitemapsFetched } = await crawlSitemaps(sitemapUrls);
 
-  return Response.json({ baseUrl, pages, sitemapUrls: sitemapsFetched });
+  return Response.json({
+    baseUrl,
+    pages,
+    sitemapUrls: sitemapsFetched,
+    groups: groupBySection(pages),
+  });
+}
+
+/** Group page URLs by their first path segment (e.g. /docs, /blog). */
+function groupBySection(pages: string[]): Record<string, string[]> {
+  const groups: Record<string, string[]> = {};
+  for (const page of pages) {
+    const seg = firstPathSegment(page);
+    const key = seg ? `/${seg}` : '/';
+    (groups[key] ??= []).push(page);
+  }
+  return groups;
 }
