@@ -41,7 +41,7 @@ export function Conversation({ email_from_name, body, role }: Tables<'email'>) {
     <div
       className={cn('flex w-full gap-2 max-w-sm md:max-w-none', flexAlignment)}
     >
-      <div className="bg-black border-[#FF4500]/20 max-w-xl overflow-hidden break-words border p-4 text-sm text-white">
+      <div className="bg-background border-[#FF4500]/20 max-w-xl overflow-hidden break-words border p-4 text-sm text-foreground">
         <div
           className="email-content"
           dangerouslySetInnerHTML={{ __html: sanitizedBody }}

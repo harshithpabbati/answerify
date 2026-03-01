@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <div className="size-full flex-1 bg-black text-white">
+    <div className="size-full flex-1 bg-background text-foreground">
       <TickerBar />
       <Header isDashboard={false} />
       <Hero />
