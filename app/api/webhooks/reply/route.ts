@@ -96,6 +96,7 @@ async function insertClarifyingDraft(
  */
 async function runResearchAgent(
   ai: GoogleGenAI,
+  subject: string,
   question: string,
   urlList: string,
 ): Promise<{ findings: string; candidates: any[] | undefined }> {
@@ -114,7 +115,7 @@ async function runResearchAgent(
 
   const result = await ai.models.generateContent({
     model: 'gemini-2.5-flash',
-    contents: `Customer question:\n${question}\n\nURLs to search:\n${urlList}`,
+    contents: `Subject: ${subject}\nCustomer question:\n${question}\n\nURLs to search:\n${urlList}`,
     config: {
       systemInstruction: researchPrompt,
       maxOutputTokens: 1024,
@@ -136,6 +137,7 @@ async function runResearchAgent(
  */
 async function runWritingAgent(
   ai: GoogleGenAI,
+  subject: string,
   question: string,
   findings: string,
   conversationHistory: string,
@@ -176,7 +178,7 @@ async function runWritingAgent(
 
   const result = await ai.models.generateContent({
     model: 'gemini-2.5-flash',
-    contents: `Customer question:\n${question}\n\nResearch findings:\n${findings}`,
+    contents: `Subject: ${subject}\nCustomer question:\n${question}\n\nResearch findings:\n${findings}`,
     config: {
       systemInstruction: writingPrompt,
       maxOutputTokens: 1024,
@@ -198,8 +200,8 @@ export async function POST(request: Request) {
   const ai = getGenAIClient();
   const supabase = await createServiceClient();
 
-  // Fetch datasources and organization autopilot settings in parallel
-  const [{ data: datasources }, { data: org }] = await Promise.all([
+  // Fetch datasources, organization autopilot settings, and thread in parallel
+  const [{ data: datasources }, { data: org }, { data: thread }] = await Promise.all([
     supabase
       .from('datasource')
       .select('id, url')
@@ -208,6 +210,11 @@ export async function POST(request: Request) {
       .from('organization')
       .select('autopilot_enabled, autopilot_threshold')
       .eq('id', record.organization_id)
+      .single(),
+    supabase
+      .from('thread')
+      .select('email_from, subject, message_id')
+      .eq('id', record.thread_id)
       .single(),
   ]);
 
@@ -262,6 +269,7 @@ export async function POST(request: Request) {
   // is the step that actually reads from the knowledge-base URLs.
   const { findings, candidates: researchCandidates } = await runResearchAgent(
     ai,
+    thread?.subject ?? '',
     record.cleaned_body,
     urlList,
   );
@@ -278,6 +286,7 @@ export async function POST(request: Request) {
   // Take the research findings and produce a polished HTML reply.
   const rawContent = await runWritingAgent(
     ai,
+    thread?.subject ?? '',
     record.cleaned_body,
     findings,
     conversationHistory,
@@ -296,13 +305,7 @@ export async function POST(request: Request) {
   const shouldAutoSend = autopilotEnabled && confidence >= autopilotThreshold;
 
   if (shouldAutoSend) {
-    // Auto-send: fetch thread details to send the email
-    const { data: thread } = await supabase
-      .from('thread')
-      .select('email_from, subject, message_id')
-      .eq('id', record.thread_id)
-      .single();
-
+    // Auto-send: use the already-fetched thread to send the email
     if (thread) {
       const resend = new Resend(process.env.RESEND_API_KEY);
       const sentEmail = await resend.emails.send({
