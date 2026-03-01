@@ -1,18 +1,116 @@
 /**
  * GET /api/robots?domain=https://example.com
  *
- * Fetches the robots.txt for the given domain and returns:
- *  - All Sitemap URLs found in the file
- *  - All unique path prefixes from Allow / Disallow directives
+ * Discovers content URLs for the given domain by crawling its sitemaps:
+ *  1. Checks robots.txt for Sitemap: declarations
+ *  2. Falls back to well-known sitemap paths if none are found in robots.txt
+ *  3. Parses sitemap XML — follows <sitemapindex> references, collects <urlset> <loc> entries
  *
- * The caller can then present these as selectable data-source candidates.
+ * Returns: { baseUrl, pages, sitemapUrls }
+ *   pages       – individual content page URLs extracted from sitemap urlset entries
+ *   sitemapUrls – sitemap XML files that were successfully fetched
  */
+
+const FETCH_TIMEOUT_MS = 5_000;
+const MAX_SITEMAPS = 5; // max sitemap files to fetch per request
+const MAX_PAGES = 200;  // max page URLs to return
+
+// Probe these paths if robots.txt has no Sitemap: directive
+const FALLBACK_SITEMAP_PATHS = [
+  '/sitemap.xml',
+  '/sitemap_index.xml',
+  '/sitemap-index.xml',
+  '/sitemaps/sitemap.xml',
+];
+
+async function safeFetch(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Answerify-Bot/1.0' },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+    return res.ok ? res.text() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Extract every <loc> value from a sitemap XML string. */
+function extractLocs(xml: string): string[] {
+  const locs: string[] = [];
+  for (const match of xml.matchAll(/<loc>([^<]+)<\/loc>/gi)) {
+    const url = match[1].trim();
+    if (url) locs.push(url);
+  }
+  return locs;
+}
+
+function isSitemapIndex(xml: string): boolean {
+  return /<sitemapindex[\s>]/i.test(xml);
+}
+
+/** Read only the Sitemap: lines from robots.txt — ignore Allow/Disallow. */
+function parseSitemapsFromRobots(text: string): string[] {
+  const urls: string[] = [];
+  for (const rawLine of text.split('\n')) {
+    const m = rawLine.trim().match(/^Sitemap:\s*(.+)$/i);
+    if (m) urls.push(m[1].trim());
+  }
+  return urls;
+}
+
+/**
+ * BFS crawl: follow sitemapindex → child sitemaps, collect <loc> from urlsets.
+ * Stops once MAX_SITEMAPS files have been fetched or MAX_PAGES pages collected.
+ */
+async function crawlSitemaps(initialUrls: string[]): Promise<{
+  pages: string[];
+  sitemapsFetched: string[];
+}> {
+  const pages: string[] = [];
+  const sitemapsFetched: string[] = [];
+  const seen = new Set<string>();
+  const queue = [...initialUrls];
+
+  while (queue.length > 0 && sitemapsFetched.length < MAX_SITEMAPS && pages.length < MAX_PAGES) {
+    const url = queue.shift()!;
+    if (seen.has(url)) continue;
+    seen.add(url);
+
+    const text = await safeFetch(url);
+    if (!text) continue;
+
+    sitemapsFetched.push(url);
+    const locs = extractLocs(text);
+
+    if (isSitemapIndex(text)) {
+      // Queue child sitemaps (not yet seen)
+      for (const loc of locs) {
+        if (!seen.has(loc)) queue.push(loc);
+      }
+    } else {
+      // Regular urlset — collect page URLs up to the cap
+      for (const loc of locs) {
+        if (pages.length >= MAX_PAGES) break;
+        pages.push(loc);
+      }
+      // Exit the outer loop immediately if we've hit the page cap
+      if (pages.length >= MAX_PAGES) break;
+    }
+  }
+
+  return { pages, sitemapsFetched };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const domain = searchParams.get('domain');
 
   if (!domain) {
-    return Response.json({ error: 'domain query parameter is required' }, { status: 400 });
+    return Response.json(
+      { error: 'domain query parameter is required' },
+      { status: 400 }
+    );
   }
 
   let baseUrl: string;
@@ -25,58 +123,27 @@ export async function GET(request: Request) {
     return Response.json({ error: 'Invalid domain' }, { status: 400 });
   }
 
-  const robotsUrl = `${baseUrl}/robots.txt`;
-
-  let text: string;
-  try {
-    const res = await fetch(robotsUrl, {
-      headers: { 'User-Agent': 'Answerify-Bot/1.0' },
-      // 5-second timeout via AbortSignal
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) {
-      return Response.json(
-        { error: `robots.txt returned ${res.status}` },
-        { status: 422 }
-      );
-    }
-    text = await res.text();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to fetch robots.txt';
-    return Response.json({ error: message }, { status: 422 });
+  // Step 1 — find sitemap URLs via robots.txt
+  let sitemapUrls: string[] = [];
+  const robotsText = await safeFetch(`${baseUrl}/robots.txt`);
+  if (robotsText) {
+    sitemapUrls = parseSitemapsFromRobots(robotsText);
   }
 
-  const sitemaps: string[] = [];
-  const paths = new Set<string>();
-
-  for (const rawLine of text.split('\n')) {
-    const line = rawLine.trim();
-
-    // Collect sitemap URLs
-    const sitemapMatch = line.match(/^Sitemap:\s*(.+)$/i);
-    if (sitemapMatch) {
-      sitemaps.push(sitemapMatch[1].trim());
-      continue;
-    }
-
-    // Collect Allow / Disallow paths (skip wildcards and query params – these
-    // can't reliably be turned into standalone datasource URLs; users can add
-    // those manually if needed)
-    const pathMatch = line.match(/^(?:Allow|Disallow):\s*(.+)$/i);
-    if (pathMatch) {
-      const p = pathMatch[1].trim();
-      // Skip wildcards, empty paths, bare "/", and paths with query strings
-      if (p && p !== '/' && !p.includes('*') && !p.includes('?')) {
-        // Build a full URL from the path prefix
-        const url = `${baseUrl}${p.startsWith('/') ? p : `/${p}`}`;
-        paths.add(url);
+  // Step 2 — probe common sitemap locations if robots.txt had no Sitemap: line
+  if (sitemapUrls.length === 0) {
+    for (const path of FALLBACK_SITEMAP_PATHS) {
+      const url = `${baseUrl}${path}`;
+      const text = await safeFetch(url);
+      if (text && (/<urlset/i.test(text) || /<sitemapindex/i.test(text))) {
+        sitemapUrls.push(url);
+        break; // one starting point is enough; crawlSitemaps follows indexes
       }
     }
   }
 
-  return Response.json({
-    baseUrl,
-    sitemaps,
-    paths: [...paths],
-  });
+  // Step 3 — crawl sitemaps to gather individual page URLs
+  const { pages, sitemapsFetched } = await crawlSitemaps(sitemapUrls);
+
+  return Response.json({ baseUrl, pages, sitemapUrls: sitemapsFetched });
 }

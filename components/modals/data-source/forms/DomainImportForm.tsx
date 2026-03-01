@@ -8,10 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-interface RobotsResult {
+interface DiscoverResult {
   baseUrl: string;
-  sitemaps: string[];
-  paths: string[];
+  /** Individual content page URLs extracted from sitemap urlsets. */
+  pages: string[];
+  /** Sitemap XML files that were successfully fetched. */
+  sitemapUrls: string[];
 }
 
 interface Props {
@@ -23,12 +25,15 @@ export function DomainImportForm({ slug, onAdd }: Props) {
   const [domain, setDomain] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [result, setResult] = useState<RobotsResult | null>(null);
+  const [result, setResult] = useState<DiscoverResult | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
-  const allUrls = result
-    ? [...result.sitemaps, ...result.paths]
+  // Show individual pages when available, fall back to the sitemap files themselves
+  const displayUrls = result
+    ? result.pages.length > 0
+      ? result.pages
+      : result.sitemapUrls
     : [];
 
   const handleFetch = async () => {
@@ -42,12 +47,14 @@ export function DomainImportForm({ slug, onAdd }: Props) {
       );
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error ?? 'Failed to fetch robots.txt');
+        setError(json.error ?? 'Failed to discover URLs');
         return;
       }
-      setResult(json as RobotsResult);
-      // Pre-select all sitemaps
-      setSelected(new Set(json.sitemaps));
+      const data = json as DiscoverResult;
+      setResult(data);
+      // Pre-select all discovered URLs so users can deselect what they don't need
+      const urls = data.pages.length > 0 ? data.pages : data.sitemapUrls;
+      setSelected(new Set(urls));
     } catch {
       setError('Network error – please check the domain and try again.');
     } finally {
@@ -65,10 +72,10 @@ export function DomainImportForm({ slug, onAdd }: Props) {
   };
 
   const toggleAll = () => {
-    if (selected.size === allUrls.length) {
+    if (selected.size === displayUrls.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(allUrls));
+      setSelected(new Set(displayUrls));
     }
   };
 
@@ -87,6 +94,8 @@ export function DomainImportForm({ slug, onAdd }: Props) {
     }
     onAdd?.();
   };
+
+  const isFallbackMode = result !== null && result.pages.length === 0;
 
   return (
     <div className="w-full space-y-4">
@@ -112,56 +121,43 @@ export function DomainImportForm({ slug, onAdd }: Props) {
             onClick={handleFetch}
             disabled={!domain || loading}
           >
-            {loading ? 'Fetching…' : 'Fetch'}
+            {loading ? 'Discovering…' : 'Discover'}
           </Button>
         </div>
         <p className="text-muted-foreground text-xs">
-          Enter a domain to discover URLs from its robots.txt file.
+          Enter a domain to discover URLs from its sitemap. A limited number of
+          pages are returned; add more manually if needed.
         </p>
       </div>
 
-      {result && allUrls.length === 0 && (
+      {result && displayUrls.length === 0 && (
         <p className="text-muted-foreground py-2 text-sm">
-          No URLs found in robots.txt. Try adding them manually.
+          No sitemap found for this domain. Try adding URLs manually.
         </p>
       )}
 
-      {result && allUrls.length > 0 && (
+      {result && displayUrls.length > 0 && (
         <div className="space-y-2">
+          {isFallbackMode && (
+            <p className="text-muted-foreground text-xs">
+              No individual pages were found — showing sitemap files instead.
+            </p>
+          )}
           <div className="flex items-center justify-between">
             <Label>
-              Select URLs to import ({selected.size}/{allUrls.length})
+              Select URLs to import ({selected.size}/{displayUrls.length})
             </Label>
             <button
               type="button"
               onClick={toggleAll}
               className="text-muted-foreground hover:text-foreground text-xs underline-offset-2 hover:underline"
             >
-              {selected.size === allUrls.length ? 'Deselect all' : 'Select all'}
+              {selected.size === displayUrls.length ? 'Deselect all' : 'Select all'}
             </button>
           </div>
 
           <ul className="max-h-60 space-y-1 overflow-y-auto rounded border p-2">
-            {result.sitemaps.length > 0 && (
-              <li className="text-muted-foreground mb-1 text-xs font-semibold uppercase tracking-wide">
-                Sitemaps
-              </li>
-            )}
-            {result.sitemaps.map((url) => (
-              <UrlCheckbox
-                key={url}
-                url={url}
-                checked={selected.has(url)}
-                onToggle={() => toggle(url)}
-              />
-            ))}
-
-            {result.paths.length > 0 && (
-              <li className="text-muted-foreground mb-1 mt-2 text-xs font-semibold uppercase tracking-wide">
-                Paths
-              </li>
-            )}
-            {result.paths.map((url) => (
+            {displayUrls.map((url) => (
               <UrlCheckbox
                 key={url}
                 url={url}
@@ -176,7 +172,9 @@ export function DomainImportForm({ slug, onAdd }: Props) {
             onClick={handleSave}
             disabled={selected.size === 0 || saving}
           >
-            {saving ? 'Saving…' : `Add ${selected.size} URL${selected.size !== 1 ? 's' : ''}`}
+            {saving
+              ? 'Saving…'
+              : `Add ${selected.size} URL${selected.size !== 1 ? 's' : ''}`}
           </Button>
         </div>
       )}
