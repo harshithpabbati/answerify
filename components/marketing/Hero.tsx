@@ -17,7 +17,7 @@ export function Hero() {
         }}
       />
       <p className="font-mono z-10 text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
-        // AI-POWERED SUPPORT INTELLIGENCE
+        {`// AI-POWERED SUPPORT INTELLIGENCE`}
       </p>
       <h1 className="font-display z-10 text-center text-4xl font-black uppercase leading-none tracking-tight text-foreground md:text-6xl lg:text-7xl">
         {siteConfig.hero.heading}

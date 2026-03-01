@@ -41,7 +41,9 @@ export default async function DashboardPage() {
             />
             <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500] mb-2">// WORKSPACE</p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500] mb-2">
+                  {`// WORKSPACE`}
+                </p>
                 <h1 className="font-display text-4xl font-black uppercase tracking-tight text-foreground">
                   Your organizations
                 </h1>
@@ -74,7 +76,12 @@ export default async function DashboardPage() {
                         className="flex h-24 items-center border-b border-[#FF4500]/40 px-6"
                         style={{ backgroundColor: bg + '22' }}
                       >
-                        <span className="font-display text-5xl font-black uppercase" style={{ color: bg }}>{initial}</span>
+                        <span
+                          className="font-display text-5xl font-black uppercase"
+                          style={{ color: bg }}
+                        >
+                          {initial}
+                        </span>
                       </div>
 
                       <CardContent className="flex flex-1 flex-col gap-2 p-5">

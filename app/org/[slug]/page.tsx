@@ -1,13 +1,13 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getOrganizationBySlug } from '@/actions/organization';
 import { getOrgStats } from '@/actions/email';
+import { getOrganizationBySlug } from '@/actions/organization';
 import { getSources } from '@/actions/source';
+
 import {
   AUTOPILOT_ENABLED_DEFAULT,
   AUTOPILOT_THRESHOLD_DEFAULT,
 } from '@/lib/autopilot';
-
 import { WelcomeDashboard } from '@/components/organization/WelcomeDashboard';
 
 interface Props {
@@ -42,7 +42,9 @@ export default async function OrgPage({ params }: Props) {
       threadsCount={threadCount}
       repliesCount={replyCount}
       autopilotEnabled={org.autopilot_enabled ?? AUTOPILOT_ENABLED_DEFAULT}
-      autopilotThreshold={org.autopilot_threshold ?? AUTOPILOT_THRESHOLD_DEFAULT}
+      autopilotThreshold={
+        org.autopilot_threshold ?? AUTOPILOT_THRESHOLD_DEFAULT
+      }
     />
   );
 }

@@ -5,6 +5,7 @@ import { getOrganizations } from '@/actions/organization';
 import { EmailSkeleton } from '@/components/organization/sidebar/EmailSkeleton';
 import { EmailsList } from '@/components/organization/sidebar/EmailsList';
 
+import { ThemeToggle } from '../ui/theme-toggle';
 import { CreateOrganization } from './CreateOrganization';
 import { Organizations } from './Organizations';
 import { User } from './User';
@@ -30,6 +31,7 @@ export async function Sidebar({ orgId, name, slug, inboundEmail }: Props) {
         <Organizations organizations={organizations} />
         <div className="flex flex-col items-center justify-center gap-2 p-2">
           <CreateOrganization />
+          <ThemeToggle />
           <User user={user} />
         </div>
       </div>
@@ -38,7 +40,9 @@ export async function Sidebar({ orgId, name, slug, inboundEmail }: Props) {
           fallback={
             <div className="max-h-dvh">
               <div className="flex h-[60px] items-center justify-between border-b border-[#FF4500]/20 p-4">
-                <h3 className="font-mono font-semibold uppercase tracking-wider text-foreground">{name}</h3>
+                <h3 className="font-mono font-semibold uppercase tracking-wider text-foreground">
+                  {name}
+                </h3>
               </div>
               <div className="flex h-[calc(100dvh-60px)] flex-col overflow-auto">
                 {Array.from({ length: 10 }).map((_, i) => (

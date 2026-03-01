@@ -33,6 +33,8 @@ export function SignUp() {
     defaultValues,
     mode: 'onChange',
   });
+
+  // eslint-disable-next-line
   const password = form.watch('password');
 
   const { strength, feedback } = usePasswordStrength(password);

@@ -16,7 +16,7 @@ function getGenAIClient() {
  * was used but no explicit grounding scores are returned.
  */
 function computeConfidence(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   candidates: any[] | undefined,
   datasourceCount: number
 ): number {
@@ -48,7 +48,7 @@ function computeConfidence(
 /**
  * Extract cited source URLs from Gemini grounding chunks.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function extractCitations(candidates: any[] | undefined): string[] {
   if (!candidates || candidates.length === 0) return [];
   const chunks =

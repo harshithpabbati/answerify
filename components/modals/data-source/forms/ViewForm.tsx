@@ -31,20 +31,18 @@ export function ViewDataSourcesForm({ orgId }: Props) {
   }
 
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-2 size-full overflow-x-auto max-h-96">
       {data.map((source) => (
-        <li
-          key={source.id}
-          className="bg-bg flex items-center gap-3 rounded-base border-2 border-black px-3 py-2 shadow-base"
-        >
-          <Link2Icon className="size-4 shrink-0" />
+        <li key={source.id}>
           <a
             href={source.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="truncate text-sm font-medium underline-offset-2 hover:underline"
+            aria-label={`Open data source: ${source.url}`}
+            className="flex items-center gap-2 border border-[#FF4500]/20 bg-muted px-3 py-2 text-sm font-mono font-medium text-foreground transition-all hover:border-[#FF4500]/60"
           >
-            {source.url}
+            <Link2Icon className="size-3.5 shrink-0" />
+            <span className="truncate">{source.url}</span>
           </a>
         </li>
       ))}
