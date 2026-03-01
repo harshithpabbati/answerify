@@ -141,3 +141,62 @@ GRANT ALL ON TABLE "public"."reply_edit" TO "service_role";
 | `NEXT_PUBLIC_BASE_URL` | Base URL of your deployment (e.g. `https://answerify.dev`) |
 | `RESEND_API_KEY` | Resend API key for sending emails |
 | `GEMINI_API_KEY` | Google Gemini API key for embeddings (`gemini-embedding-001`) and completions (`gemini-3-flash-preview`) |
+| `CLOUDFLARE_AGENT_URL` | *(Optional)* URL of the deployed Cloudflare Worker (see below) |
+| `CLOUDFLARE_AGENT_SECRET` | *(Optional)* Shared secret to authenticate calls from Next.js to the Worker |
+
+---
+
+## Cloudflare Agents Integration
+
+The `worker/` directory contains a [Cloudflare Agents](https://agents.cloudflare.com/) Worker that runs the research → writing AI pipeline on Cloudflare's infrastructure instead of inside Next.js serverless functions.
+
+### Why Cloudflare Agents?
+
+| | Next.js serverless | Cloudflare Agent Worker |
+|---|---|---|
+| Execution timeout | ~60 s (Vercel) | Minutes to hours (Durable Objects) |
+| State persistence | None – stateless per request | Built-in SQLite per agent instance |
+| Parallelism | One function per request | One Durable Object per email thread |
+| Observability | Logs only | State introspection + scheduling |
+
+The `EmailReplyAgent` extends the Cloudflare [`Agent`](https://agents.cloudflare.com/) class. Each email thread gets its own Durable Object instance, so parallel threads are fully isolated and never block each other. Agent state (`status`, `findings`, `reply`, `confidence`) is persisted across the research and writing steps, enabling safe retries if any step fails.
+
+### Deploying the Worker
+
+```bash
+cd worker
+pnpm install          # or npm install
+pnpm run deploy       # wrangler deploy
+
+# Set secrets (run once):
+wrangler secret put GEMINI_API_KEY
+wrangler secret put SUPABASE_URL
+wrangler secret put SUPABASE_SERVICE_KEY
+wrangler secret put RESEND_API_KEY
+wrangler secret put INBOUND_WEBHOOK_SECRET
+```
+
+After deploying, set `CLOUDFLARE_AGENT_URL` and `CLOUDFLARE_AGENT_SECRET` in your Next.js environment to activate the Cloudflare Agent path. Without these variables the app falls back to the built-in Next.js webhook (original behaviour).
+
+### How it works
+
+```
+Inbound email
+     │
+     ▼
+Next.js /api/generate-reply
+     │  fetches context from Supabase
+     │  (datasources, org settings, thread, history)
+     │
+     ▼
+Cloudflare Worker  ─── routeAgentRequest() ──►  EmailReplyAgent (Durable Object)
+                                                      │
+                                                      ├─ Step 1: Research Agent (Gemini)
+                                                      │          grounding metadata → confidence score
+                                                      │
+                                                      ├─ Step 2: Writing Agent (Gemini)
+                                                      │          produces HTML reply
+                                                      │
+                                                      └─ Step 3: Auto-send (Resend) or save draft
+                                                                 results written to Supabase
+```

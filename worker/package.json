@@ -1,0 +1,22 @@
+{
+  "name": "answerify-worker",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "agents": "^0.6.0",
+    "common-tags": "^1.8.2",
+    "postal-mime": "^2.7.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250525.0",
+    "@types/common-tags": "^1.8.4",
+    "typescript": "^5",
+    "wrangler": "^4.69.0"
+  }
+}
