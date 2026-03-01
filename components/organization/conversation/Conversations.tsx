@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { sendEmail } from '@/actions/email';
 import { Tables } from '@/database.types';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 import { useTiptap } from '@/hooks/useTiptap';
+import { createBrowserClient } from '@/lib/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -45,12 +47,14 @@ function confidenceVariant(score: number): 'default' | 'neutral' {
 
 export function Conversations({
   threadId,
-  conversations,
+  conversations: initialConversations,
   reply,
   status,
 }: Props) {
   const router = useRouter();
   const divRef = useRef<HTMLDivElement>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const [conversations, setConversations] = useState(initialConversations);
 
   const editor = useTiptap(
     conversations[conversations.length - 1].role === 'user'
@@ -61,7 +65,39 @@ export function Conversations({
   useEffect(() => {
     if (!divRef.current) return;
     divRef.current.scrollTop = divRef.current.scrollHeight;
-  }, []);
+  }, [conversations]);
+
+  useEffect(() => {
+    if (channelRef.current) return;
+
+    const supabase = createBrowserClient();
+    channelRef.current = supabase
+      .channel(`email:${threadId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'email',
+          filter: `thread_id=eq.${threadId}`,
+        },
+        (payload) => {
+          const newEmail = payload.new as Tables<'email'>;
+          setConversations((prev) =>
+            prev.some((e) => e.id === newEmail.id) ? prev : [...prev, newEmail]
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (channelRef.current) {
+        const channel = channelRef.current;
+        channelRef.current = null;
+        channel.unsubscribe();
+      }
+    };
+  }, [threadId]);
 
   const handleSubmit = async (
     status: 'open' | 'closed' | undefined = undefined

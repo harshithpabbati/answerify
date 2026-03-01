@@ -32,7 +32,8 @@ type ThreadAction =
       data: Tables<'thread'>[];
       status: 'open' | 'closed';
     }
-  | { type: 'INSERT_THREAD'; thread: Tables<'thread'> };
+  | { type: 'INSERT_THREAD'; thread: Tables<'thread'> }
+  | { type: 'UPDATE_THREAD'; thread: Tables<'thread'> };
 
 function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
   switch (action.type) {
@@ -42,6 +43,25 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
       return { data: action.data, status: action.status, isLoading: false };
     case 'INSERT_THREAD':
       return { ...state, data: [action.thread, ...state.data] };
+    case 'UPDATE_THREAD': {
+      const existsInList = state.data.some((t) => t.id === action.thread.id);
+      if (action.thread.status !== state.status) {
+        if (!existsInList) return state;
+        return {
+          ...state,
+          data: state.data.filter((t) => t.id !== action.thread.id),
+        };
+      }
+      const updated = existsInList
+        ? state.data.map((t) => (t.id === action.thread.id ? action.thread : t))
+        : [action.thread, ...state.data];
+      updated.sort(
+        (a, b) =>
+          new Date(b.last_message_created_at).getTime() -
+          new Date(a.last_message_created_at).getTime()
+      );
+      return { ...state, data: updated };
+    }
   }
 }
 
@@ -99,6 +119,21 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
           if (statusRef.current === 'closed') return;
           dispatch({
             type: 'INSERT_THREAD',
+            thread: payload.new as Tables<'thread'>,
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'thread',
+          filter: `organization_id=eq.${orgId}`,
+        },
+        (payload) => {
+          dispatch({
+            type: 'UPDATE_THREAD',
             thread: payload.new as Tables<'thread'>,
           });
         }
