@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { codeBlock } from 'common-tags';
+import { JSDOM } from 'jsdom';
 import { Resend } from 'resend';
 
 import { cleanBody } from '@/lib/cleanBody';
@@ -9,6 +10,95 @@ import { firstPathSegment } from '@/lib/url-section';
 
 function getGenAIClient() {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+}
+
+const CLOUDFLARE_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+
+// Maximum number of URLs to fetch when running the Cloudflare fallback.
+// Kept intentionally small because we download page content ourselves.
+const MAX_FALLBACK_URLS = 5;
+
+// Maximum plain-text characters to include per fetched URL in the prompt.
+const FALLBACK_URL_CONTENT_LENGTH = 4000;
+
+// Timeout in milliseconds for each URL fetch in the fallback path.
+const URL_FETCH_TIMEOUT_MS = 5000;
+
+/**
+ * Fetch the plain-text content of a URL for use as AI context.
+ *
+ * Any LLM can "read" a knowledge-base URL when the page text is fetched
+ * server-side and injected directly into the prompt, so this approach works
+ * for any fallback model — not just Gemini's native urlContext tool.
+ *
+ * Returns null when the URL cannot be reached or returns no usable text.
+ */
+async function fetchUrlContent(url: string): Promise<{ url: string; text: string } | null> {
+  try {
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'Answerify/1.0 (+https://answerify.dev)' },
+      signal: AbortSignal.timeout(URL_FETCH_TIMEOUT_MS),
+    });
+
+    if (!response.ok) return null;
+
+    const html = await response.text();
+
+    // Use JSDOM to safely parse and extract plain text — more robust than
+    // regex stripping, which can leave residual tag fragments.
+    const dom = new JSDOM(html);
+    dom.window.document.querySelectorAll('script, style').forEach((el) => el.remove());
+    const text = (dom.window.document.body?.textContent ?? '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, FALLBACK_URL_CONTENT_LENGTH);
+
+    return text ? { url, text } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Call Cloudflare Workers AI via the REST API.
+ * Used as a fallback when Gemini is unavailable (e.g. rate limited).
+ */
+async function runCloudflareAgent(systemPrompt: string, userPrompt: string): Promise<string> {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+
+  if (!accountId || !apiToken) {
+    throw new Error('Cloudflare credentials not configured');
+  }
+
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${CLOUDFLARE_MODEL}`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        max_tokens: 1024,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Cloudflare AI request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const text = (data as { result?: { response?: string } }).result?.response ?? '';
+  if (!text) {
+    console.warn('Cloudflare AI returned an empty response');
+  }
+  return text;
 }
 
 /**
@@ -99,7 +189,7 @@ async function runResearchAgent(
   subject: string,
   question: string,
   urlList: string,
-): Promise<{ findings: string; candidates: any[] | undefined }> {
+): Promise<{ findings: string; candidates: any[] | undefined; usedFallback?: boolean }> {
   const researchPrompt = codeBlock`
     You are a research assistant for a customer support team.
     Your job is to find and extract the most relevant information from the provided URLs
@@ -113,18 +203,56 @@ async function runResearchAgent(
     - If no relevant information can be found, respond with only: NO_INFORMATION
   `;
 
-  const result = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `Subject: ${subject}\nCustomer question:\n${question}\n\nURLs to search:\n${urlList}`,
-    config: {
-      systemInstruction: researchPrompt,
-      maxOutputTokens: 1024,
-      temperature: 0.3,
-      tools: [{ urlContext: {} }],
-    },
-  });
+  try {
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Subject: ${subject}\nCustomer question:\n${question}\n\nURLs to search:\n${urlList}`,
+      config: {
+        systemInstruction: researchPrompt,
+        maxOutputTokens: 1024,
+        temperature: 0.3,
+        tools: [{ urlContext: {} }],
+      },
+    });
 
-  return { findings: result.text ?? '', candidates: result.candidates };
+    return { findings: result.text ?? '', candidates: result.candidates };
+  } catch (err) {
+    console.warn('Gemini research agent failed, falling back to Cloudflare AI:', err);
+
+    const cloudflareResearchPrompt = codeBlock`
+      You are a research assistant for a customer support team.
+      Your job is to extract the most relevant information to answer a customer's question.
+
+      - Extract only information that is directly relevant to the question
+      - Organise the findings as concise bullet points or short paragraphs
+      - Include specific details: steps, values, settings, or policies that apply
+      - Do not write the final reply – only gather and present the raw facts
+      - If you cannot find relevant information, respond with only: NO_INFORMATION
+    `;
+
+    // Fetch the actual content of the knowledge-base URLs so the model has
+    // real page text to work with. Any LLM can support URL-based knowledge
+    // bases this way — no native URL tool required.
+    const urls = urlList.split('\n').filter(Boolean).slice(0, MAX_FALLBACK_URLS);
+    const settledPages = await Promise.allSettled(urls.map(fetchUrlContent));
+    const fetchedPages = settledPages
+      .filter((r): r is PromiseFulfilledResult<{ url: string; text: string }> =>
+        r.status === 'fulfilled' && r.value !== null,
+      )
+      .map((r) => r.value);
+
+    const urlContext =
+      fetchedPages.length > 0
+        ? fetchedPages.map((p) => `[${p.url}]\n${p.text}`).join('\n\n---\n\n')
+        : urlList;
+
+    const findings = await runCloudflareAgent(
+      cloudflareResearchPrompt,
+      `Subject: ${subject}\nCustomer question:\n${question}\n\nKnowledge base content:\n${urlContext}`,
+    );
+
+    return { findings, candidates: undefined, usedFallback: true };
+  }
 }
 
 /**
@@ -176,17 +304,24 @@ async function runWritingAgent(
     - Do not output anything outside of the HTML response
   `;
 
-  const result = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `Subject: ${subject}\nCustomer question:\n${question}\n\nResearch findings:\n${findings}`,
-    config: {
-      systemInstruction: writingPrompt,
-      maxOutputTokens: 1024,
-      temperature: 0.7,
-    },
-  });
+  const userContent = `Subject: ${subject}\nCustomer question:\n${question}\n\nResearch findings:\n${findings}`;
 
-  return result.text ?? '';
+  try {
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: userContent,
+      config: {
+        systemInstruction: writingPrompt,
+        maxOutputTokens: 1024,
+        temperature: 0.7,
+      },
+    });
+
+    return result.text ?? '';
+  } catch (err) {
+    console.warn('Gemini writing agent failed, falling back to Cloudflare AI:', err);
+    return runCloudflareAgent(writingPrompt, userContent);
+  }
 }
 
 export async function POST(request: Request) {
@@ -267,15 +402,23 @@ export async function POST(request: Request) {
   // Fetch and synthesise relevant information from the datasource URLs.
   // Confidence is derived from the grounding metadata of this step because it
   // is the step that actually reads from the knowledge-base URLs.
-  const { findings, candidates: researchCandidates } = await runResearchAgent(
+  const {
+    findings,
+    candidates: researchCandidates,
+    usedFallback,
+  } = await runResearchAgent(
     ai,
     thread?.subject ?? '',
     record.cleaned_body,
     urlList,
   );
 
-  const confidence = computeConfidence(researchCandidates, datasources.length);
-  const citations = extractCitations(researchCandidates);
+  // When using the Cloudflare fallback, grounding metadata is unavailable so
+  // we use a fixed conservative confidence score to keep the reply as a draft.
+  const confidence = usedFallback
+    ? 0.5
+    : computeConfidence(researchCandidates, datasources.length);
+  const citations = usedFallback ? [] : extractCitations(researchCandidates);
 
   if (!findings || findings.trim() === 'NO_INFORMATION') {
     // Generate clarifying question draft instead of erroring out

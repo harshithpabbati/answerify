@@ -141,3 +141,7 @@ GRANT ALL ON TABLE "public"."reply_edit" TO "service_role";
 | `NEXT_PUBLIC_BASE_URL` | Base URL of your deployment (e.g. `https://answerify.dev`) |
 | `RESEND_API_KEY` | Resend API key for sending emails |
 | `GEMINI_API_KEY` | Google Gemini API key for embeddings (`gemini-embedding-001`) and completions (`gemini-3-flash-preview`) |
+| `CLOUDFLARE_ACCOUNT_ID` | *(Optional)* Cloudflare account ID – used as a fallback AI provider when Gemini is unavailable (e.g. rate limited) |
+| `CLOUDFLARE_API_TOKEN` | *(Optional)* Cloudflare API token with Workers AI permission – required alongside `CLOUDFLARE_ACCOUNT_ID` for the fallback to activate |
+
+> **How the Cloudflare fallback handles URLs:** when Gemini is unavailable the server fetches up to 5 knowledge-base URLs itself, strips the HTML to plain text, and injects the content directly into the Cloudflare AI prompt. This gives the fallback model the same knowledge-base information that Gemini obtains via its native URL context tool — no special model capability required.
