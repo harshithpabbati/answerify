@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { updateAutopilotSettings } from '@/actions/organization';
 import { Tables } from '@/database.types';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
@@ -354,6 +355,9 @@ export function WelcomeDashboard({
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-3">
+                <Link href={`/org/${slug}/stats`}>
+                  <Button variant="default">View Stats</Button>
+                </Link>
                 <Button
                   variant="neutral"
                   onClick={() => setInviteMembers(orgId)}
