@@ -669,6 +669,20 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
           }),
         });
 
+        // Close the thread now that a reply has been sent automatically.
+        // This is best-effort: a failure here does not affect the sent reply.
+        supabaseFetch(
+          supabaseUrl,
+          serviceKey,
+          `thread?id=eq.${encodeURIComponent(threadId)}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'closed' }),
+          }
+        ).catch((err) =>
+          console.error(`Failed to close thread ${threadId}:`, err)
+        );
+
         await this.setState({ ...this.state, status: 'complete' });
         return;
       } catch (err) {
