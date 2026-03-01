@@ -195,25 +195,25 @@ export function WelcomeDashboard({
             <ol className="space-y-3">
               <li className="flex items-start gap-3">
                 <StepBadge step={1} done={!!inboundEmail} />
-                <span className="font-mono text-sm text-gray-300">
+                <span className="font-mono text-sm text-muted-foreground">
                   Copy your inbound email address
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <StepBadge step={2} done={threadsCount > 0} />
-                <span className="font-mono text-sm text-gray-300">
+                <span className="font-mono text-sm text-muted-foreground">
                   Set up email forwarding from your support account
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <StepBadge step={3} done={sources.length > 0} />
-                <span className="font-mono text-sm text-gray-300">
+                <span className="font-mono text-sm text-muted-foreground">
                   Add data sources to power AI replies
                 </span>
               </li>
               <li className="flex items-start gap-3">
                 <StepBadge step={4} done={repliesCount > 0} />
-                <span className="font-mono text-sm text-gray-300">
+                <span className="font-mono text-sm text-muted-foreground">
                   Send a test email and watch Answerify reply!
                 </span>
               </li>

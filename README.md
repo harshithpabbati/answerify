@@ -141,3 +141,86 @@ GRANT ALL ON TABLE "public"."reply_edit" TO "service_role";
 | `NEXT_PUBLIC_BASE_URL` | Base URL of your deployment (e.g. `https://answerify.dev`) |
 | `RESEND_API_KEY` | Resend API key for sending emails |
 | `GEMINI_API_KEY` | Google Gemini API key for embeddings (`gemini-embedding-001`) and completions (`gemini-3-flash-preview`) |
+| `CLOUDFLARE_AGENT_URL` | *(Optional)* URL of the deployed Cloudflare Worker (see below) |
+| `CLOUDFLARE_AGENT_SECRET` | *(Optional)* Shared secret to authenticate calls from Next.js to the Worker |
+
+---
+
+## Cloudflare Agents Integration
+
+The `worker/` directory contains a [Cloudflare Agents](https://agents.cloudflare.com/) Worker that handles inbound email processing and AI reply generation entirely on Cloudflare's infrastructure, replacing both the `/api/webhooks/inbound-email` and `/api/webhooks/reply` Next.js routes.
+
+### Why Cloudflare Agents?
+
+| | Next.js serverless | Cloudflare Agent Worker |
+|---|---|---|
+| Inbound email | HTTP webhook (base64 raw body) | Native `email` export – raw `EmailMessage` direct from Cloudflare Email Routing |
+| Execution timeout | ~60 s (Vercel) | Minutes to hours (Durable Objects) |
+| State persistence | None – stateless per request | Built-in SQLite per agent instance |
+| Parallelism | One function per request | One Durable Object per email thread |
+| Observability | Logs only | State introspection + scheduling |
+| Outbound reply | Resend API with manual `In-Reply-To` header | `this.replyToEmail()` – Cloudflare sets `In-Reply-To` natively; reply lands in customer's existing thread |
+
+The `EmailReplyAgent` extends the Cloudflare [`Agent`](https://agents.cloudflare.com/) class. Each email thread gets its own Durable Object instance, so parallel threads are fully isolated and never block each other. Agent state (`status`, `findings`, `reply`, `confidence`) is persisted across the research and writing steps, enabling safe retries if any step fails.
+
+### Deploying the Worker
+
+```bash
+cd worker
+npm install
+npm run deploy        # wrangler deploy
+
+# Set secrets (run once):
+wrangler secret put SUPABASE_URL
+wrangler secret put SUPABASE_SERVICE_KEY
+wrangler secret put INBOUND_WEBHOOK_SECRET   # shared with Next.js CLOUDFLARE_AGENT_SECRET
+```
+
+After deploying:
+1. Point your [Cloudflare Email Routing](https://developers.cloudflare.com/email-routing/) destination to this Worker (instead of the Next.js `/api/webhooks/inbound-email` URL).
+2. Set `CLOUDFLARE_AGENT_URL` and `CLOUDFLARE_AGENT_SECRET` in your Next.js environment so the dashboard's "Generate Reply" action calls the Worker.
+
+Without these variables the app falls back to the built-in Next.js webhook (original behaviour).
+
+### How it works
+
+```
+Customer sends email
+        │
+        ▼
+Cloudflare Email Routing
+        │  delivers raw EmailMessage
+        ▼
+Worker email handler
+        │  resolveEmailToAgent():
+        │   1. In-Reply-To lookup   → existing thread via Supabase
+        │   2. new UUID             → new thread
+        │
+        ▼  routeAgentEmail()
+EmailReplyAgent (Durable Object, one per thread)
+        │
+        ├─ onEmail()
+        │   ├─ isAutoReplyEmail check (RFC 3834)
+        │   ├─ Parse raw email (PostalMime)
+        │   ├─ Look up organization by recipient address
+        │   ├─ Create/reopen thread in Supabase
+        │   ├─ Insert email record
+        │   └─ generateReply() ──────────────────────────────────────┐
+        │                                                             │
+        └─ onRequest()  ◄── Next.js /api/generate-reply              │
+            (manual trigger from dashboard → always saves draft)      │
+            └─ generateReply() ────────────────────────────────────► │
+                                                                      ▼
+                                              Step 1: Research Agent (@cf/zai-org/glm-4.7-flash)
+                                                       fetches up to 5 datasource URLs, extracts
+                                                       plain text, summarises relevant facts
+                                              Step 2: Writing Agent (@cf/zai-org/glm-4.7-flash)
+                                                       produces polished HTML reply (up to 4096 tokens)
+                                              Both steps use the Workers AI binding – no external
+                                              AI service or API key required.
+                                              Step 3: Auto-send or draft
+                                                       • email path: this.replyToEmail() – Cloudflare
+                                                         sets In-Reply-To natively; reply lands in the
+                                                         customer's existing thread automatically
+                                                       • HTTP path: always saves draft for review
+```

@@ -1,0 +1,20 @@
+name = "answerify-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[ai]
+binding = "AI"
+
+[[durable_objects.bindings]]
+name = "EMAIL_REPLY_AGENT"
+class_name = "EmailReplyAgent"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["EmailReplyAgent"]
+
+# Set these secrets with: wrangler secret put <KEY>
+# SUPABASE_URL
+# SUPABASE_SERVICE_KEY
+# INBOUND_WEBHOOK_SECRET
