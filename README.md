@@ -53,13 +53,13 @@ The confidence score is derived from two possible sources, depending on the retr
 
 **URL context fallback:** Derived from Gemini grounding metadata. Falls back to `0.70` when URL context was used but no explicit grounding scores are returned.
 
-| scenario | approximate confidence |
-|---|---|
-| No datasources | 0.00 (always draft) |
-| URL context, no grounding data | 0.70 |
-| 2 sections, avg similarity 0.72 | 0.72 |
-| 3 sections, avg similarity 0.85 | 0.85 |
-| 5 sections, avg similarity 0.95 | 0.95 |
+| scenario                        | approximate confidence |
+| ------------------------------- | ---------------------- |
+| No datasources                  | 0.00 (always draft)    |
+| URL context, no grounding data  | 0.70                   |
+| 2 sections, avg similarity 0.72 | 0.72                   |
+| 3 sections, avg similarity 0.85 | 0.85                   |
+| 5 sections, avg similarity 0.95 | 0.95                   |
 
 The threshold is configurable per organization (`autopilot_threshold`, default `0.65`).
 
@@ -135,11 +135,11 @@ GRANT ALL ON TABLE "public"."reply_edit" TO "service_role";
 
 ## Required Environment Variables
 
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
-| `SUPABASE_SERVICE_KEY` | Supabase service-role key (used in webhooks) |
-| `NEXT_PUBLIC_BASE_URL` | Base URL of your deployment (e.g. `https://answerify.dev`) |
-| `RESEND_API_KEY` | Resend API key for sending emails |
-| `GEMINI_API_KEY` | Google Gemini API key for embeddings (`gemini-embedding-001`) and completions (`gemini-3-flash-preview`) |
+| Variable                        | Description                                                                                              |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase project URL                                                                                     |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key                                                                                   |
+| `SUPABASE_SERVICE_KEY`          | Supabase service-role key (used in webhooks)                                                             |
+| `NEXT_PUBLIC_BASE_URL`          | Base URL of your deployment (e.g. `https://answerify.dev`)                                               |
+| `RESEND_API_KEY`                | Resend API key for sending emails                                                                        |
+| `GOOGLE_GENERATIVE_AI_API_KEY`  | Google Gemini API key for embeddings (`gemini-embedding-001`) and completions (`gemini-3-flash-preview`) |

@@ -31,9 +31,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 /**
  * Generate embedding vectors for multiple text inputs in a single request.
  */
-export async function generateEmbeddings(
-  texts: string[],
-): Promise<number[][]> {
+export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
   const { embeddings } = await embedMany({
     model: embeddingModel,
     values: texts,

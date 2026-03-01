@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   if (!textContent) {
     return new Response(
       JSON.stringify({ ok: true, message: 'No content found' }),
-      { status: 200 },
+      { status: 200 }
     );
   }
 
@@ -53,14 +53,12 @@ export async function POST(request: Request) {
   if (sections.length === 0) {
     return new Response(
       JSON.stringify({ ok: true, message: 'No sections produced' }),
-      { status: 200 },
+      { status: 200 }
     );
   }
 
   // Generate embeddings for all sections
-  const embeddings = await generateEmbeddings(
-    sections.map((s) => s.content),
-  );
+  const embeddings = await generateEmbeddings(sections.map((s) => s.content));
 
   // Insert sections with embeddings
   const sectionRows = sections.map((s, i) => ({
@@ -74,14 +72,12 @@ export async function POST(request: Request) {
   const { error } = await supabase.from('section').insert(sectionRows as never);
   if (error) {
     console.error('Failed to insert sections:', error);
-    return new Response(
-      JSON.stringify({ error: 'Failed to store sections' }),
-      { status: 500 },
-    );
+    return new Response(JSON.stringify({ error: 'Failed to store sections' }), {
+      status: 500,
+    });
   }
 
-  return new Response(
-    JSON.stringify({ ok: true, sections: sections.length }),
-    { status: 200 },
-  );
+  return new Response(JSON.stringify({ ok: true, sections: sections.length }), {
+    status: 200,
+  });
 }
