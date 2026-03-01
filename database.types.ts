@@ -179,6 +179,8 @@ export type Database = {
       }
       reply: {
         Row: {
+          citations: Json
+          confidence_score: number
           content: string
           created_at: string
           id: string
@@ -188,6 +190,8 @@ export type Database = {
           thread_id: string
         }
         Insert: {
+          citations?: Json
+          confidence_score?: number
           content: string
           created_at?: string
           id?: string
@@ -197,6 +201,8 @@ export type Database = {
           thread_id?: string
         }
         Update: {
+          citations?: Json
+          confidence_score?: number
           content?: string
           created_at?: string
           id?: string
