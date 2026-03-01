@@ -18,11 +18,13 @@ Autopilot is **enabled by default** for new organizations with a confidence thre
 ### How it works
 
 1. An inbound email arrives and triggers reply generation.
-2. The system retrieves relevant knowledge-base sections via vector similarity search.
-3. A confidence score (0–1) is computed from the number and quality of matching sections.
-4. If `autopilot_enabled = true` AND `confidence_score >= autopilot_threshold`:
+2. The system embeds the question and searches the `section` table for semantically similar pre-indexed content chunks (Agentic RAG).
+3. If enough high-quality vector matches are found (≥ 2 sections with similarity ≥ 0.65), the matched sections are used directly as context – **no URL fetching required**, dramatically reducing token usage.
+4. If vector search yields insufficient matches, the system falls back to Gemini's URL context tool to fetch and process datasource URLs.
+5. A confidence score (0–1) is computed from vector similarity or Gemini grounding metadata.
+6. If `autopilot_enabled = true` AND `confidence_score >= autopilot_threshold`:
    - The reply is automatically sent via Resend and stored with `status = 'sent'`.
-5. Otherwise the reply is saved as `status = 'draft'` for human review.
+7. Otherwise the reply is saved as `status = 'draft'` for human review.
 
 ### Safety guardrails
 
@@ -45,19 +47,19 @@ WHERE id = '<org-id>';
 
 ## Confidence Score
 
-The confidence score is a heuristic derived from vector similarity search results:
+The confidence score is derived from two possible sources, depending on the retrieval strategy used:
 
-```
-confidence = min(0.60 + sections_found × 0.08, 0.99)
-```
+**Vector search path (Agentic RAG):** Average similarity score from matched sections, clamped to `[0, 0.99]`.
 
-| sections found | approximate confidence |
+**URL context fallback:** Derived from Gemini grounding metadata. Falls back to `0.70` when URL context was used but no explicit grounding scores are returned.
+
+| scenario | approximate confidence |
 |---|---|
-| 0 | 0.00 (always draft) |
-| 1 | 0.68 |
-| 2 | 0.76 |
-| 3 | 0.84 |
-| 5 | 0.99 |
+| No datasources | 0.00 (always draft) |
+| URL context, no grounding data | 0.70 |
+| 2 sections, avg similarity 0.72 | 0.72 |
+| 3 sections, avg similarity 0.85 | 0.85 |
+| 5 sections, avg similarity 0.95 | 0.95 |
 
 The threshold is configurable per organization (`autopilot_threshold`, default `0.65`).
 

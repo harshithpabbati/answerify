@@ -3,6 +3,7 @@ import { codeBlock } from 'common-tags';
 import { Resend } from 'resend';
 
 import { cleanBody } from '@/lib/cleanBody';
+import { generateEmbedding } from '@/lib/embeddings';
 import { createServiceClient } from '@/lib/supabase/service';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { firstPathSegment } from '@/lib/url-section';
@@ -12,14 +13,28 @@ function getGenAIClient() {
 }
 
 /**
+ * Minimum average similarity from vector search that allows the system to
+ * skip Gemini's URL context tool entirely and use pre-embedded sections as
+ * the sole context.  Below this threshold the Research Agent falls back to
+ * URL context for a (potentially) higher-quality but more token-expensive
+ * retrieval.
+ */
+const VECTOR_CONFIDENCE_THRESHOLD = 0.65;
+
+/**
+ * Minimum number of high-quality vector matches required before the system
+ * trusts sections alone (without URL context fallback).
+ */
+const MIN_VECTOR_MATCHES = 2;
+
+/**
  * Derive a 0–1 confidence score from Gemini grounding metadata.
  * Falls back to URL_CONTEXT_FALLBACK_CONFIDENCE when the URL context tool
  * was used but no explicit grounding scores are returned.
  */
-function computeConfidence(
-   
+function computeGroundingConfidence(
   candidates: any[] | undefined,
-  datasourceCount: number
+  datasourceCount: number,
 ): number {
   if (!candidates || candidates.length === 0) return URL_CONTEXT_FALLBACK_CONFIDENCE;
 
@@ -30,26 +45,31 @@ function computeConfidence(
       | undefined;
 
   if (supports && supports.length > 0) {
-    // Average all per-chunk confidence scores
     const allScores = supports.flatMap((s) => s.confidenceScores ?? []);
     if (allScores.length > 0) {
       const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
-      // Clamp to [0, 0.99]: we never claim 100% certainty so agents can always
-      // override the autopilot decision when confidence is borderline.
       return Math.min(0.99, Math.max(0, avg));
     }
   }
 
-  // URL context was used (datasources > 0) but no explicit scores returned
   if (datasourceCount > 0) return URL_CONTEXT_FALLBACK_CONFIDENCE;
-
   return 0;
+}
+
+/**
+ * Derive a 0–1 confidence score from vector similarity results.
+ */
+function computeVectorConfidence(
+  similarities: number[],
+): number {
+  if (similarities.length === 0) return 0;
+  const avg = similarities.reduce((a, b) => a + b, 0) / similarities.length;
+  return Math.min(0.99, Math.max(0, avg));
 }
 
 /**
  * Extract cited source URLs from Gemini grounding chunks.
  */
- 
 function extractCitations(candidates: any[] | undefined): string[] {
   if (!candidates || candidates.length === 0) return [];
   const chunks =
@@ -87,14 +107,85 @@ async function insertClarifyingDraft(
 }
 
 /**
- * Agent 1 – Research Agent
+ * Agentic RAG – Retrieval step
  *
- * Fetches relevant information from the provided URLs using Gemini's URL
- * context tool and returns a structured summary of facts that are relevant
- * to the customer's question. Keeping research separate from writing lets
- * each agent specialise and produces higher-quality final responses.
+ * Embeds the customer question and searches the `section` table for
+ * pre-indexed content chunks that are semantically similar.  Returns the
+ * matched sections sorted by relevance.
  */
-async function runResearchAgent(
+async function retrieveSections(
+  ai: GoogleGenAI,
+  supabase: Awaited<ReturnType<typeof createServiceClient>>,
+  organizationId: string,
+  question: string,
+): Promise<Array<{ content: string; datasource_id: string; similarity: number }>> {
+  const questionEmbedding = await generateEmbedding(ai, question);
+  if (questionEmbedding.length === 0) return [];
+
+  const { data, error } = await supabase.rpc('match_sections', {
+    embedding: `[${questionEmbedding.join(',')}]`,
+    match_threshold: 0.4,
+    organization_id: organizationId,
+    match_count: 5,
+  });
+
+  if (error) {
+    console.error('Vector search failed:', error);
+    return [];
+  }
+
+  return (data ?? []) as Array<{
+    content: string;
+    datasource_id: string;
+    similarity: number;
+  }>;
+}
+
+/**
+ * Agent 1a – Research Agent (vector context)
+ *
+ * Uses pre-embedded section content retrieved via vector search as context.
+ * No URL fetching is required, dramatically reducing token usage.
+ */
+async function runResearchAgentWithSections(
+  ai: GoogleGenAI,
+  subject: string,
+  question: string,
+  sectionContent: string,
+): Promise<string> {
+  const researchPrompt = codeBlock`
+    You are a research assistant for a customer support team.
+    Your job is to find and extract the most relevant information from the
+    provided knowledge base content to answer a customer's question.
+
+    - Extract only information that is directly relevant to the question
+    - Organise the findings as concise bullet points or short paragraphs
+    - Include specific details: steps, values, settings, or policies that apply
+    - Do not write the final reply – only gather and present the raw facts
+    - If no relevant information can be found, respond with only: NO_INFORMATION
+  `;
+
+  const result = await ai.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: `Subject: ${subject}\nCustomer question:\n${question}\n\nKnowledge base content:\n${sectionContent}`,
+    config: {
+      systemInstruction: researchPrompt,
+      maxOutputTokens: 1024,
+      temperature: 0.3,
+    },
+  });
+
+  return result.text ?? '';
+}
+
+/**
+ * Agent 1b – Research Agent (URL context fallback)
+ *
+ * Falls back to Gemini's URL context tool when vector search does not yield
+ * enough high-quality matches.  This is the original behaviour and is more
+ * token-expensive because Gemini fetches and reads the URLs.
+ */
+async function runResearchAgentWithUrls(
   ai: GoogleGenAI,
   subject: string,
   question: string,
@@ -241,12 +332,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // Build URL list for Gemini URL context tool.
-  // Deduplicate by section prefix so Gemini is never overwhelmed: when many
-  // URLs share the same origin + first path segment, use the prefix URL as a
-  // representative (e.g. /docs/ instead of 50 individual doc pages).
-  const urlList = deduplicateForGemini(datasources.map((d) => d.url)).join('\n');
-
   // Build conversation history context
   const conversationHistory =
     threadEmails && threadEmails.length > 0
@@ -263,19 +348,62 @@ export async function POST(request: Request) {
           .join('\n\n')
       : '';
 
-  // --- Agent 1: Research ---
-  // Fetch and synthesise relevant information from the datasource URLs.
-  // Confidence is derived from the grounding metadata of this step because it
-  // is the step that actually reads from the knowledge-base URLs.
-  const { findings, candidates: researchCandidates } = await runResearchAgent(
+  // --- Agentic RAG: Retrieval ---
+  // Step 1: Embed the customer question and search the section table for
+  //         semantically similar pre-indexed content chunks.
+  const questionText = `${thread?.subject ?? ''}\n${record.cleaned_body}`;
+  const matchedSections = await retrieveSections(
     ai,
-    thread?.subject ?? '',
-    record.cleaned_body,
-    urlList,
+    supabase,
+    record.organization_id,
+    questionText,
   );
 
-  const confidence = computeConfidence(researchCandidates, datasources.length);
-  const citations = extractCitations(researchCandidates);
+  let findings: string;
+  let confidence: number;
+  let citations: string[];
+
+  const highQualityMatches = matchedSections.filter(
+    (s) => s.similarity >= VECTOR_CONFIDENCE_THRESHOLD,
+  );
+
+  if (highQualityMatches.length >= MIN_VECTOR_MATCHES) {
+    // --- Agent 1a: Research (vector context) ---
+    // Enough high-quality section matches – use them directly as context.
+    // This skips URL fetching entirely and dramatically reduces token usage.
+    const sectionContext = highQualityMatches.map((s) => s.content).join('\n\n---\n\n');
+
+    findings = await runResearchAgentWithSections(
+      ai,
+      thread?.subject ?? '',
+      record.cleaned_body,
+      sectionContext,
+    );
+
+    confidence = computeVectorConfidence(highQualityMatches.map((s) => s.similarity));
+
+    // Build citations from matched datasources
+    const matchedDatasourceIds = [...new Set(highQualityMatches.map((s) => s.datasource_id))];
+    citations = datasources
+      .filter((d) => matchedDatasourceIds.includes(d.id))
+      .map((d) => d.url);
+  } else {
+    // --- Agent 1b: Research (URL context fallback) ---
+    // Not enough high-quality vector matches – fall back to Gemini URL context.
+    const urlList = deduplicateForGemini(datasources.map((d) => d.url)).join('\n');
+
+    const { findings: urlFindings, candidates: researchCandidates } =
+      await runResearchAgentWithUrls(
+        ai,
+        thread?.subject ?? '',
+        record.cleaned_body,
+        urlList,
+      );
+
+    findings = urlFindings;
+    confidence = computeGroundingConfidence(researchCandidates, datasources.length);
+    citations = extractCitations(researchCandidates);
+  }
 
   if (!findings || findings.trim() === 'NO_INFORMATION') {
     // Generate clarifying question draft instead of erroring out
