@@ -1,19 +1,13 @@
-import { GoogleGenAI } from '@google/genai';
-
 import { generateEmbeddings, serializeEmbedding } from '@/lib/embeddings';
 import { processMarkdown } from '@/lib/processMarkdown';
 import { createServiceClient } from '@/lib/supabase/service';
-
-function getGenAIClient() {
-  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-}
 
 /**
  * Webhook triggered when a new datasource row is inserted.
  *
  * 1. Fetches the URL content as markdown via markdown.new
  * 2. Chunks with processMarkdown (splits by headings)
- * 3. Generates embeddings via Gemini
+ * 3. Generates embeddings via the configured embedding model
  * 4. Inserts sections into the `section` table
  *
  * Using markdown.new to convert web pages to clean markdown preserves
@@ -23,7 +17,6 @@ function getGenAIClient() {
 export async function POST(request: Request) {
   const { record } = await request.json();
   const supabase = await createServiceClient();
-  const ai = getGenAIClient();
 
   // Fetch the URL content as markdown via markdown.new
   let textContent: string;
@@ -66,7 +59,6 @@ export async function POST(request: Request) {
 
   // Generate embeddings for all sections
   const embeddings = await generateEmbeddings(
-    ai,
     sections.map((s) => s.content),
   );
 

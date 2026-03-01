@@ -1,9 +1,12 @@
-import { GoogleGenAI } from '@google/genai';
+import { embed, embedMany } from 'ai';
 
-const EMBEDDING_MODEL = 'gemini-embedding-001';
-const EMBEDDING_DIMENSIONS = 768;
+import { embeddingModel } from '@/lib/ai';
 
-export { EMBEDDING_DIMENSIONS };
+export const EMBEDDING_DIMENSIONS = 768;
+
+const providerOptions = {
+  google: { outputDimensionality: EMBEDDING_DIMENSIONS },
+};
 
 /**
  * Serialise an embedding vector into the string format expected by pgvector
@@ -14,33 +17,27 @@ export function serializeEmbedding(values: number[]): string {
 }
 
 /**
- * Generate embedding vectors for one or more text inputs using Gemini.
- * Returns a flat array when given a single string, or a 2D array for
- * multiple strings.
+ * Generate an embedding vector for a single text input.
  */
-export async function generateEmbedding(
-  ai: GoogleGenAI,
-  text: string,
-): Promise<number[]> {
-  const result = await ai.models.embedContent({
-    model: EMBEDDING_MODEL,
-    contents: text,
-    config: { outputDimensionality: EMBEDDING_DIMENSIONS },
+export async function generateEmbedding(text: string): Promise<number[]> {
+  const { embedding } = await embed({
+    model: embeddingModel,
+    value: text,
+    providerOptions,
   });
-  return result.embeddings?.[0]?.values ?? [];
+  return embedding;
 }
 
 /**
  * Generate embedding vectors for multiple text inputs in a single request.
  */
 export async function generateEmbeddings(
-  ai: GoogleGenAI,
   texts: string[],
 ): Promise<number[][]> {
-  const result = await ai.models.embedContent({
-    model: EMBEDDING_MODEL,
-    contents: texts,
-    config: { outputDimensionality: EMBEDDING_DIMENSIONS },
+  const { embeddings } = await embedMany({
+    model: embeddingModel,
+    values: texts,
+    providerOptions,
   });
-  return result.embeddings?.map((e) => e.values ?? []) ?? [];
+  return embeddings;
 }

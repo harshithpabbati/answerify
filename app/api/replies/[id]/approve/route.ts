@@ -1,12 +1,6 @@
-import { GoogleGenAI } from '@google/genai';
-
 import { generateEmbeddings, serializeEmbedding } from '@/lib/embeddings';
 import { processMarkdown } from '@/lib/processMarkdown';
 import { createServiceClient } from '@/lib/supabase/service';
-
-function getGenAIClient() {
-  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-}
 
 const INTERNAL_KB_URL = 'internal://knowledge-base';
 
@@ -84,9 +78,7 @@ export async function POST(request: Request, { params }: Params) {
       // Chunk the approved content and generate embeddings
       const { sections } = processMarkdown(content);
       if (sections.length > 0) {
-        const ai = getGenAIClient();
         const embeddings = await generateEmbeddings(
-          ai,
           sections.map((s) => s.content),
         );
 

@@ -1,23 +1,18 @@
-import { GoogleGenAI } from '@google/genai';
+import { generateText } from 'ai';
 import { codeBlock } from 'common-tags';
 import { Resend } from 'resend';
 
+import { textModel } from '@/lib/ai';
 import { cleanBody } from '@/lib/cleanBody';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
 import { createServiceClient } from '@/lib/supabase/service';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
-import { firstPathSegment } from '@/lib/url-section';
-
-function getGenAIClient() {
-  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-}
 
 /**
  * Minimum average similarity from vector search that allows the system to
- * skip Gemini's URL context tool entirely and use pre-embedded sections as
- * the sole context.  Below this threshold the Research Agent falls back to
- * URL context for a (potentially) higher-quality but more token-expensive
- * retrieval.
+ * use pre-embedded sections as the sole context.  Below this threshold the
+ * Research Agent falls back to stored datasource content for a (potentially)
+ * higher-quality but more token-expensive retrieval.
  */
 const VECTOR_CONFIDENCE_THRESHOLD = 0.65;
 
@@ -28,35 +23,6 @@ const VECTOR_CONFIDENCE_THRESHOLD = 0.65;
 const MIN_VECTOR_MATCHES = 2;
 
 /**
- * Derive a 0–1 confidence score from Gemini grounding metadata.
- * Falls back to URL_CONTEXT_FALLBACK_CONFIDENCE when the URL context tool
- * was used but no explicit grounding scores are returned.
- */
-function computeGroundingConfidence(
-  candidates: any[] | undefined,
-  datasourceCount: number,
-): number {
-  if (!candidates || candidates.length === 0) return URL_CONTEXT_FALLBACK_CONFIDENCE;
-
-  const candidate = candidates[0];
-  const supports =
-    candidate?.groundingMetadata?.groundingSupports as
-      | Array<{ confidenceScores?: number[] }>
-      | undefined;
-
-  if (supports && supports.length > 0) {
-    const allScores = supports.flatMap((s) => s.confidenceScores ?? []);
-    if (allScores.length > 0) {
-      const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
-      return Math.min(0.99, Math.max(0, avg));
-    }
-  }
-
-  if (datasourceCount > 0) return URL_CONTEXT_FALLBACK_CONFIDENCE;
-  return 0;
-}
-
-/**
  * Derive a 0–1 confidence score from vector similarity results.
  */
 function computeVectorConfidence(
@@ -65,19 +31,6 @@ function computeVectorConfidence(
   if (similarities.length === 0) return 0;
   const avg = similarities.reduce((a, b) => a + b, 0) / similarities.length;
   return Math.min(0.99, Math.max(0, avg));
-}
-
-/**
- * Extract cited source URLs from Gemini grounding chunks.
- */
-function extractCitations(candidates: any[] | undefined): string[] {
-  if (!candidates || candidates.length === 0) return [];
-  const chunks =
-    candidates[0]?.groundingMetadata?.groundingChunks as
-      | Array<{ web?: { uri?: string } }>
-      | undefined;
-  if (!chunks) return [];
-  return [...new Set(chunks.map((c) => c.web?.uri).filter(Boolean) as string[])];
 }
 
 const CLARIFYING_CONTENT = `<p>Thank you for contacting us. Based on the information available, I wasn't able to provide a complete answer to your question. Could you please provide more details or rephrase your question so we can assist you better?</p>`;
@@ -114,12 +67,11 @@ async function insertClarifyingDraft(
  * matched sections sorted by relevance.
  */
 async function retrieveSections(
-  ai: GoogleGenAI,
   supabase: Awaited<ReturnType<typeof createServiceClient>>,
   organizationId: string,
   question: string,
 ): Promise<Array<{ content: string; datasource_id: string; similarity: number }>> {
-  const questionEmbedding = await generateEmbedding(ai, question);
+  const questionEmbedding = await generateEmbedding(question);
   if (questionEmbedding.length === 0) return [];
 
   const { data, error } = await supabase.rpc('match_sections', {
@@ -148,7 +100,6 @@ async function retrieveSections(
  * No URL fetching is required, dramatically reducing token usage.
  */
 async function runResearchAgentWithSections(
-  ai: GoogleGenAI,
   subject: string,
   question: string,
   sectionContent: string,
@@ -165,38 +116,35 @@ async function runResearchAgentWithSections(
     - If no relevant information can be found, respond with only: NO_INFORMATION
   `;
 
-  const result = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `Subject: ${subject}\nCustomer question:\n${question}\n\nKnowledge base content:\n${sectionContent}`,
-    config: {
-      systemInstruction: researchPrompt,
-      maxOutputTokens: 1024,
-      temperature: 0.3,
-    },
+  const { text } = await generateText({
+    model: textModel,
+    system: researchPrompt,
+    prompt: `Subject: ${subject}\nCustomer question:\n${question}\n\nKnowledge base content:\n${sectionContent}`,
+    maxOutputTokens: 1024,
+    temperature: 0.3,
   });
 
-  return result.text ?? '';
+  return text;
 }
 
 /**
- * Agent 1b – Research Agent (URL context fallback)
+ * Agent 1b – Research Agent (datasource content fallback)
  *
- * Falls back to Gemini's URL context tool when vector search does not yield
- * enough high-quality matches.  This is the original behaviour and is more
- * token-expensive because Gemini fetches and reads the URLs.
+ * Falls back to using stored datasource content when vector search does not
+ * yield enough high-quality matches. This is model-agnostic — the content
+ * was already fetched and stored when the datasource was indexed.
  */
-async function runResearchAgentWithUrls(
-  ai: GoogleGenAI,
+async function runResearchAgentWithContent(
   subject: string,
   question: string,
-  urlList: string,
-): Promise<{ findings: string; candidates: any[] | undefined }> {
+  datasourceContent: string,
+): Promise<string> {
   const researchPrompt = codeBlock`
     You are a research assistant for a customer support team.
-    Your job is to find and extract the most relevant information from the provided URLs
-    to answer a customer's question.
+    Your job is to find and extract the most relevant information from the provided
+    knowledge base content to answer a customer's question.
 
-    - Read the content available at the provided URLs
+    - Read the content provided below
     - Extract only information that is directly relevant to the question
     - Organise the findings as concise bullet points or short paragraphs
     - Include specific details: steps, values, settings, or policies that apply
@@ -204,18 +152,15 @@ async function runResearchAgentWithUrls(
     - If no relevant information can be found, respond with only: NO_INFORMATION
   `;
 
-  const result = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `Subject: ${subject}\nCustomer question:\n${question}\n\nURLs to search:\n${urlList}`,
-    config: {
-      systemInstruction: researchPrompt,
-      maxOutputTokens: 1024,
-      temperature: 0.3,
-      tools: [{ urlContext: {} }],
-    },
+  const { text } = await generateText({
+    model: textModel,
+    system: researchPrompt,
+    prompt: `Subject: ${subject}\nCustomer question:\n${question}\n\nKnowledge base content:\n${datasourceContent}`,
+    maxOutputTokens: 1024,
+    temperature: 0.3,
   });
 
-  return { findings: result.text ?? '', candidates: result.candidates };
+  return text;
 }
 
 /**
@@ -227,7 +172,6 @@ async function runResearchAgentWithUrls(
  * and formatting without needing to access any URLs itself.
  */
 async function runWritingAgent(
-  ai: GoogleGenAI,
   subject: string,
   question: string,
   findings: string,
@@ -267,17 +211,15 @@ async function runWritingAgent(
     - Do not output anything outside of the HTML response
   `;
 
-  const result = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `Subject: ${subject}\nCustomer question:\n${question}\n\nResearch findings:\n${findings}`,
-    config: {
-      systemInstruction: writingPrompt,
-      maxOutputTokens: 1024,
-      temperature: 0.7,
-    },
+  const { text } = await generateText({
+    model: textModel,
+    system: writingPrompt,
+    prompt: `Subject: ${subject}\nCustomer question:\n${question}\n\nResearch findings:\n${findings}`,
+    maxOutputTokens: 1024,
+    temperature: 0.7,
   });
 
-  return result.text ?? '';
+  return text;
 }
 
 export async function POST(request: Request) {
@@ -288,15 +230,16 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   }
 
-  const ai = getGenAIClient();
   const supabase = await createServiceClient();
 
-  // Fetch datasources, organization autopilot settings, and thread in parallel
+  // Fetch datasources (including stored content for fallback), org settings, and thread
   const [{ data: datasources }, { data: org }, { data: thread }] = await Promise.all([
     supabase
       .from('datasource')
-      .select('id, url')
-      .eq('organization_id', record.organization_id),
+      .select('id, url, content' as 'id, url')
+      .eq('organization_id', record.organization_id) as unknown as Promise<{
+      data: Array<{ id: string; url: string; content: string | null }> | null;
+    }>,
     supabase
       .from('organization')
       .select('autopilot_enabled, autopilot_threshold')
@@ -353,7 +296,6 @@ export async function POST(request: Request) {
   //         semantically similar pre-indexed content chunks.
   const questionText = `${thread?.subject ?? ''}\n${record.cleaned_body}`;
   const matchedSections = await retrieveSections(
-    ai,
     supabase,
     record.organization_id,
     questionText,
@@ -374,7 +316,6 @@ export async function POST(request: Request) {
     const sectionContext = highQualityMatches.map((s) => s.content).join('\n\n---\n\n');
 
     findings = await runResearchAgentWithSections(
-      ai,
       thread?.subject ?? '',
       record.cleaned_body,
       sectionContext,
@@ -388,21 +329,21 @@ export async function POST(request: Request) {
       .filter((d) => matchedDatasourceIds.includes(d.id))
       .map((d) => d.url);
   } else {
-    // --- Agent 1b: Research (URL context fallback) ---
-    // Not enough high-quality vector matches – fall back to Gemini URL context.
-    const urlList = deduplicateForGemini(datasources.map((d) => d.url)).join('\n');
+    // --- Agent 1b: Research (datasource content fallback) ---
+    // Not enough high-quality vector matches – use stored datasource content.
+    const datasourceContent = datasources
+      .map((d) => d.content)
+      .filter(Boolean)
+      .join('\n\n---\n\n');
 
-    const { findings: urlFindings, candidates: researchCandidates } =
-      await runResearchAgentWithUrls(
-        ai,
-        thread?.subject ?? '',
-        record.cleaned_body,
-        urlList,
-      );
+    findings = await runResearchAgentWithContent(
+      thread?.subject ?? '',
+      record.cleaned_body,
+      datasourceContent,
+    );
 
-    findings = urlFindings;
-    confidence = computeGroundingConfidence(researchCandidates, datasources.length);
-    citations = extractCitations(researchCandidates);
+    confidence = URL_CONTEXT_FALLBACK_CONFIDENCE;
+    citations = datasources.map((d) => d.url);
   }
 
   if (!findings || findings.trim() === 'NO_INFORMATION') {
@@ -413,7 +354,6 @@ export async function POST(request: Request) {
   // --- Agent 2: Writing ---
   // Take the research findings and produce a polished HTML reply.
   const rawContent = await runWritingAgent(
-    ai,
     thread?.subject ?? '',
     record.cleaned_body,
     findings,
@@ -500,42 +440,3 @@ export async function POST(request: Request) {
   return new Response(JSON.stringify({ data, error }), { status: 200 });
 }
 
-/**
- * Reduce a potentially large list of datasource URLs to a manageable set for
- * Gemini's URL context tool.
- *
- * Strategy: group by origin + first path segment. When a section has more than
- * one URL, replace all of them with the section prefix URL (e.g. turning 50
- * individual "/docs/…" pages into a single "https://example.com/docs/" entry).
- * This prevents Gemini from being overwhelmed while still pointing it at every
- * distinct content area.
- *
- * A hard cap of MAX_GEMINI_URLS is applied after deduplication.
- */
-const MAX_GEMINI_URLS = 20;
-
-function deduplicateForGemini(urls: string[]): string[] {
-  if (urls.length <= MAX_GEMINI_URLS) return urls;
-
-  const groups = new Map<string, string[]>();
-  for (const url of urls) {
-    let key: string;
-    try {
-      const parsed = new URL(url);
-      const seg = firstPathSegment(url);
-      key = seg ? `${parsed.origin}/${seg}/` : `${parsed.origin}/`;
-    } catch {
-      key = url;
-    }
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(url);
-  }
-
-  const result: string[] = [];
-  for (const [prefix, groupUrls] of groups) {
-    // More than one URL in this section → use the prefix as representative
-    result.push(groupUrls.length > 1 ? prefix : groupUrls[0]);
-    if (result.length >= MAX_GEMINI_URLS) break;
-  }
-  return result;
-}
