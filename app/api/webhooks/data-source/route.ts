@@ -1,5 +1,4 @@
 import { GoogleGenAI } from '@google/genai';
-import { JSDOM } from 'jsdom';
 
 import { generateEmbeddings, serializeEmbedding } from '@/lib/embeddings';
 import { processMarkdown } from '@/lib/processMarkdown';
@@ -12,44 +11,33 @@ function getGenAIClient() {
 /**
  * Webhook triggered when a new datasource row is inserted.
  *
- * 1. Fetches the URL content
- * 2. Converts HTML → plain text
- * 3. Chunks with processMarkdown
- * 4. Generates embeddings via Gemini
- * 5. Inserts sections into the `section` table
+ * 1. Fetches the URL content as markdown via markdown.new
+ * 2. Chunks with processMarkdown (splits by headings)
+ * 3. Generates embeddings via Gemini
+ * 4. Inserts sections into the `section` table
  *
- * This pre-indexes datasource content so the reply pipeline can use fast
- * vector search (Agentic RAG) instead of sending every URL to Gemini's
- * URL context tool.
+ * Using markdown.new to convert web pages to clean markdown preserves
+ * document structure (headings, lists, etc.) so processMarkdown can
+ * split content into semantically meaningful sections.
  */
 export async function POST(request: Request) {
   const { record } = await request.json();
   const supabase = await createServiceClient();
   const ai = getGenAIClient();
 
-  // Fetch the URL content
-  let html: string;
+  // Fetch the URL content as markdown via markdown.new
+  let textContent: string;
   try {
-    const response = await fetch(record.url, {
+    const response = await fetch(`https://markdown.new/${record.url}`, {
       headers: { 'User-Agent': 'Answerify/1.0 (knowledge-base indexer)' },
     });
-    html = await response.text();
+    textContent = (await response.text()).trim();
   } catch (error) {
     console.error('Failed to fetch datasource URL:', error);
     return new Response(JSON.stringify({ error: 'Failed to fetch URL' }), {
       status: 500,
     });
   }
-
-  const dom = new JSDOM(html);
-  const doc = dom.window.document;
-
-  // Remove script, style, and hidden elements before extracting text
-  doc.querySelectorAll('script, style, noscript, [hidden], [aria-hidden="true"]').forEach(
-    (el) => el.remove(),
-  );
-
-  const textContent = doc.body?.textContent?.trim() ?? '';
 
   if (!textContent) {
     return new Response(
