@@ -334,7 +334,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
             organization_id: record.organization_id,
             thread_id: record.thread_id,
             body: htmlContent,
-            cleaned_body: htmlContent.replace(/<[^>]+>/g, ''),
+            cleaned_body: htmlContent.replace(/<[^>]*>/g, '').replace(/</g, ''),
             role: 'staff',
             email_from: 'support@answerify.dev',
             email_from_name: 'Support',
