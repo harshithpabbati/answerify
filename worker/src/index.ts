@@ -17,7 +17,8 @@
  *       d. Thread creation/lookup in Supabase
  *       e. Email record insertion
  *       f. Research Agent – fetches relevant info from datasource URLs
- *       g. Writing Agent  – produces a polished HTML reply
+ *       g. Writing Agent  – produces a polished HTML reply via @cf/zai-org/glm-4.7-flash
+ *                          (Cloudflare Workers AI binding – no external service needed)
  *       h. Auto-send via this.replyToEmail() (or save as draft for human review)
  *
  * Sending replies uses Cloudflare's native email.reply() via this.replyToEmail().
@@ -45,6 +46,9 @@ import PostalMime from 'postal-mime';
 
 export interface Env {
   EMAIL_REPLY_AGENT: DurableObjectNamespace;
+  /** Cloudflare Workers AI binding – used for the Writing Agent. */
+  AI: Ai;
+  /** Google Gemini API key – used for the Research Agent (URL context/grounding). */
   GEMINI_API_KEY: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_KEY: string;
@@ -202,6 +206,50 @@ function extractCitations(candidates: unknown[]): string[] {
       chunks.map((c) => c.web?.uri).filter((u): u is string => Boolean(u))
     ),
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Cloudflare Workers AI helper (Writing Agent)
+// ---------------------------------------------------------------------------
+
+/**
+ * Run a text-generation model via the Cloudflare Workers AI binding.
+ * The model name is passed as a plain string so the helper works with any
+ * model, including ones not yet reflected in the generated type definitions.
+ *
+ * @param ai - The Workers AI binding from the environment.
+ * @param model - Cloudflare Workers AI model identifier (e.g. '@cf/zai-org/glm-4.7-flash').
+ * @param systemInstruction - System prompt sent as the 'system' role message.
+ * @param userContent - User message content.
+ * @param maxTokens - Maximum number of tokens to generate.
+ * @param temperature - Sampling temperature (0 = deterministic, 1 = creative).
+ * @returns The generated text, or empty string if the model returned no content.
+ */
+async function cfAiGenerateText(
+  ai: Ai,
+  model: string,
+  systemInstruction: string,
+  userContent: string,
+  maxTokens: number,
+  temperature: number,
+): Promise<string> {
+  const result = await (
+    ai.run as (
+      model: string,
+      inputs: AiTextGenerationInput,
+    ) => Promise<AiTextGenerationOutput>
+  )(model, {
+    messages: [
+      { role: 'system', content: systemInstruction },
+      { role: 'user', content: userContent },
+    ],
+    max_tokens: maxTokens,
+    temperature,
+  });
+  if (!result.response) {
+    console.warn(`${model} returned an empty response`);
+  }
+  return result.response ?? '';
 }
 
 // ---------------------------------------------------------------------------
@@ -724,7 +772,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
       'gemini-2.5-flash',
       `Subject: ${subject}\nCustomer question:\n${question}\n\nURLs to search:\n${urlList}`,
       systemInstruction,
-      1024,
+      2048,
       0.3,
       [{ urlContext: {} }]
     );
@@ -733,7 +781,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
   }
 
   // -------------------------------------------------------------------------
-  // Writing Agent
+  // Writing Agent – powered by @cf/zai-org/glm-4.7-flash via Workers AI
   // -------------------------------------------------------------------------
   private async runWritingAgent(
     subject: string,
@@ -775,12 +823,12 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
       - Do not output anything outside of the HTML response
     `;
 
-    const { text } = await geminiGenerateContent(
-      this.env.GEMINI_API_KEY,
-      'gemini-2.5-flash',
-      `Subject: ${subject}\nCustomer question:\n${question}\n\nResearch findings:\n${findings}`,
+    const text = await cfAiGenerateText(
+      this.env.AI,
+      '@cf/zai-org/glm-4.7-flash',
       systemInstruction,
-      1024,
+      `Subject: ${subject}\nCustomer question:\n${question}\n\nResearch findings:\n${findings}`,
+      4096,
       0.7
     );
 

@@ -214,8 +214,9 @@ EmailReplyAgent (Durable Object, one per thread)
                                                                       ▼
                                               Step 1: Research Agent (Gemini + URL context)
                                                        grounding metadata → confidence score
-                                              Step 2: Writing Agent (Gemini)
-                                                       produces polished HTML reply
+                                              Step 2: Writing Agent (@cf/zai-org/glm-4.7-flash
+                                                       via Workers AI binding – cheaper, no external API)
+                                                       produces polished HTML reply (up to 4096 tokens)
                                               Step 3: Auto-send or draft
                                                        • email path: this.replyToEmail() – Cloudflare
                                                          sets In-Reply-To natively; reply lands in the

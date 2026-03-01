@@ -3,6 +3,9 @@ main = "src/index.ts"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 
+[ai]
+binding = "AI"
+
 [[durable_objects.bindings]]
 name = "EMAIL_REPLY_AGENT"
 class_name = "EmailReplyAgent"
