@@ -171,7 +171,6 @@ npm install
 npm run deploy        # wrangler deploy
 
 # Set secrets (run once):
-wrangler secret put GEMINI_API_KEY
 wrangler secret put SUPABASE_URL
 wrangler secret put SUPABASE_SERVICE_KEY
 wrangler secret put INBOUND_WEBHOOK_SECRET   # shared with Next.js CLOUDFLARE_AGENT_SECRET
@@ -212,11 +211,13 @@ EmailReplyAgent (Durable Object, one per thread)
             (manual trigger from dashboard → always saves draft)      │
             └─ generateReply() ────────────────────────────────────► │
                                                                       ▼
-                                              Step 1: Research Agent (Gemini + URL context)
-                                                       grounding metadata → confidence score
-                                              Step 2: Writing Agent (@cf/zai-org/glm-4.7-flash
-                                                       via Workers AI binding – cheaper, no external API)
+                                              Step 1: Research Agent (@cf/zai-org/glm-4.7-flash)
+                                                       fetches up to 5 datasource URLs, extracts
+                                                       plain text, summarises relevant facts
+                                              Step 2: Writing Agent (@cf/zai-org/glm-4.7-flash)
                                                        produces polished HTML reply (up to 4096 tokens)
+                                              Both steps use the Workers AI binding – no external
+                                              AI service or API key required.
                                               Step 3: Auto-send or draft
                                                        • email path: this.replyToEmail() – Cloudflare
                                                          sets In-Reply-To natively; reply lands in the

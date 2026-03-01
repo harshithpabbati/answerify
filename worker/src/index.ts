@@ -16,7 +16,8 @@
  *       c. Organization lookup by recipient address
  *       d. Thread creation/lookup in Supabase
  *       e. Email record insertion
- *       f. Research Agent – fetches relevant info from datasource URLs
+ *       f. Research Agent – fetches datasource URLs, extracts relevant content,
+ *                          and summarises findings via @cf/zai-org/glm-4.7-flash
  *       g. Writing Agent  – produces a polished HTML reply via @cf/zai-org/glm-4.7-flash
  *                          (Cloudflare Workers AI binding – no external service needed)
  *       h. Auto-send via this.replyToEmail() (or save as draft for human review)
@@ -46,10 +47,8 @@ import PostalMime from 'postal-mime';
 
 export interface Env {
   EMAIL_REPLY_AGENT: DurableObjectNamespace;
-  /** Cloudflare Workers AI binding – used for the Writing Agent. */
+  /** Cloudflare Workers AI binding – used for both the Research and Writing Agents. */
   AI: Ai;
-  /** Google Gemini API key – used for the Research Agent (URL context/grounding). */
-  GEMINI_API_KEY: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_KEY: string;
   /**
@@ -107,109 +106,66 @@ async function supabaseFetch<T = unknown>(
 }
 
 // ---------------------------------------------------------------------------
-// Gemini helpers (direct REST – no Node.js SDK needed in Workers)
+// URL content fetcher (Research Agent)
+//
+// Fetches datasource pages in parallel, strips HTML, and truncates to a safe
+// per-URL length so the combined context fits inside the model's token budget.
 // ---------------------------------------------------------------------------
 
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+/** Maximum number of datasource URLs fetched per request. */
+const MAX_RESEARCH_URLS = 5;
+/** Maximum plain-text characters kept per fetched URL. */
+const MAX_CHARS_PER_URL = 3000;
+/**
+ * Confidence score assigned when at least one datasource URL was successfully
+ * fetched and contained relevant content. Matches the fallback value that was
+ * used with Gemini URL context when grounding metadata was unavailable.
+ */
+const URL_FETCH_SUCCESS_CONFIDENCE = 0.7;
+/** Maximum tokens the Writing Agent may generate. */
+const MAX_WRITING_TOKENS = 4096;
 
-async function geminiGenerateContent(
-  apiKey: string,
-  model: string,
-  contents: string,
-  systemInstruction: string,
-  maxOutputTokens: number,
-  temperature: number,
-  tools?: object[]
-): Promise<{ text: string; candidates: unknown[] }> {
-  const body: Record<string, unknown> = {
-    contents: [{ role: 'user', parts: [{ text: contents }] }],
-    systemInstruction: { parts: [{ text: systemInstruction }] },
-    generationConfig: { maxOutputTokens, temperature },
-  };
-  if (tools && tools.length > 0) {
-    body.tools = tools;
-  }
-
-  const response = await fetch(
-    `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }
+/**
+ * Fetch a list of URLs in parallel and extract their plain-text content.
+ * Returns only the URLs that responded successfully and had non-empty content.
+ */
+async function fetchUrlsContent(
+  urls: string[]
+): Promise<Array<{ url: string; content: string }>> {
+  const results = await Promise.allSettled(
+    urls.slice(0, MAX_RESEARCH_URLS).map(async (url) => {
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'Answerify-Support-Bot/1.0' },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!response.ok) return { url, content: '' };
+      // Use HTMLRewriter to remove <script> and <style> blocks via a proper
+      // HTML parser, then strip residual structural tags with a catch-all
+      // pattern. HTMLRewriter handles all tag variations safely.
+      const withoutCode = new HTMLRewriter()
+        .on('script', { element(el) { el.remove(); } })
+        .on('style', { element(el) { el.remove(); } })
+        .transform(response);
+      const html = await withoutCode.text();
+      const content = html
+        .replace(/<[^>]*(>|$)/gm, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, MAX_CHARS_PER_URL);
+      return { url, content };
+    })
   );
 
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Gemini API error (${response.status}): ${err}`);
-  }
-
-  const data = (await response.json()) as {
-    candidates?: Array<{
-      content?: { parts?: Array<{ text?: string }> };
-      groundingMetadata?: {
-        groundingSupports?: Array<{ confidenceScores?: number[] }>;
-        groundingChunks?: Array<{ web?: { uri?: string } }>;
-      };
-    }>;
-  };
-
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-  return { text, candidates: data.candidates ?? [] };
-}
-
-/**
- * Derive a 0–1 confidence score from Gemini grounding metadata.
- */
-function computeConfidence(
-  candidates: unknown[],
-  datasourceCount: number
-): number {
-  const URL_CONTEXT_FALLBACK_CONFIDENCE = 0.7;
-  if (!candidates || candidates.length === 0)
-    return URL_CONTEXT_FALLBACK_CONFIDENCE;
-
-  const candidate = candidates[0] as {
-    groundingMetadata?: {
-      groundingSupports?: Array<{ confidenceScores?: number[] }>;
-    };
-  };
-  const supports = candidate?.groundingMetadata?.groundingSupports;
-
-  if (supports && supports.length > 0) {
-    const allScores = supports.flatMap((s) => s.confidenceScores ?? []);
-    if (allScores.length > 0) {
-      const avg =
-        allScores.reduce((a: number, b: number) => a + b, 0) / allScores.length;
-      return Math.min(0.99, Math.max(0, avg));
-    }
-  }
-
-  if (datasourceCount > 0) return URL_CONTEXT_FALLBACK_CONFIDENCE;
-  return 0;
-}
-
-/**
- * Extract cited source URLs from Gemini grounding chunks.
- */
-function extractCitations(candidates: unknown[]): string[] {
-  if (!candidates || candidates.length === 0) return [];
-  const candidate = candidates[0] as {
-    groundingMetadata?: {
-      groundingChunks?: Array<{ web?: { uri?: string } }>;
-    };
-  };
-  const chunks = candidate?.groundingMetadata?.groundingChunks;
-  if (!chunks) return [];
-  return [
-    ...new Set(
-      chunks.map((c) => c.web?.uri).filter((u): u is string => Boolean(u))
-    ),
-  ];
+  return results
+    .filter(
+      (r): r is PromiseFulfilledResult<{ url: string; content: string }> =>
+        r.status === 'fulfilled' && r.value.content.length > 0
+    )
+    .map((r) => r.value);
 }
 
 // ---------------------------------------------------------------------------
-// Cloudflare Workers AI helper (Writing Agent)
+// Cloudflare Workers AI helper (Research + Writing Agents)
 // ---------------------------------------------------------------------------
 
 /**
@@ -253,10 +209,8 @@ async function cfAiGenerateText(
 }
 
 // ---------------------------------------------------------------------------
-// URL deduplication (mirrors the logic in the Next.js webhooks/reply route)
+// URL deduplication – picks representative URLs before fetching
 // ---------------------------------------------------------------------------
-
-const MAX_GEMINI_URLS = 20;
 
 function firstPathSegment(url: string): string {
   try {
@@ -267,8 +221,8 @@ function firstPathSegment(url: string): string {
   }
 }
 
-function deduplicateForGemini(urls: string[]): string[] {
-  if (urls.length <= MAX_GEMINI_URLS) return urls;
+function deduplicateUrls(urls: string[]): string[] {
+  if (urls.length <= MAX_RESEARCH_URLS) return urls;
 
   const groups = new Map<string, string[]>();
   for (const url of urls) {
@@ -287,7 +241,7 @@ function deduplicateForGemini(urls: string[]): string[] {
   const result: string[] = [];
   for (const [prefix, groupUrls] of groups) {
     result.push(groupUrls.length > 1 ? prefix : groupUrls[0]);
-    if (result.length >= MAX_GEMINI_URLS) break;
+    if (result.length >= MAX_RESEARCH_URLS) break;
   }
   return result;
 }
@@ -577,9 +531,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
       return;
     }
 
-    const urlList = deduplicateForGemini(datasourceRows.map((d) => d.url)).join(
-      '\n'
-    );
+    const urls = deduplicateUrls(datasourceRows.map((d) => d.url));
 
     const conversationHistory =
       historyRows && historyRows.length > 0
@@ -598,11 +550,11 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
 
     // --- Step 1: Research Agent ---
     let findings: string;
-    let researchCandidates: unknown[];
+    let citations: string[];
     try {
-      const result = await this.runResearchAgent(subject, cleanedBody, urlList);
+      const result = await this.runResearchAgent(subject, cleanedBody, urls);
       findings = result.findings;
-      researchCandidates = result.candidates;
+      citations = result.citations;
     } catch (err) {
       await this.setState({
         ...this.state,
@@ -612,11 +564,9 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
       return;
     }
 
-    const confidence = computeConfidence(
-      researchCandidates,
-      datasourceRows.length
-    );
-    const citations = extractCitations(researchCandidates);
+    // Confidence: URL_FETCH_SUCCESS_CONFIDENCE when we successfully fetched
+    // source content, 0 otherwise. This mirrors the Gemini URL-context fallback.
+    const confidence = citations.length > 0 ? URL_FETCH_SUCCESS_CONFIDENCE : 0;
 
     if (!findings || findings.trim() === 'NO_INFORMATION') {
       await this.insertClarifyingDraft(
@@ -747,19 +697,32 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
   }
 
   // -------------------------------------------------------------------------
-  // Research Agent
+  // Research Agent – powered by @cf/zai-org/glm-4.7-flash via Workers AI
+  //
+  // Fetches each datasource URL, extracts plain text, and passes the combined
+  // content to the model so it can identify relevant facts. Citations are the
+  // URLs that actually returned usable content.
   // -------------------------------------------------------------------------
   private async runResearchAgent(
     subject: string,
     question: string,
-    urlList: string
-  ): Promise<{ findings: string; candidates: unknown[] }> {
+    urls: string[]
+  ): Promise<{ findings: string; citations: string[] }> {
+    const fetched = await fetchUrlsContent(urls);
+
+    if (fetched.length === 0) {
+      return { findings: 'NO_INFORMATION', citations: [] };
+    }
+
+    const context = fetched
+      .map(({ url, content }) => `Source: ${url}\n${content}`)
+      .join('\n\n---\n\n');
+
     const systemInstruction = codeBlock`
       You are a research assistant for a customer support team.
-      Your job is to find and extract the most relevant information from the provided URLs
+      Your job is to find and extract the most relevant information from the provided source content
       to answer a customer's question.
 
-      - Read the content available at the provided URLs
       - Extract only information that is directly relevant to the question
       - Organise the findings as concise bullet points or short paragraphs
       - Include specific details: steps, values, settings, or policies that apply
@@ -767,17 +730,16 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
       - If no relevant information can be found, respond with only: NO_INFORMATION
     `;
 
-    const { text, candidates } = await geminiGenerateContent(
-      this.env.GEMINI_API_KEY,
-      'gemini-2.5-flash',
-      `Subject: ${subject}\nCustomer question:\n${question}\n\nURLs to search:\n${urlList}`,
+    const findings = await cfAiGenerateText(
+      this.env.AI,
+      '@cf/zai-org/glm-4.7-flash',
       systemInstruction,
+      `Subject: ${subject}\nCustomer question:\n${question}\n\nSource content:\n${context}`,
       2048,
-      0.3,
-      [{ urlContext: {} }]
+      0.3
     );
 
-    return { findings: text, candidates };
+    return { findings, citations: fetched.map((f) => f.url) };
   }
 
   // -------------------------------------------------------------------------
@@ -828,7 +790,7 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
       '@cf/zai-org/glm-4.7-flash',
       systemInstruction,
       `Subject: ${subject}\nCustomer question:\n${question}\n\nResearch findings:\n${findings}`,
-      4096,
+      MAX_WRITING_TOKENS,
       0.7
     );
 

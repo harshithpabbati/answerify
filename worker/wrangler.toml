@@ -15,7 +15,6 @@ tag = "v1"
 new_sqlite_classes = ["EmailReplyAgent"]
 
 # Set these secrets with: wrangler secret put <KEY>
-# GEMINI_API_KEY
 # SUPABASE_URL
 # SUPABASE_SERVICE_KEY
 # INBOUND_WEBHOOK_SECRET
