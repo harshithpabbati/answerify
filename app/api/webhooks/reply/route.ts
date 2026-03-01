@@ -232,11 +232,13 @@ export async function POST(request: Request) {
 
   const supabase = await createServiceClient();
 
-  // Fetch datasources (including stored content for fallback), org settings, and thread
+  // Fetch datasources (including stored content for fallback), org settings, and thread.
+  // The `content` column exists at the DB level but is not in the generated Supabase
+  // types, so we cast the query result to include it.
   const [{ data: datasources }, { data: org }, { data: thread }] = await Promise.all([
     supabase
       .from('datasource')
-      .select('id, url, content' as 'id, url')
+      .select('id, url, content' as string)
       .eq('organization_id', record.organization_id) as unknown as Promise<{
       data: Array<{ id: string; url: string; content: string | null }> | null;
     }>,
