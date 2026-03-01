@@ -4,8 +4,8 @@ import { useCallback, useState } from 'react';
 import { useAddDataSource } from '@/states/data-source';
 import { toast } from 'sonner';
 
-import { useIsMobile } from '@/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import {
   Dialog,
   DialogContent,
@@ -49,17 +49,11 @@ function TabBar({ active, onChange }: { active: Tab; onChange(t: Tab): void }) {
   );
 }
 
-function DataSourceContent({
-  slug,
-  onAdd,
-}: {
-  slug: string;
-  onAdd(): void;
-}) {
+function DataSourceContent({ slug, onAdd }: { slug: string; onAdd(): void }) {
   const [tab, setTab] = useState<Tab>('manual');
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-auto">
       <TabBar active={tab} onChange={setTab} />
       {tab === 'manual' ? (
         <AddDataSourceForm slug={slug} onAdd={onAdd} />

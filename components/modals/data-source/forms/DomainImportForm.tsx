@@ -152,7 +152,9 @@ export function DomainImportForm({ slug, onAdd }: Props) {
               onClick={toggleAll}
               className="text-muted-foreground hover:text-foreground text-xs underline-offset-2 hover:underline"
             >
-              {selected.size === displayUrls.length ? 'Deselect all' : 'Select all'}
+              {selected.size === displayUrls.length
+                ? 'Deselect all'
+                : 'Select all'}
             </button>
           </div>
 

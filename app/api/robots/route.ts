@@ -12,8 +12,8 @@
  */
 
 const FETCH_TIMEOUT_MS = 5_000;
-const MAX_SITEMAPS = 5; // max sitemap files to fetch per request
-const MAX_PAGES = 200;  // max page URLs to return
+const MAX_SITEMAPS = 20; // max sitemap files to fetch per request
+const MAX_PAGES = 1000; // max page URLs to return
 
 // Probe these paths if robots.txt has no Sitemap: directive
 const FALLBACK_SITEMAP_PATHS = [
@@ -72,7 +72,11 @@ async function crawlSitemaps(initialUrls: string[]): Promise<{
   const seen = new Set<string>();
   const queue = [...initialUrls];
 
-  while (queue.length > 0 && sitemapsFetched.length < MAX_SITEMAPS && pages.length < MAX_PAGES) {
+  while (
+    queue.length > 0 &&
+    sitemapsFetched.length < MAX_SITEMAPS &&
+    pages.length < MAX_PAGES
+  ) {
     const url = queue.shift()!;
     if (seen.has(url)) continue;
     seen.add(url);
