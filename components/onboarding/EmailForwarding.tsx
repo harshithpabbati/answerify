@@ -30,7 +30,7 @@ export function EmailForwarding({ email, slug }: Props) {
 
   return (
     <div>
-      <h2 className="font-display text-3xl font-black uppercase tracking-tight text-white">Setup email forwarding</h2>
+      <h2 className="font-display text-3xl font-black uppercase tracking-tight text-foreground">Setup email forwarding</h2>
       <p className="font-mono mt-1 text-sm text-gray-400">
         Follow the instructions below to setup email forwarding from your
         support account
@@ -56,8 +56,8 @@ export function EmailForwarding({ email, slug }: Props) {
             <a className="text-[#FF4500] underline" href="https://docs.microsoft.com/en-us/exchange/recipients/user-mailboxes/email-forwarding?view=exchserver-2019">Microsoft Exchange Server</a>
           </li>
         </ul>
-        <div className="mt-4 flex items-center justify-between gap-2 border border-[#FF4500]/30 bg-[#0a0a0a] p-4">
-          <p className="font-mono text-sm text-white">{email}</p>
+        <div className="mt-4 flex items-center justify-between gap-2 border border-[#FF4500]/30 bg-card p-4">
+          <p className="font-mono text-sm text-foreground">{email}</p>
           <Button
             variant="neutral"
             size="icon"

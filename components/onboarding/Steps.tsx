@@ -23,7 +23,7 @@ function Step({ title, current, index }: StepProps) {
       <p className={cn('font-mono text-xs font-semibold uppercase tracking-widest', current ? 'text-[#FF4500]' : 'text-gray-600')}>
         Step {index}
       </p>
-      <h2 className={cn('font-display text-lg font-black uppercase tracking-tight', current ? 'text-white' : 'text-gray-600')}>{title}</h2>
+      <h2 className={cn('font-display text-lg font-black uppercase tracking-tight', current ? 'text-foreground' : 'text-gray-600')}>{title}</h2>
     </div>
   );
 }
