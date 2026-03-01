@@ -148,16 +148,18 @@ GRANT ALL ON TABLE "public"."reply_edit" TO "service_role";
 
 ## Cloudflare Agents Integration
 
-The `worker/` directory contains a [Cloudflare Agents](https://agents.cloudflare.com/) Worker that runs the research → writing AI pipeline on Cloudflare's infrastructure instead of inside Next.js serverless functions.
+The `worker/` directory contains a [Cloudflare Agents](https://agents.cloudflare.com/) Worker that handles inbound email processing and AI reply generation entirely on Cloudflare's infrastructure, replacing both the `/api/webhooks/inbound-email` and `/api/webhooks/reply` Next.js routes.
 
 ### Why Cloudflare Agents?
 
 | | Next.js serverless | Cloudflare Agent Worker |
 |---|---|---|
+| Inbound email | HTTP webhook (base64 raw body) | Native `email` export – raw `EmailMessage` direct from Cloudflare Email Routing |
 | Execution timeout | ~60 s (Vercel) | Minutes to hours (Durable Objects) |
 | State persistence | None – stateless per request | Built-in SQLite per agent instance |
 | Parallelism | One function per request | One Durable Object per email thread |
 | Observability | Logs only | State introspection + scheduling |
+| Reply routing | Lookup by message-id | Sub-address routing (`support+<threadId>@domain`) |
 
 The `EmailReplyAgent` extends the Cloudflare [`Agent`](https://agents.cloudflare.com/) class. Each email thread gets its own Durable Object instance, so parallel threads are fully isolated and never block each other. Agent state (`status`, `findings`, `reply`, `confidence`) is persisted across the research and writing steps, enabling safe retries if any step fails.
 
@@ -165,38 +167,58 @@ The `EmailReplyAgent` extends the Cloudflare [`Agent`](https://agents.cloudflare
 
 ```bash
 cd worker
-pnpm install          # or npm install
-pnpm run deploy       # wrangler deploy
+npm install
+npm run deploy        # wrangler deploy
 
 # Set secrets (run once):
 wrangler secret put GEMINI_API_KEY
 wrangler secret put SUPABASE_URL
 wrangler secret put SUPABASE_SERVICE_KEY
 wrangler secret put RESEND_API_KEY
-wrangler secret put INBOUND_WEBHOOK_SECRET
+wrangler secret put INBOUND_WEBHOOK_SECRET   # shared with Next.js CLOUDFLARE_AGENT_SECRET
 ```
 
-After deploying, set `CLOUDFLARE_AGENT_URL` and `CLOUDFLARE_AGENT_SECRET` in your Next.js environment to activate the Cloudflare Agent path. Without these variables the app falls back to the built-in Next.js webhook (original behaviour).
+After deploying:
+1. Point your [Cloudflare Email Routing](https://developers.cloudflare.com/email-routing/) destination to this Worker (instead of the Next.js `/api/webhooks/inbound-email` URL).
+2. Set `CLOUDFLARE_AGENT_URL` and `CLOUDFLARE_AGENT_SECRET` in your Next.js environment so the dashboard's "Generate Reply" action calls the Worker.
+
+Without these variables the app falls back to the built-in Next.js webhook (original behaviour).
 
 ### How it works
 
 ```
-Inbound email
-     │
-     ▼
-Next.js /api/generate-reply
-     │  fetches context from Supabase
-     │  (datasources, org settings, thread, history)
-     │
-     ▼
-Cloudflare Worker  ─── routeAgentRequest() ──►  EmailReplyAgent (Durable Object)
-                                                      │
-                                                      ├─ Step 1: Research Agent (Gemini)
-                                                      │          grounding metadata → confidence score
-                                                      │
-                                                      ├─ Step 2: Writing Agent (Gemini)
-                                                      │          produces HTML reply
-                                                      │
-                                                      └─ Step 3: Auto-send (Resend) or save draft
-                                                                 results written to Supabase
+Customer sends email
+        │
+        ▼
+Cloudflare Email Routing
+        │  delivers raw EmailMessage
+        ▼
+Worker email handler
+        │  resolveEmailToAgent():
+        │   1. sub-address routing  support+<threadId>@domain → existing thread
+        │   2. In-Reply-To lookup   → existing thread via Supabase
+        │   3. new UUID             → new thread
+        │
+        ▼  routeAgentEmail()
+EmailReplyAgent (Durable Object, one per thread)
+        │
+        ├─ onEmail()
+        │   ├─ isAutoReplyEmail check (RFC 3834)
+        │   ├─ Parse raw email (PostalMime)
+        │   ├─ Look up organization by recipient address
+        │   ├─ Create/reopen thread in Supabase
+        │   ├─ Insert email record
+        │   └─ generateReply() ──────────────────────────────────────┐
+        │                                                             │
+        └─ onRequest()  ◄── Next.js /api/generate-reply              │
+            (manual trigger from dashboard)                           │
+            └─ generateReply() ────────────────────────────────────► │
+                                                                      ▼
+                                              Step 1: Research Agent (Gemini + URL context)
+                                                       grounding metadata → confidence score
+                                              Step 2: Writing Agent (Gemini)
+                                                       produces polished HTML reply
+                                              Step 3: Auto-send (Resend) or save as draft
+                                                       Reply-To: support+<threadId>@domain
+                                                       so customer replies route back here
 ```

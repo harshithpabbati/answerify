@@ -1,34 +1,46 @@
 /**
  * Answerify – Cloudflare Agents Worker
  *
- * This Worker implements the email reply generation pipeline using the
- * Cloudflare Agents SDK (https://agents.cloudflare.com/).
+ * This Worker integrates with Cloudflare Email Routing and the Cloudflare
+ * Agents SDK (https://agents.cloudflare.com/) to process inbound support
+ * emails end-to-end, replacing the Next.js /api/webhooks/inbound-email and
+ * /api/webhooks/reply routes.
  *
- * The EmailReplyAgent extends the Agent class from the Cloudflare Agents SDK,
- * which uses Durable Objects for state persistence. This provides several
- * advantages over the Next.js serverless implementation:
+ * Flow:
+ *  1. Cloudflare Email Routing delivers raw emails to the `email` export.
+ *  2. A thread-aware resolver maps each message to the correct EmailReplyAgent
+ *     Durable Object instance (one per thread, keyed by the Supabase thread ID).
+ *  3. EmailReplyAgent.onEmail() handles:
+ *       a. Auto-reply detection (RFC 3834 / X-Auto-Response-Suppress headers)
+ *       b. Raw email parsing via PostalMime
+ *       c. Organization lookup by recipient address
+ *       d. Thread creation/lookup in Supabase
+ *       e. Email record insertion
+ *       f. Research Agent – fetches relevant info from datasource URLs
+ *       g. Writing Agent  – produces a polished HTML reply
+ *       h. Auto-send via Resend (or save as draft for human review)
  *
- *  - Long-running pipeline steps never time out (Durable Objects can run for hours)
- *  - Agent state is persisted across the research → writing → send pipeline steps
- *  - Each email thread gets its own isolated agent instance (by thread ID)
- *  - Built-in retry and scheduling support via the Agents SDK
+ * Each email thread gets its own isolated Durable Object instance so parallel
+ * threads never block each other and pipeline state survives transient errors.
  *
- * Architecture:
- *  1. The Next.js app receives inbound emails and calls /api/generate-reply
- *  2. That endpoint forwards the request to this Worker via fetch()
- *  3. routeAgentRequest() dispatches to the correct EmailReplyAgent instance
- *  4. The agent runs the research agent → writing agent pipeline using Gemini
- *  5. Results are written back to Supabase (same DB as the Next.js app)
+ * An optional HTTP path (onRequest) lets the Next.js dashboard manually
+ * trigger AI reply generation for a specific email ID.
  *
- * Each thread gets its own Durable Object instance so parallel threads are
- * fully isolated and never block each other.
+ * Outbound emails set Reply-To to support+<threadId>@<domain> so that
+ * customer replies are routed back to the same EmailReplyAgent instance via
+ * sub-address routing, without relying on signed headers that email clients
+ * often strip.
  */
 
-import { Agent, routeAgentRequest } from 'agents';
+import { Agent, getAgentByName, routeAgentEmail, routeAgentRequest } from 'agents';
+import { isAutoReplyEmail } from 'agents/email';
 import { codeBlock } from 'common-tags';
+import PostalMime from 'postal-mime';
+
+import type { AgentEmail } from 'agents/email';
 
 // ---------------------------------------------------------------------------
-// Environment bindings (defined in wrangler.toml / Cloudflare dashboard)
+// Environment bindings (wrangler.toml / Cloudflare dashboard secrets)
 // ---------------------------------------------------------------------------
 
 export interface Env {
@@ -37,10 +49,11 @@ export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_KEY: string;
   RESEND_API_KEY: string;
-  /** Secret shared with the Next.js app to authenticate inbound requests. */
+  /**
+   * Shared secret used to authenticate HTTP requests from the Next.js app to
+   * the Worker's onRequest handler.
+   */
   INBOUND_WEBHOOK_SECRET: string;
-  /** Base URL of the Next.js app (e.g. https://answerify.dev). */
-  NEXT_APP_URL: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -60,7 +73,38 @@ interface AgentState {
 }
 
 // ---------------------------------------------------------------------------
-// Gemini helpers
+// Supabase REST helpers (no SDK dependency required in Workers)
+// ---------------------------------------------------------------------------
+
+async function supabaseFetch<T = unknown>(
+  supabaseUrl: string,
+  serviceKey: string,
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+      ...(options.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(
+      `Supabase ${options.method ?? 'GET'} /${path} failed (${response.status}): ${body}`,
+    );
+  }
+
+  return response.json() as Promise<T>;
+}
+
+// ---------------------------------------------------------------------------
+// Gemini helpers (direct REST – no Node.js SDK needed in Workers)
 // ---------------------------------------------------------------------------
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
@@ -160,36 +204,51 @@ function extractCitations(candidates: unknown[]): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// Supabase helpers (thin REST wrapper – no SDK dependency needed in Workers)
+// URL deduplication (mirrors the logic in the Next.js webhooks/reply route)
 // ---------------------------------------------------------------------------
 
-async function supabaseFetch(
-  supabaseUrl: string,
-  serviceKey: string,
-  path: string,
-  options: RequestInit = {},
-): Promise<unknown> {
-  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-    ...options,
-    headers: {
-      apikey: serviceKey,
-      Authorization: `Bearer ${serviceKey}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation',
-      ...(options.headers ?? {}),
-    },
-  });
+const MAX_GEMINI_URLS = 20;
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Supabase ${options.method ?? 'GET'} ${path} failed (${response.status}): ${body}`);
+function firstPathSegment(url: string): string {
+  try {
+    const { pathname } = new URL(url);
+    return pathname.split('/').filter(Boolean)[0] ?? '';
+  } catch {
+    return '';
   }
-
-  return response.json();
 }
 
+function deduplicateForGemini(urls: string[]): string[] {
+  if (urls.length <= MAX_GEMINI_URLS) return urls;
+
+  const groups = new Map<string, string[]>();
+  for (const url of urls) {
+    let key: string;
+    try {
+      const parsed = new URL(url);
+      const seg = firstPathSegment(url);
+      key = seg ? `${parsed.origin}/${seg}/` : `${parsed.origin}/`;
+    } catch {
+      key = url;
+    }
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(url);
+  }
+
+  const result: string[] = [];
+  for (const [prefix, groupUrls] of groups) {
+    result.push(groupUrls.length > 1 ? prefix : groupUrls[0]);
+    if (result.length >= MAX_GEMINI_URLS) break;
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Clarifying-question draft content
+// ---------------------------------------------------------------------------
+
 const CLARIFYING_CONTENT =
-  '<p>Thank you for contacting us. Based on the information available, I wasn\'t able to provide a complete answer to your question. Could you please provide more details or rephrase your question so we can assist you better?</p>';
+  "<p>Thank you for contacting us. Based on the information available, I wasn't able to provide a complete answer to your question. Could you please provide more details or rephrase your question so we can assist you better?</p>";
 
 // ---------------------------------------------------------------------------
 // EmailReplyAgent – one Durable Object instance per email thread
@@ -198,142 +257,339 @@ const CLARIFYING_CONTENT =
 export class EmailReplyAgent extends Agent<Env, AgentState> {
   initialState: AgentState = { status: 'idle' };
 
-  /**
-   * Main entry point called by routeAgentRequest().
-   *
-   * Expects a JSON body of the shape sent by the Next.js /api/generate-reply
-   * route (same schema as the existing /api/webhooks/reply route):
-   * {
-   *   record:              email row from Supabase
-   *   datasources:         [{ id, url }]
-   *   org:                 { autopilot_enabled, autopilot_threshold }
-   *   thread:              { email_from, subject, message_id }
-   *   conversationHistory: string
-   * }
-   */
+  // -------------------------------------------------------------------------
+  // onEmail – called by routeAgentEmail() for emails from Cloudflare Email
+  // Routing. This completely replaces the Next.js inbound-email webhook.
+  // -------------------------------------------------------------------------
+  async onEmail(email: AgentEmail): Promise<void> {
+    // Ignore auto-generated messages (out-of-office, delivery receipts, etc.)
+    const headersList = [...email.headers.entries()].map(([key, value]) => ({ key, value }));
+    if (isAutoReplyEmail(headersList)) {
+      email.setReject('Auto-replies are not accepted');
+      return;
+    }
+
+    const supabaseUrl = this.env.SUPABASE_URL;
+    const serviceKey = this.env.SUPABASE_SERVICE_KEY;
+
+    // Parse the raw email bytes
+    const rawBytes = await email.getRaw();
+    const parsed = await new PostalMime().parse(rawBytes);
+
+    const fromAddress = parsed.from?.address ?? email.from;
+    const fromName = parsed.from?.name ?? '';
+    const subject = parsed.subject ?? '(No subject)';
+    const html = parsed.html ?? null;
+    const text = parsed.text ?? null;
+    const messageId = parsed.messageId ?? null;
+    const references = parsed.references ?? null;
+
+    // Look up the organization that owns this inbound address
+    const orgRows = await supabaseFetch<Array<{ id: string }>>(
+      supabaseUrl,
+      serviceKey,
+      `organization?inbound_email=eq.${encodeURIComponent(email.to)}&select=id&limit=1`,
+    );
+
+    if (!orgRows || orgRows.length === 0) {
+      console.error('No organization found for recipient:', email.to);
+      return;
+    }
+
+    const organizationId = orgRows[0].id;
+
+    // Find or create the thread.
+    // For new emails (no references) the agent ID (this.name) was pre-assigned
+    // by the resolver as a new UUID and we use it as the Supabase thread ID.
+    let threadId: string;
+    let threadStatus: string | null = null;
+
+    if (references) {
+      // Reply to an existing thread – resolver already looked up the thread
+      // and set this.name to its ID, so we can use it directly.
+      threadId = this.name;
+      const threadRows = await supabaseFetch<Array<{ id: string; status: string }>>(
+        supabaseUrl,
+        serviceKey,
+        `thread?id=eq.${encodeURIComponent(threadId)}&select=id,status&limit=1`,
+      );
+      if (threadRows && threadRows.length > 0) {
+        threadStatus = threadRows[0].status;
+      }
+    } else {
+      // New thread – create it in Supabase using this.name as the ID
+      const created = await supabaseFetch<Array<{ id: string; status: string }>>(
+        supabaseUrl,
+        serviceKey,
+        'thread',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            id: this.name,
+            organization_id: organizationId,
+            email_from: fromAddress,
+            email_from_name: fromName,
+            subject,
+            message_id: messageId,
+          }),
+        },
+      );
+      if (!created || created.length === 0) {
+        console.error('Failed to create thread');
+        return;
+      }
+      threadId = created[0].id;
+      threadStatus = created[0].status;
+    }
+
+    await this.setState({
+      ...this.state,
+      status: 'researching',
+      organizationId,
+      threadId,
+    });
+
+    // Re-open closed threads when a customer writes again
+    if (threadStatus === 'closed') {
+      await supabaseFetch(supabaseUrl, serviceKey, `thread?id=eq.${encodeURIComponent(threadId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'open' }),
+      });
+    }
+
+    // Store the inbound email record
+    const emailRows = await supabaseFetch<Array<{ id: string }>>(
+      supabaseUrl,
+      serviceKey,
+      'email',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          organization_id: organizationId,
+          thread_id: threadId,
+          email_from: fromAddress,
+          email_from_name: fromName,
+          body: html,
+          cleaned_body: text,
+          role: 'user',
+        }),
+      },
+    );
+
+    const emailId = emailRows?.[0]?.id;
+    await this.setState({ ...this.state, emailId });
+
+    // Run the AI reply pipeline
+    await this.generateReply({
+      organizationId,
+      threadId,
+      emailId: emailId ?? '',
+      cleanedBody: text ?? '',
+      subject,
+      emailFrom: fromAddress,
+      messageId: messageId ?? '',
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // onRequest – HTTP handler for the Next.js fallback path.
+  // Accepts { emailId } and fetches all context from Supabase itself so the
+  // caller doesn't need to pass a large payload.
+  // -------------------------------------------------------------------------
   async onRequest(request: Request): Promise<Response> {
     if (request.method !== 'POST') {
       return new Response('Method Not Allowed', { status: 405 });
     }
 
-    // Authenticate the request from the Next.js app
     const secret = request.headers.get('X-Agent-Secret');
     if (secret !== this.env.INBOUND_WEBHOOK_SECRET) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const { record, datasources, org, thread, conversationHistory } =
-      (await request.json()) as {
-        record: {
-          id: string;
-          organization_id: string;
-          thread_id: string;
-          cleaned_body: string;
-          role: string;
-        };
-        datasources: Array<{ id: string; url: string }>;
-        org: { autopilot_enabled: boolean; autopilot_threshold: number };
-        thread: { email_from: string; subject: string; message_id: string };
-        conversationHistory: string;
-      };
-
-    // Guard: only process user messages
-    if (record.role !== 'user') {
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    const { emailId } = (await request.json()) as { emailId: string };
+    if (!emailId) {
+      return new Response('Missing emailId', { status: 400 });
     }
-
-    await this.setState({ ...this.state, status: 'researching', threadId: record.thread_id, organizationId: record.organization_id, emailId: record.id });
 
     const supabaseUrl = this.env.SUPABASE_URL;
     const serviceKey = this.env.SUPABASE_SERVICE_KEY;
 
-    if (!datasources || datasources.length === 0) {
-      await this.insertClarifyingDraft(
-        supabaseUrl,
-        serviceKey,
-        record.organization_id,
-        record.thread_id,
-        '<p>Thank you for reaching out. I wasn\'t able to find specific information to fully answer your question at this time. Could you please provide more details or clarify your request so we can assist you better?</p>',
-      );
-      await this.setState({ ...this.state, status: 'complete' });
+    // Fetch the email record
+    const emailRows = await supabaseFetch<
+      Array<{
+        id: string;
+        organization_id: string;
+        thread_id: string;
+        cleaned_body: string;
+        role: string;
+      }>
+    >(supabaseUrl, serviceKey, `email?id=eq.${encodeURIComponent(emailId)}&limit=1`);
+
+    if (!emailRows || emailRows.length === 0) {
+      return new Response('Email not found', { status: 404 });
+    }
+
+    const record = emailRows[0];
+    if (record.role !== 'user') {
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
 
-    const urlList = deduplicateForGemini(datasources.map((d) => d.url)).join('\n');
+    // Fetch thread info
+    const threadRows = await supabaseFetch<
+      Array<{ email_from: string; subject: string; message_id: string }>
+    >(
+      supabaseUrl,
+      serviceKey,
+      `thread?id=eq.${encodeURIComponent(record.thread_id)}&select=email_from,subject,message_id&limit=1`,
+    );
+    const thread = threadRows?.[0];
 
-    // ------------------------------------------------------------------
-    // Step 1 – Research Agent
-    // ------------------------------------------------------------------
+    await this.setState({
+      ...this.state,
+      status: 'researching',
+      organizationId: record.organization_id,
+      threadId: record.thread_id,
+      emailId: record.id,
+    });
+
+    await this.generateReply({
+      organizationId: record.organization_id,
+      threadId: record.thread_id,
+      emailId: record.id,
+      cleanedBody: record.cleaned_body,
+      subject: thread?.subject ?? '',
+      emailFrom: thread?.email_from ?? '',
+      messageId: thread?.message_id ?? '',
+    });
+
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  }
+
+  // -------------------------------------------------------------------------
+  // generateReply – shared AI pipeline (used by both onEmail and onRequest)
+  // -------------------------------------------------------------------------
+  private async generateReply(params: {
+    organizationId: string;
+    threadId: string;
+    emailId: string;
+    cleanedBody: string;
+    subject: string;
+    emailFrom: string;
+    messageId: string;
+  }): Promise<void> {
+    const { organizationId, threadId, emailId, cleanedBody, subject, emailFrom, messageId } =
+      params;
+    const supabaseUrl = this.env.SUPABASE_URL;
+    const serviceKey = this.env.SUPABASE_SERVICE_KEY;
+
+    // Fetch datasources, org autopilot settings, and conversation history in parallel
+    const [datasourceRows, orgRows, historyRows] = await Promise.all([
+      supabaseFetch<Array<{ id: string; url: string }>>(
+        supabaseUrl,
+        serviceKey,
+        `datasource?organization_id=eq.${encodeURIComponent(organizationId)}&select=id,url`,
+      ),
+      supabaseFetch<Array<{ autopilot_enabled: boolean; autopilot_threshold: number }>>(
+        supabaseUrl,
+        serviceKey,
+        `organization?id=eq.${encodeURIComponent(organizationId)}&select=autopilot_enabled,autopilot_threshold&limit=1`,
+      ),
+      supabaseFetch<Array<{ role: string; cleaned_body: string }>>(
+        supabaseUrl,
+        serviceKey,
+        `email?thread_id=eq.${encodeURIComponent(threadId)}&id=neq.${encodeURIComponent(emailId)}&select=role,cleaned_body&order=created_at.asc&limit=10`,
+      ),
+    ]);
+
+    if (!datasourceRows || datasourceRows.length === 0) {
+      await this.insertClarifyingDraft(
+        supabaseUrl,
+        serviceKey,
+        organizationId,
+        threadId,
+      );
+      await this.setState({ ...this.state, status: 'complete' });
+      return;
+    }
+
+    const urlList = deduplicateForGemini(datasourceRows.map((d) => d.url)).join('\n');
+
+    const conversationHistory =
+      historyRows && historyRows.length > 0
+        ? historyRows
+            .map((e) => {
+              const label =
+                e.role === 'user' ? 'Customer' : e.role === 'support' ? 'Support' : e.role;
+              return `${label}: ${e.cleaned_body}`;
+            })
+            .join('\n\n')
+        : '';
+
+    // --- Step 1: Research Agent ---
     let findings: string;
     let researchCandidates: unknown[];
     try {
-      const result = await this.runResearchAgent(
-        thread?.subject ?? '',
-        record.cleaned_body,
-        urlList,
-      );
+      const result = await this.runResearchAgent(subject, cleanedBody, urlList);
       findings = result.findings;
       researchCandidates = result.candidates;
     } catch (err) {
       await this.setState({ ...this.state, status: 'error', error: String(err) });
-      return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+      return;
     }
 
-    const confidence = computeConfidence(researchCandidates, datasources.length);
+    const confidence = computeConfidence(researchCandidates, datasourceRows.length);
     const citations = extractCitations(researchCandidates);
 
     if (!findings || findings.trim() === 'NO_INFORMATION') {
-      await this.insertClarifyingDraft(supabaseUrl, serviceKey, record.organization_id, record.thread_id);
+      await this.insertClarifyingDraft(supabaseUrl, serviceKey, organizationId, threadId);
       await this.setState({ ...this.state, status: 'complete' });
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      return;
     }
 
-    // Persist research findings in agent state (survives any transient errors)
     await this.setState({ ...this.state, status: 'writing', findings, confidence, citations });
 
-    // ------------------------------------------------------------------
-    // Step 2 – Writing Agent
-    // ------------------------------------------------------------------
+    // --- Step 2: Writing Agent ---
     let rawContent: string;
     try {
-      rawContent = await this.runWritingAgent(
-        thread?.subject ?? '',
-        record.cleaned_body,
-        findings,
-        conversationHistory ?? '',
-      );
+      rawContent = await this.runWritingAgent(subject, cleanedBody, findings, conversationHistory);
     } catch (err) {
       await this.setState({ ...this.state, status: 'error', error: String(err) });
-      return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+      return;
     }
 
     if (!rawContent || rawContent.trim() === 'NO_INFORMATION') {
-      await this.insertClarifyingDraft(supabaseUrl, serviceKey, record.organization_id, record.thread_id);
+      await this.insertClarifyingDraft(supabaseUrl, serviceKey, organizationId, threadId);
       await this.setState({ ...this.state, status: 'complete' });
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      return;
     }
 
     const htmlContent = rawContent.replace(/^```html\s*|\s*```$/g, '');
-
     await this.setState({ ...this.state, reply: htmlContent });
 
-    // ------------------------------------------------------------------
-    // Step 3 – Auto-send or save as draft
-    // ------------------------------------------------------------------
+    const org = orgRows?.[0];
     const autopilotEnabled = org?.autopilot_enabled ?? false;
     const autopilotThreshold = org?.autopilot_threshold ?? 0.65;
     const shouldAutoSend = autopilotEnabled && confidence >= autopilotThreshold;
 
-    if (shouldAutoSend && thread) {
-      const sent = await this.sendEmail(thread, htmlContent);
+    // --- Step 3: Send or draft ---
+    if (shouldAutoSend) {
+      const sent = await this.sendEmail({
+        emailFrom,
+        subject,
+        messageId,
+        htmlContent,
+        threadId,
+      });
+
       if (sent) {
-        // Record the sent staff email in Supabase
         await supabaseFetch(supabaseUrl, serviceKey, 'email', {
           method: 'POST',
           body: JSON.stringify({
-            organization_id: record.organization_id,
-            thread_id: record.thread_id,
+            organization_id: organizationId,
+            thread_id: threadId,
             body: htmlContent,
+            // Strip complete tags first, then any remaining '<' to prevent
+            // partial tags like '<script' from surviving into the plain-text field.
             cleaned_body: htmlContent.replace(/<[^>]*>/g, '').replace(/</g, ''),
             role: 'staff',
             email_from: 'support@answerify.dev',
@@ -345,8 +601,8 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
         await supabaseFetch(supabaseUrl, serviceKey, 'reply', {
           method: 'POST',
           body: JSON.stringify({
-            organization_id: record.organization_id,
-            thread_id: record.thread_id,
+            organization_id: organizationId,
+            thread_id: threadId,
             content: htmlContent,
             status: 'sent',
             confidence_score: confidence,
@@ -355,16 +611,16 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
         });
 
         await this.setState({ ...this.state, status: 'complete' });
-        return new Response(JSON.stringify({ ok: true, status: 'sent' }), { status: 200 });
+        return;
       }
     }
 
     // Save as draft for human review
-    const draft = await supabaseFetch(supabaseUrl, serviceKey, 'reply', {
+    await supabaseFetch(supabaseUrl, serviceKey, 'reply', {
       method: 'POST',
       body: JSON.stringify({
-        organization_id: record.organization_id,
-        thread_id: record.thread_id,
+        organization_id: organizationId,
+        thread_id: threadId,
         content: htmlContent,
         status: 'draft',
         confidence_score: confidence,
@@ -373,12 +629,11 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
     });
 
     await this.setState({ ...this.state, status: 'complete' });
-    return new Response(JSON.stringify({ data: draft }), { status: 200 });
   }
 
-  // ------------------------------------------------------------------
+  // -------------------------------------------------------------------------
   // Research Agent
-  // ------------------------------------------------------------------
+  // -------------------------------------------------------------------------
   private async runResearchAgent(
     subject: string,
     question: string,
@@ -410,9 +665,9 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
     return { findings: text, candidates };
   }
 
-  // ------------------------------------------------------------------
+  // -------------------------------------------------------------------------
   // Writing Agent
-  // ------------------------------------------------------------------
+  // -------------------------------------------------------------------------
   private async runWritingAgent(
     subject: string,
     question: string,
@@ -465,13 +720,25 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
     return text;
   }
 
-  // ------------------------------------------------------------------
-  // Send email via Resend
-  // ------------------------------------------------------------------
-  private async sendEmail(
-    thread: { email_from: string; subject: string; message_id: string },
-    htmlContent: string,
-  ): Promise<boolean> {
+  // -------------------------------------------------------------------------
+  // Send email via Resend.
+  // Reply-To is set to support+<threadId>@<domain> so that the customer's
+  // reply is routed back to this exact agent instance via sub-address routing.
+  // -------------------------------------------------------------------------
+  private async sendEmail(params: {
+    emailFrom: string;
+    subject: string;
+    messageId: string;
+    htmlContent: string;
+    threadId: string;
+  }): Promise<boolean> {
+    const { emailFrom, subject, messageId, htmlContent, threadId } = params;
+
+    // Derive the reply-to domain from the recipient's own address so replies
+    // land on the same Cloudflare Email Routing domain.
+    const inboundDomain = emailFrom.split('@')[1] ?? 'answerify.dev';
+    const replyTo = `support+${threadId}@${inboundDomain}`;
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -480,10 +747,11 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
       },
       body: JSON.stringify({
         from: 'Support <support@answerify.dev>',
-        to: [thread.email_from],
-        subject: thread.subject,
+        to: [emailFrom],
+        reply_to: replyTo,
+        subject,
         html: htmlContent,
-        headers: { 'In-Reply-To': thread.message_id },
+        headers: { 'In-Reply-To': messageId },
       }),
     });
 
@@ -496,9 +764,9 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
     return Boolean(data?.id);
   }
 
-  // ------------------------------------------------------------------
+  // -------------------------------------------------------------------------
   // Insert a clarifying-question draft reply
-  // ------------------------------------------------------------------
+  // -------------------------------------------------------------------------
   private async insertClarifyingDraft(
     supabaseUrl: string,
     serviceKey: string,
@@ -521,43 +789,47 @@ export class EmailReplyAgent extends Agent<Env, AgentState> {
 }
 
 // ---------------------------------------------------------------------------
-// URL deduplication (same logic as in the Next.js app)
+// Thread-aware email resolver
+//
+// Routing strategy (tried in order):
+//  1. Sub-address routing – if the recipient is "local+<threadId>@domain" the
+//     sub-address IS the thread ID (covers replies via our custom Reply-To).
+//  2. In-Reply-To lookup – look up the original message's thread in Supabase
+//     to handle clients that honour In-Reply-To but strip sub-addresses.
+//  3. New email – generate a fresh UUID; the agent will create the thread.
 // ---------------------------------------------------------------------------
 
-const MAX_GEMINI_URLS = 20;
+async function resolveEmailToAgent(
+  email: ForwardableEmailMessage,
+  env: Env,
+): Promise<{ agentName: string; agentId: string } | null> {
+  const AGENT_NAME = 'email-reply-agent';
 
-function firstPathSegment(url: string): string {
-  try {
-    const { pathname } = new URL(url);
-    return pathname.split('/').filter(Boolean)[0] ?? '';
-  } catch {
-    return '';
+  // 1. Sub-address: support+<threadId>@domain → route to that thread's agent
+  const subAddressMatch = email.to.match(/^[^+@]+\+([^@]+)@/);
+  if (subAddressMatch) {
+    return { agentName: AGENT_NAME, agentId: subAddressMatch[1] };
   }
-}
 
-function deduplicateForGemini(urls: string[]): string[] {
-  if (urls.length <= MAX_GEMINI_URLS) return urls;
-
-  const groups = new Map<string, string[]>();
-  for (const url of urls) {
-    let key: string;
+  // 2. In-Reply-To header → look up thread by message_id in Supabase
+  const inReplyTo = email.headers.get('in-reply-to');
+  if (inReplyTo) {
     try {
-      const parsed = new URL(url);
-      const seg = firstPathSegment(url);
-      key = seg ? `${parsed.origin}/${seg}/` : `${parsed.origin}/`;
-    } catch {
-      key = url;
+      const rows = await supabaseFetch<Array<{ id: string }>>(
+        env.SUPABASE_URL,
+        env.SUPABASE_SERVICE_KEY,
+        `thread?message_id=eq.${encodeURIComponent(inReplyTo)}&select=id&limit=1`,
+      );
+      if (rows && rows.length > 0) {
+        return { agentName: AGENT_NAME, agentId: rows[0].id };
+      }
+    } catch (err) {
+      console.error('Thread lookup failed:', err);
     }
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(url);
   }
 
-  const result: string[] = [];
-  for (const [prefix, groupUrls] of groups) {
-    result.push(groupUrls.length > 1 ? prefix : groupUrls[0]);
-    if (result.length >= MAX_GEMINI_URLS) break;
-  }
-  return result;
+  // 3. New email – generate a fresh UUID for a new thread
+  return { agentName: AGENT_NAME, agentId: crypto.randomUUID() };
 }
 
 // ---------------------------------------------------------------------------
@@ -565,18 +837,33 @@ function deduplicateForGemini(urls: string[]): string[] {
 // ---------------------------------------------------------------------------
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    // Authenticate all incoming requests
-    const secret = request.headers.get('X-Agent-Secret');
-    if (secret !== env.INBOUND_WEBHOOK_SECRET) {
-      return new Response('Unauthorized', { status: 401 });
-    }
+  /**
+   * email – Cloudflare Email Routing entry point.
+   * Receives raw EmailMessage objects directly from Cloudflare Email Routing
+   * and dispatches them to the correct EmailReplyAgent Durable Object.
+   * This replaces the Next.js /api/webhooks/inbound-email route entirely.
+   */
+  async email(message: ForwardableEmailMessage, env: Env): Promise<void> {
+    await routeAgentEmail(message, env, {
+      resolver: (msg, e) => resolveEmailToAgent(msg, e),
+      onNoRoute: (msg) => {
+        console.error('No route found for email:', msg.from, '→', msg.to);
+        msg.setReject('Unable to route email to a support thread');
+      },
+    });
+  },
 
-    // Route request to the correct EmailReplyAgent instance.
-    // Each thread gets its own Durable Object (agent) instance, keyed by thread ID.
+  /**
+   * fetch – HTTP entry point for calls from the Next.js app.
+   * Supports the manual "Generate Reply" action in the dashboard when the
+   * operator wants to regenerate an AI draft for a specific email.
+   * Routes to routeAgentRequest() which forwards to EmailReplyAgent.onRequest().
+   */
+  async fetch(request: Request, env: Env): Promise<Response> {
     return (
       (await routeAgentRequest(request, env)) ??
       new Response('Not Found', { status: 404 })
     );
   },
 };
+
