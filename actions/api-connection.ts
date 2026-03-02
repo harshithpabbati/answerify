@@ -13,6 +13,13 @@ export async function getApiConnections(organizationId: string) {
     .order('created_at', { ascending: true });
 }
 
+// Throws on error – suitable for use as a TanStack Query queryFn.
+export async function fetchApiConnections(organizationId: string) {
+  const { data, error } = await getApiConnections(organizationId);
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function addApiConnection(
   organizationId: string,
   {

@@ -1,16 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   addApiConnection,
   deleteApiConnection,
-  getApiConnections,
+  fetchApiConnections,
 } from '@/actions/api-connection';
 import { Tables } from '@/database.types';
 import { useManageApiConnections } from '@/states/api-connection';
 import { TrashIcon } from '@radix-ui/react-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { apiConnectionsQueryKey } from '@/lib/query-keys';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,6 +39,27 @@ type ExampleTemplate = {
   description: string;
 };
 
+/**
+ * Returns demo templates that point to the built-in /api/demo/* routes.
+ * We derive the origin at call-time so the URL is correct in every environment.
+ */
+function getDemoTemplates(): ExampleTemplate[] {
+  const origin =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000');
+  return [
+    {
+      name: '🎬 Demo API',
+      base_url: `${origin}/api/demo`,
+      api_key: 'demo-key',
+      description:
+        'Built-in demo API with customer data, order history, and billing info. ' +
+        'Supports endpoints: customers, orders, billing.',
+    },
+  ];
+}
+
 function ApiConnectionContent({
   orgId,
   slug,
@@ -44,10 +67,15 @@ function ApiConnectionContent({
   orgId: string;
   slug: string;
 }) {
-  const [connections, setConnections] = useState<Tables<'api_connection'>[]>(
-    []
-  );
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: connections = [], isLoading } = useQuery<
+    Tables<'api_connection'>[]
+  >({
+    queryKey: apiConnectionsQueryKey(orgId),
+    queryFn: () => fetchApiConnections(orgId),
+    enabled: Boolean(orgId),
+  });
+
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState('');
@@ -55,19 +83,14 @@ function ApiConnectionContent({
   const [apiKey, setApiKey] = useState('');
   const [description, setDescription] = useState('');
 
-  const refreshConnections = useCallback(() => {
-    getApiConnections(orgId).then(({ data }) => {
-      setConnections(data ?? []);
-      setLoading(false);
-    });
-  }, [orgId]);
+  const demoTemplates = getDemoTemplates();
 
-  useEffect(() => {
-    getApiConnections(orgId).then(({ data }) => {
-      setConnections(data ?? []);
-      setLoading(false);
-    });
-  }, [orgId]);
+  const applyTemplate = (t: ExampleTemplate) => {
+    setName(t.name);
+    setBaseUrl(t.base_url);
+    setApiKey(t.api_key);
+    setDescription(t.description);
+  };
 
   const handleAdd = async () => {
     if (!name.trim() || !baseUrl.trim() || !apiKey.trim()) return;
@@ -94,7 +117,9 @@ function ApiConnectionContent({
     setApiKey('');
     setDescription('');
     toast.success('API connection added');
-    refreshConnections();
+    await queryClient.invalidateQueries({
+      queryKey: apiConnectionsQueryKey(orgId),
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -106,7 +131,9 @@ function ApiConnectionContent({
       return;
     }
     toast.success('API connection removed');
-    setConnections((prev) => prev.filter((c) => c.id !== id));
+    await queryClient.invalidateQueries({
+      queryKey: apiConnectionsQueryKey(orgId),
+    });
   };
 
   const inputClass =
@@ -115,7 +142,7 @@ function ApiConnectionContent({
   return (
     <div className="space-y-6 p-4">
       {/* Existing connections */}
-      {loading ? (
+      {isLoading ? (
         <p className="font-mono text-sm text-muted-foreground">Loading…</p>
       ) : connections.length === 0 ? (
         <p className="font-mono text-sm text-muted-foreground">
@@ -152,6 +179,28 @@ function ApiConnectionContent({
           ))}
         </ul>
       )}
+
+      {/* Example templates */}
+      <div className="space-y-2 border-t border-border pt-4">
+        <p className="font-mono text-xs font-semibold uppercase tracking-widest text-[#FF4500]">
+          {'// Example templates'}
+        </p>
+        <p className="font-mono text-xs text-muted-foreground">
+          Click a template to pre-fill the form below.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {demoTemplates.map((t) => (
+            <button
+              key={t.name}
+              type="button"
+              onClick={() => applyTemplate(t)}
+              className="border border-[#FF4500]/40 bg-[#FF4500]/5 px-3 py-1 font-mono text-xs font-semibold text-[#FF4500] transition-colors hover:bg-[#FF4500]/15"
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Add new connection form */}
       <div className="space-y-3 border-t border-border pt-4">

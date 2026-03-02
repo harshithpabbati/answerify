@@ -6,6 +6,7 @@ import {
   updateTonePolicy,
 } from '@/actions/organization';
 import { fetchSources } from '@/actions/source';
+import { fetchApiConnections } from '@/actions/api-connection';
 import { Tables } from '@/database.types';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
 import { useManageApiConnections } from '@/states/api-connection';
@@ -23,7 +24,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { sourcesQueryKey } from '@/lib/query-keys';
+import { sourcesQueryKey, apiConnectionsQueryKey } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,7 @@ interface Props {
   autopilotEnabled: boolean;
   autopilotThreshold: number;
   initialTonePolicy: string | null;
+  initialApiConnections: Tables<'api_connection'>[];
 }
 
 function StepBadge({ step, done }: { step: number; done: boolean }) {
@@ -79,6 +81,7 @@ export function WelcomeDashboard({
   autopilotEnabled,
   autopilotThreshold,
   initialTonePolicy,
+  initialApiConnections,
 }: Props) {
   const { copied, copyToClipboard } = useCopyToClipboard();
   const [, setAddDataSource] = useAddDataSource();
@@ -107,6 +110,13 @@ export function WelcomeDashboard({
       );
       return hasProcessing ? 4_000 : false;
     },
+  });
+
+  // Seed the API connections cache with SSR data so the modal shows instantly.
+  useQuery<Tables<'api_connection'>[]>({
+    queryKey: apiConnectionsQueryKey(orgId),
+    queryFn: () => fetchApiConnections(orgId),
+    initialData: initialApiConnections,
   });
 
   const saveAutopilot = async (nextEnabled: boolean, nextThreshold: number) => {
