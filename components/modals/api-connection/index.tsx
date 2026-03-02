@@ -30,6 +30,37 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 
+type ExampleTemplate = {
+  name: string;
+  base_url: string;
+  api_key: string;
+  description: string;
+};
+
+const EXAMPLE_TEMPLATES: ExampleTemplate[] = [
+  {
+    name: 'Stripe',
+    base_url: 'https://api.stripe.com/v1',
+    api_key: 'sk_test_••••••••••••••••••••••••',
+    description:
+      'Fetch customer invoices, subscriptions, and billing usage from Stripe.',
+  },
+  {
+    name: 'Shopify',
+    base_url: 'https://your-store.myshopify.com/admin/api/2024-01',
+    api_key: 'shpat_••••••••••••••••••••••••',
+    description:
+      'Retrieve customer orders, shipping status, and refund details from Shopify.',
+  },
+  {
+    name: 'Intercom',
+    base_url: 'https://api.intercom.io',
+    api_key: 'dG9rOi••••••••••••••••••••••••',
+    description:
+      'Look up contact data, conversation history, and support tier from Intercom.',
+  },
+];
+
 function ApiConnectionContent({
   orgId,
   slug,
@@ -37,9 +68,9 @@ function ApiConnectionContent({
   orgId: string;
   slug: string;
 }) {
-  const [connections, setConnections] = useState<
-    Tables<'api_connection'>[]
-  >([]);
+  const [connections, setConnections] = useState<Tables<'api_connection'>[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -61,6 +92,13 @@ function ApiConnectionContent({
       setLoading(false);
     });
   }, [orgId]);
+
+  const applyTemplate = (t: ExampleTemplate) => {
+    setName(t.name);
+    setBaseUrl(t.base_url);
+    setApiKey(t.api_key);
+    setDescription(t.description);
+  };
 
   const handleAdd = async () => {
     if (!name.trim() || !baseUrl.trim() || !apiKey.trim()) return;
@@ -145,6 +183,28 @@ function ApiConnectionContent({
           ))}
         </ul>
       )}
+
+      {/* Example templates */}
+      <div className="space-y-2 border-t border-border pt-4">
+        <p className="font-mono text-xs font-semibold uppercase tracking-widest text-[#FF4500]">
+          {'// Example templates'}
+        </p>
+        <p className="font-mono text-xs text-muted-foreground">
+          Click a template to pre-fill the form below.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {EXAMPLE_TEMPLATES.map((t) => (
+            <button
+              key={t.name}
+              type="button"
+              onClick={() => applyTemplate(t)}
+              className="border border-[#FF4500]/40 bg-[#FF4500]/5 px-3 py-1 font-mono text-xs font-semibold text-[#FF4500] transition-colors hover:bg-[#FF4500]/15"
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Add new connection form */}
       <div className="space-y-3 border-t border-border pt-4">
