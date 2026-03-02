@@ -1,13 +1,22 @@
 'use server';
 
+import { cache } from 'react';
+import { revalidatePath } from 'next/cache';
+
 import { createServerClient } from '@/lib/supabase/server';
 
-export async function getSources(id: string) {
+// Cached so the layout/page and any other server component requesting the same
+// org's sources within one render share a single Supabase round-trip.
+const getSourcesCached = cache(async (id: string) => {
   const supabase = await createServerClient();
   return await supabase
     .from('datasource')
     .select()
     .match({ organization_id: id });
+});
+
+export async function getSources(id: string) {
+  return getSourcesCached(id);
 }
 
 export async function setupSources(slug: string, sources: { url: string }[]) {
@@ -19,7 +28,7 @@ export async function setupSources(slug: string, sources: { url: string }[]) {
     .single();
   if (error || !data?.id) return { data: null, error };
 
-  return await supabase
+  const result = await supabase
     .from('datasource')
     .insert(
       sources
@@ -31,4 +40,10 @@ export async function setupSources(slug: string, sources: { url: string }[]) {
         }))
     )
     .select();
+
+  if (!result.error) {
+    revalidatePath(`/org/${slug}`);
+  }
+
+  return result;
 }

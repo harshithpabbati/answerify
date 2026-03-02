@@ -1,5 +1,7 @@
 'use server';
 
+import { cache } from 'react';
+
 import { Resend } from 'resend';
 
 import { cleanBody } from '@/lib/cleanBody';
@@ -31,7 +33,8 @@ export async function getThreads(orgId: string, status: 'open' | 'closed') {
   return { data, error };
 }
 
-export async function getThread(id: string) {
+// Cached so generateMetadata and the page component share one DB round-trip.
+const getThreadCached = cache(async (id: string) => {
   const supabase = await createServerClient();
   const { data, error } = await supabase
     .from('thread')
@@ -39,6 +42,10 @@ export async function getThread(id: string) {
     .match({ id })
     .single();
   return { data, error };
+});
+
+export async function getThread(id: string) {
+  return getThreadCached(id);
 }
 
 export async function getEmails(threadId: string) {

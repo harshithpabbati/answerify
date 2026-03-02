@@ -1,13 +1,21 @@
 'use server';
 
+import { cache } from 'react';
+
 import { UserAttributes } from '@supabase/supabase-js';
 
 import { getGravatar } from '@/lib/gravatar';
 import { createServerClient } from '@/lib/supabase/server';
 
-export async function getUser() {
+// Cached so multiple server components in the same render (e.g. Header and
+// Sidebar) share a single Supabase auth round-trip.
+const getUserCached = cache(async () => {
   const supabase = await createServerClient();
   return await supabase.auth.getUser();
+});
+
+export async function getUser() {
+  return getUserCached();
 }
 
 export async function signInWithPassword({
