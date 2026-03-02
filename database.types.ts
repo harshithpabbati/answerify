@@ -16,7 +16,6 @@ export type Database = {
     Tables: {
       datasource: {
         Row: {
-          content: string | null
           created_at: string
           id: string
           is_internal_kb: boolean | null
@@ -25,7 +24,6 @@ export type Database = {
           url: string
         }
         Insert: {
-          content?: string | null
           created_at?: string
           id?: string
           is_internal_kb?: boolean | null
@@ -34,7 +32,6 @@ export type Database = {
           url: string
         }
         Update: {
-          content?: string | null
           created_at?: string
           id?: string
           is_internal_kb?: boolean | null
@@ -237,51 +234,6 @@ export type Database = {
           },
         ]
       }
-      reply_edit: {
-        Row: {
-          created_at: string
-          final_content: string
-          id: string
-          learned: boolean
-          organization_id: string
-          original_content: string
-          reply_id: string
-        }
-        Insert: {
-          created_at?: string
-          final_content: string
-          id?: string
-          learned?: boolean
-          organization_id: string
-          original_content: string
-          reply_id: string
-        }
-        Update: {
-          created_at?: string
-          final_content?: string
-          id?: string
-          learned?: boolean
-          organization_id?: string
-          original_content?: string
-          reply_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "public_reply_edit_reply_id_fkey"
-            columns: ["reply_id"]
-            isOneToOne: false
-            referencedRelation: "reply"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "public_reply_edit_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organization"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       section: {
         Row: {
           content: string
@@ -390,15 +342,15 @@ export type Database = {
       match_sections: {
         Args: {
           embedding: string
-          match_threshold: number
-          organization_id: string
           match_count?: number
+          match_threshold: number
+          p_organization_id: string
         }
         Returns: {
-          id: string
-          datasource_id: string
-          organization_id: string
           content: string
+          datasource_id: string
+          id: string
+          organization_id: string
           similarity: number
         }[]
       }
