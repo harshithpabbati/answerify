@@ -21,6 +21,7 @@ export type Database = {
           id: string
           is_internal_kb: boolean | null
           organization_id: string
+          status: string
           url: string
         }
         Insert: {
@@ -29,6 +30,7 @@ export type Database = {
           id?: string
           is_internal_kb?: boolean | null
           organization_id?: string
+          status?: string
           url: string
         }
         Update: {
@@ -37,6 +39,7 @@ export type Database = {
           id?: string
           is_internal_kb?: boolean | null
           organization_id?: string
+          status?: string
           url?: string
         }
         Relationships: [

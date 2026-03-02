@@ -2,6 +2,7 @@ import React from 'react';
 import { getUser } from '@/actions/auth';
 
 import { JotaiProvider } from '@/components/providers/JotaiProvider';
+import { QueryProvider } from '@/components/providers/QueryProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 export async function Providers({ children }: React.PropsWithChildren<{}>) {
@@ -10,7 +11,9 @@ export async function Providers({ children }: React.PropsWithChildren<{}>) {
   } = await getUser();
   return (
     <ThemeProvider>
-      <JotaiProvider>{children}</JotaiProvider>
+      <QueryProvider>
+        <JotaiProvider>{children}</JotaiProvider>
+      </QueryProvider>
     </ThemeProvider>
   );
 }

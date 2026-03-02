@@ -1,14 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { fetchSources } from '@/actions/source';
 import { updateAutopilotSettings, updateTonePolicy } from '@/actions/organization';
 import { Tables } from '@/database.types';
+import { sourcesQueryKey } from '@/lib/query-keys';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
 import {
   useInviteMembers,
   useTestSandbox,
   useUpdateOrganization,
 } from '@/states/organization';
+import { useQuery } from '@tanstack/react-query';
 import {
   CheckIcon,
   ClipboardCopyIcon,
@@ -27,6 +30,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { EmbeddingStatusBadge } from '@/components/ui/EmbeddingStatusBadge';
 
 import { Slider } from '../ui/slider';
 
@@ -63,7 +67,7 @@ export function WelcomeDashboard({
   orgName,
   slug,
   inboundEmail,
-  sources,
+  sources: initialSources,
   threadsCount,
   repliesCount,
   autopilotEnabled,
@@ -83,6 +87,20 @@ export function WelcomeDashboard({
 
   const [tonePolicy, setTonePolicy] = useState(initialTonePolicy ?? '');
   const [savingTone, setSavingTone] = useState(false);
+
+  // TanStack Query – seeded with server-fetched data, polls while sources are indexing
+  const { data: sources = initialSources } = useQuery<Tables<'datasource'>[]>({
+    queryKey: sourcesQueryKey(orgId),
+    queryFn: () => fetchSources(orgId),
+    initialData: initialSources,
+    refetchInterval: (query) => {
+      const list = (query.state.data ?? []) as Tables<'datasource'>[];
+      const hasProcessing = list.some(
+        (s) => s.status === 'pending' || s.status === 'processing'
+      );
+      return hasProcessing ? 4_000 : false;
+    },
+  });
 
   const saveAutopilot = async (nextEnabled: boolean, nextThreshold: number) => {
     setSaving(true);
@@ -275,11 +293,19 @@ export function WelcomeDashboard({
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`Open data source: ${source.url}`}
-                      className="flex items-center gap-2 border border-[#FF4500]/20 bg-muted px-3 py-2 text-sm font-mono font-medium text-foreground transition-all hover:border-[#FF4500]/60"
+                      className={cn(
+                        'flex items-center gap-2 border bg-muted px-3 py-2 text-sm font-mono font-medium text-foreground transition-all',
+                        source.status === 'ready'
+                          ? 'border-[#FF4500]/20 hover:border-[#FF4500]/60'
+                          : source.status === 'error'
+                            ? 'border-red-500/30 hover:border-red-500/60'
+                            : 'border-amber-500/30 hover:border-amber-500/60'
+                      )}
                     >
                       <Link2Icon className="size-3.5 shrink-0" />
                       <span className="truncate">{source.url}</span>
-                      <ExternalLinkIcon className="ml-auto size-3.5 shrink-0 opacity-50" />
+                      <EmbeddingStatusBadge status={source.status} />
+                      <ExternalLinkIcon className="size-3.5 shrink-0 opacity-50" />
                     </a>
                   </li>
                 ))}
@@ -298,7 +324,7 @@ export function WelcomeDashboard({
             <Button
               variant="default"
               className="w-full"
-              onClick={() => setAddDataSource(slug)}
+              onClick={() => setAddDataSource({ slug, orgId })}
             >
               + Add Data Source
             </Button>

@@ -50,16 +50,24 @@ function TabBar({ active, onChange }: { active: Tab; onChange(t: Tab): void }) {
   );
 }
 
-function DataSourceContent({ slug, onAdd }: { slug: string; onAdd(): void }) {
+function DataSourceContent({
+  slug,
+  orgId,
+  onAdd,
+}: {
+  slug: string;
+  orgId: string;
+  onAdd(): void;
+}) {
   const [tab, setTab] = useState<Tab>('manual');
 
   return (
     <div className="space-y-4 overflow-auto">
       <TabBar active={tab} onChange={setTab} />
       {tab === 'manual' ? (
-        <AddDataSourceForm slug={slug} onAdd={onAdd} />
+        <AddDataSourceForm slug={slug} orgId={orgId} onAdd={onAdd} />
       ) : (
-        <DomainImportForm slug={slug} onAdd={onAdd} />
+        <DomainImportForm slug={slug} orgId={orgId} onAdd={onAdd} />
       )}
     </div>
   );
@@ -68,7 +76,17 @@ function DataSourceContent({ slug, onAdd }: { slug: string; onAdd(): void }) {
 export function AddDataSource() {
   const isMobile = useIsMobile();
   const router = useRouter();
-  const [slug, setOpen] = useAddDataSource();
+  const [state, setOpen] = useAddDataSource();
+
+  const slug = state ? state.slug : '';
+  const orgId = state ? state.orgId : '';
+
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) setOpen(false);
+    },
+    [setOpen]
+  );
 
   const handleOnAdd = useCallback(() => {
     setOpen(false);
@@ -80,7 +98,7 @@ export function AddDataSource() {
 
   if (isMobile) {
     return (
-      <Drawer open={Boolean(slug)} onOpenChange={setOpen}>
+      <Drawer open={Boolean(state)} onOpenChange={handleOpenChange}>
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>Add data-source to your organization</DrawerTitle>
@@ -89,7 +107,11 @@ export function AddDataSource() {
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-4">
-            <DataSourceContent slug={slug as string} onAdd={handleOnAdd} />
+            <DataSourceContent
+              slug={slug}
+              orgId={orgId}
+              onAdd={handleOnAdd}
+            />
           </div>
         </DrawerContent>
         <DrawerFooter>
@@ -100,7 +122,7 @@ export function AddDataSource() {
   }
 
   return (
-    <Dialog open={Boolean(slug)} onOpenChange={setOpen}>
+    <Dialog open={Boolean(state)} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add data-source to your organization</DialogTitle>
@@ -108,7 +130,7 @@ export function AddDataSource() {
             Add your links to the docs, blogs & other help center docs
           </DialogDescription>
         </DialogHeader>
-        <DataSourceContent slug={slug as string} onAdd={handleOnAdd} />
+        <DataSourceContent slug={slug} orgId={orgId} onAdd={handleOnAdd} />
       </DialogContent>
     </Dialog>
   );

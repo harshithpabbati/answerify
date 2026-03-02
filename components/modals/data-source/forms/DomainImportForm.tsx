@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { setupSources } from '@/actions/source';
+import { sourcesQueryKey } from '@/lib/query-keys';
+import { useQueryClient } from '@tanstack/react-query';
 import { ChevronDownIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -22,9 +24,11 @@ interface DiscoverResult {
 interface Props {
   slug: string;
   onAdd?(): void;
+  /** org ID – used to invalidate the TanStack Query sources cache */
+  orgId?: string;
 }
 
-export function DomainImportForm({ slug, onAdd }: Props) {
+export function DomainImportForm({ slug, onAdd, orgId }: Props) {
   const [domain, setDomain] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,6 +36,7 @@ export function DomainImportForm({ slug, onAdd }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   // Show individual pages when available, fall back to the sitemap files themselves
   const isFallbackMode = result !== null && result.pages.length === 0;
@@ -137,6 +142,9 @@ export function DomainImportForm({ slug, onAdd }: Props) {
     if (error) {
       setError(error.message);
       return;
+    }
+    if (orgId) {
+      await queryClient.invalidateQueries({ queryKey: sourcesQueryKey(orgId) });
     }
     onAdd?.();
   };

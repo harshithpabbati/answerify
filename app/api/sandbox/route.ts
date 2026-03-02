@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       findings = await runResearchAgent(subject, question, sectionContext);
     } else {
       const datasourceContent = datasources
-        .map((d) => d.content)
+        .map((d: { content: string | null }) => d.content)
         .filter(Boolean)
         .join('\n\n---\n\n');
       if (datasourceContent) {

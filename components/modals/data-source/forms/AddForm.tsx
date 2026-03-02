@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { setupSources } from '@/actions/source';
+import { sourcesQueryKey } from '@/lib/query-keys';
+import { useQueryClient } from '@tanstack/react-query';
 import { PlusIcon } from '@radix-ui/react-icons';
 import { useFieldArray, useForm } from 'react-hook-form';
 
@@ -22,10 +24,13 @@ import { Input } from '@/components/ui/input';
 interface Props {
   slug: string;
   onAdd?(): void;
+  /** org ID – used to invalidate the TanStack Query sources cache */
+  orgId?: string;
 }
 
-export function AddDataSourceForm({ slug, onAdd }: Props) {
+export function AddDataSourceForm({ slug, onAdd, orgId }: Props) {
   const [error, setError] = useState('');
+  const queryClient = useQueryClient();
   const form = useForm<DataSourcesSchema>({
     resolver,
     defaultValues: {
@@ -44,6 +49,9 @@ export function AddDataSourceForm({ slug, onAdd }: Props) {
       console.error(error);
       setError(error.message);
       return;
+    }
+    if (orgId) {
+      await queryClient.invalidateQueries({ queryKey: sourcesQueryKey(orgId) });
     }
     onAdd?.();
   };

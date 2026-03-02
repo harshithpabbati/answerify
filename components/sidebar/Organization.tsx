@@ -108,7 +108,7 @@ export function Organization({ id, name, slug }: Tables<'organization'>) {
                 <FileIcon />
               </ContextMenuShortcut>
             </ContextMenuItem>
-            <ContextMenuItem onSelect={() => setAddDataSource(slug)}>
+            <ContextMenuItem onSelect={() => setAddDataSource({ slug, orgId: id })}>
               Add new sources
               <ContextMenuShortcut>
                 <FilePlusIcon />
