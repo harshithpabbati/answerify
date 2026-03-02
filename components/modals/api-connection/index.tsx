@@ -37,29 +37,24 @@ type ExampleTemplate = {
   description: string;
 };
 
-const EXAMPLE_TEMPLATES: ExampleTemplate[] = [
-  {
-    name: 'Stripe',
-    base_url: 'https://api.stripe.com/v1',
-    api_key: 'sk_test_••••••••••••••••••••••••',
-    description:
-      'Fetch customer invoices, subscriptions, and billing usage from Stripe.',
-  },
-  {
-    name: 'Shopify',
-    base_url: 'https://your-store.myshopify.com/admin/api/2024-01',
-    api_key: 'shpat_••••••••••••••••••••••••',
-    description:
-      'Retrieve customer orders, shipping status, and refund details from Shopify.',
-  },
-  {
-    name: 'Intercom',
-    base_url: 'https://api.intercom.io',
-    api_key: 'dG9rOi••••••••••••••••••••••••',
-    description:
-      'Look up contact data, conversation history, and support tier from Intercom.',
-  },
-];
+/**
+ * Returns demo templates that point to the built-in /api/demo/* routes.
+ * We derive the origin at call-time so the URL is correct in every environment.
+ */
+function getDemoTemplates(): ExampleTemplate[] {
+  const origin =
+    typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+  return [
+    {
+      name: '🎬 Demo API',
+      base_url: `${origin}/api/demo`,
+      api_key: 'demo-key',
+      description:
+        'Built-in demo API with customer data, order history, and billing info. ' +
+        'Supports endpoints: customers, orders, billing.',
+    },
+  ];
+}
 
 function ApiConnectionContent({
   orgId,
@@ -92,6 +87,8 @@ function ApiConnectionContent({
       setLoading(false);
     });
   }, [orgId]);
+
+  const demoTemplates = getDemoTemplates();
 
   const applyTemplate = (t: ExampleTemplate) => {
     setName(t.name);
@@ -193,7 +190,7 @@ function ApiConnectionContent({
           Click a template to pre-fill the form below.
         </p>
         <div className="flex flex-wrap gap-2">
-          {EXAMPLE_TEMPLATES.map((t) => (
+          {demoTemplates.map((t) => (
             <button
               key={t.name}
               type="button"
