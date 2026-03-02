@@ -39,6 +39,7 @@ interface Props {
   orgName: string;
   slug: string;
   inboundEmail: string;
+  supportEmail: string;
   sources: Tables<'datasource'>[];
   threadsCount: number;
   repliesCount: number;
@@ -67,6 +68,7 @@ export function WelcomeDashboard({
   orgName,
   slug,
   inboundEmail,
+  supportEmail,
   sources: initialSources,
   threadsCount,
   repliesCount,
@@ -458,7 +460,13 @@ export function WelcomeDashboard({
                 </Button>
                 <Button
                   variant="default"
-                  onClick={() => setUpdateOrganization(orgId)}
+                  onClick={() =>
+                    setUpdateOrganization({
+                      id: orgId,
+                      name: orgName,
+                      support_email: supportEmail,
+                    })
+                  }
                 >
                   Settings
                 </Button>

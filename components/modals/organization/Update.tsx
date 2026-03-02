@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useUpdateOrganization } from '@/states/organization';
 
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -22,11 +23,18 @@ import { UpdateOrganizationForm } from './forms/UpdateForm';
 
 export function UpdateOrganization() {
   const isMobile = useIsMobile();
-  const [open, setOpen] = useUpdateOrganization();
+  const [org, setOrg] = useUpdateOrganization();
+
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) setOrg(false);
+    },
+    [setOrg]
+  );
 
   if (isMobile) {
     return (
-      <Drawer open={Boolean(open)} onOpenChange={setOpen}>
+      <Drawer open={Boolean(org)} onOpenChange={handleOpenChange}>
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>Update your organization</DrawerTitle>
@@ -44,7 +52,7 @@ export function UpdateOrganization() {
   }
 
   return (
-    <Dialog open={Boolean(open)} onOpenChange={setOpen}>
+    <Dialog open={Boolean(org)} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Update your organization</DialogTitle>
