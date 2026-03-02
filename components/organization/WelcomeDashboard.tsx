@@ -8,6 +8,7 @@ import {
 import { fetchSources } from '@/actions/source';
 import { Tables } from '@/database.types';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
+import { useManageApiConnections } from '@/states/api-connection';
 import {
   useInviteMembers,
   useTestSandbox,
@@ -85,6 +86,7 @@ export function WelcomeDashboard({
   const [, setInviteMembers] = useInviteMembers();
   const [, setUpdateOrganization] = useUpdateOrganization();
   const [, setTestSandbox] = useTestSandbox();
+  const [, setManageApiConnections] = useManageApiConnections();
 
   const [enabled, setEnabled] = useState(autopilotEnabled);
   const [threshold, setThreshold] = useState(autopilotThreshold);
@@ -441,6 +443,13 @@ export function WelcomeDashboard({
                   }
                 >
                   Settings
+                </Button>
+                <Button
+                  variant="neutral"
+                  className="col-span-3"
+                  onClick={() => setManageApiConnections({ orgId, slug })}
+                >
+                  🔌 API Connections
                 </Button>
               </div>
             </CardContent>
