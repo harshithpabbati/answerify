@@ -33,10 +33,7 @@ export async function POST(request: Request) {
 
   // Fetch datasources and org tone_policy
   const [{ data: datasources }, { data: org }] = await Promise.all([
-    supabase
-      .from('datasource')
-      .select('id, url, content')
-      .eq('organization_id', orgId),
+    supabase.from('datasource').select('id, url').eq('organization_id', orgId),
     supabase
       .from('organization')
       .select('tone_policy')
@@ -62,7 +59,7 @@ export async function POST(request: Request) {
       const { data: sections } = await supabase.rpc('match_sections', {
         embedding: serializeEmbedding(questionEmbedding),
         match_threshold: 0.4,
-        organization_id: orgId,
+        p_organization_id: orgId,
         match_count: 5,
       });
 
@@ -80,14 +77,6 @@ export async function POST(request: Request) {
         .map((s) => s.content)
         .join('\n\n---\n\n');
       findings = await runResearchAgent(subject, question, sectionContext);
-    } else {
-      const datasourceContent = datasources
-        .map((d: { content: string | null }) => d.content)
-        .filter(Boolean)
-        .join('\n\n---\n\n');
-      if (datasourceContent) {
-        findings = await runResearchAgent(subject, question, datasourceContent);
-      }
     }
   }
 
@@ -100,7 +89,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const rawContent = await runWritingAgent(subject, question, findings, tonePolicy);
+  const rawContent = await runWritingAgent(
+    subject,
+    question,
+    findings,
+    tonePolicy
+  );
 
   if (!rawContent || rawContent.trim() === 'NO_INFORMATION') {
     return new Response(

@@ -21,5 +21,5 @@ export const createServerClient = async () => {
         },
       },
     }
-  ) as any;
+  );
 };
