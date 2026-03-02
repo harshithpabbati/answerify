@@ -9,20 +9,6 @@ import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
 import { createServiceClient } from '@/lib/supabase/service';
 
 /**
- * Minimum average similarity from vector search that allows the system to
- * use pre-embedded sections as the sole context.  Below this threshold the
- * Research Agent falls back to stored datasource content for a (potentially)
- * higher-quality but more token-expensive retrieval.
- */
-const VECTOR_CONFIDENCE_THRESHOLD = 0.65;
-
-/**
- * Minimum number of high-quality vector matches required before the system
- * trusts sections alone (without URL context fallback).
- */
-const MIN_VECTOR_MATCHES = 2;
-
-/**
  * Derive a 0–1 confidence score from vector similarity results.
  */
 function computeVectorConfidence(similarities: number[]): number {
@@ -76,9 +62,9 @@ async function retrieveSections(
 
   const { data, error } = await supabase.rpc('match_sections', {
     embedding: serializeEmbedding(questionEmbedding),
-    match_threshold: 0.4,
+    match_threshold: 0.1,
     p_organization_id: organizationId,
-    match_count: 5,
+    match_count: 10,
   });
 
   if (error) {
@@ -309,15 +295,8 @@ export async function POST(request: Request) {
   let confidence: number = URL_CONTEXT_FALLBACK_CONFIDENCE;
   let citations: string[] = [];
 
-  const highQualityMatches = matchedSections.filter(
-    (s) => s.similarity >= VECTOR_CONFIDENCE_THRESHOLD
-  );
-
-  if (highQualityMatches.length >= MIN_VECTOR_MATCHES) {
-    // --- Agent 1a: Research (vector context) ---
-    // Enough high-quality section matches – use them directly as context.
-    // This skips URL fetching entirely and dramatically reduces token usage.
-    const sectionContext = highQualityMatches
+  if (matchedSections.length > 0) {
+    const sectionContext = matchedSections
       .map((s) => s.content)
       .join('\n\n---\n\n');
 
@@ -328,12 +307,11 @@ export async function POST(request: Request) {
     );
 
     confidence = computeVectorConfidence(
-      highQualityMatches.map((s) => s.similarity)
+      matchedSections.map((s) => s.similarity)
     );
 
-    // Build citations from matched datasources
     const matchedDatasourceIds = [
-      ...new Set(highQualityMatches.map((s) => s.datasource_id)),
+      ...new Set(matchedSections.map((s) => s.datasource_id)),
     ];
     citations = datasources
       .filter((d) => matchedDatasourceIds.includes(d.id))

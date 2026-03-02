@@ -5,9 +5,6 @@ import { textModel } from '@/lib/ai';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
 import { createServerClient } from '@/lib/supabase/server';
 
-const VECTOR_CONFIDENCE_THRESHOLD = 0.65;
-const MIN_VECTOR_MATCHES = 2;
-
 /**
  * POST /api/sandbox
  *
@@ -49,33 +46,21 @@ export async function POST(request: Request) {
 
   if (datasources && datasources.length > 0) {
     const questionEmbedding = await generateEmbedding(questionText);
-    let highQualityMatches: Array<{
+    const { data: sections } = await supabase.rpc('match_sections', {
+      embedding: serializeEmbedding(questionEmbedding),
+      match_threshold: 0.1,
+      p_organization_id: orgId,
+      match_count: 10,
+    });
+
+    const matches = (sections ?? []) as Array<{
       content: string;
       datasource_id: string;
       similarity: number;
-    }> = [];
+    }>;
 
-    if (questionEmbedding.length > 0) {
-      const { data: sections } = await supabase.rpc('match_sections', {
-        embedding: serializeEmbedding(questionEmbedding),
-        match_threshold: 0.4,
-        p_organization_id: orgId,
-        match_count: 5,
-      });
-
-      highQualityMatches = (
-        (sections ?? []) as Array<{
-          content: string;
-          datasource_id: string;
-          similarity: number;
-        }>
-      ).filter((s) => s.similarity >= VECTOR_CONFIDENCE_THRESHOLD);
-    }
-
-    if (highQualityMatches.length >= MIN_VECTOR_MATCHES) {
-      const sectionContext = highQualityMatches
-        .map((s) => s.content)
-        .join('\n\n---\n\n');
+    if (matches.length > 0) {
+      const sectionContext = matches.map((s) => s.content).join('\n\n---\n\n');
       findings = await runResearchAgent(subject, question, sectionContext);
     }
   }
