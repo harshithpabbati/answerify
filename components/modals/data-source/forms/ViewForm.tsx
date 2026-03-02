@@ -1,26 +1,30 @@
-import { useEffect, useState } from 'react';
-import { getSources } from '@/actions/source';
-import { Tables } from '@/database.types';
+import { fetchSources } from '@/actions/source';
+import { useQuery } from '@tanstack/react-query';
 import { Link2Icon } from '@radix-ui/react-icons';
+
+import { cn } from '@/lib/utils';
+import { sourcesQueryKey } from '@/lib/query-keys';
+import { Tables } from '@/database.types';
+import { EmbeddingStatusBadge } from '@/components/ui/EmbeddingStatusBadge';
 
 interface Props {
   orgId: string;
 }
 
 export function ViewDataSourcesForm({ orgId }: Props) {
-  const [data, setData] = useState<Tables<'datasource'>[]>([]);
-
-  useEffect(() => {
-    if (!orgId) return;
-
-    const fetchSources = async () => {
-      const { data, error } = await getSources(orgId);
-      if (error) return;
-      setData(data);
-    };
-
-    fetchSources();
-  }, [orgId]);
+  const { data = [] } = useQuery<Tables<'datasource'>[]>({
+    queryKey: sourcesQueryKey(orgId),
+    queryFn: () => fetchSources(orgId),
+    enabled: Boolean(orgId),
+    // Keep polling while any source is still being indexed
+    refetchInterval: (query) => {
+      const sources = (query.state.data ?? []) as Tables<'datasource'>[];
+      const hasProcessing = sources.some(
+        (s) => s.status === 'pending' || s.status === 'processing'
+      );
+      return hasProcessing ? 4_000 : false;
+    },
+  });
 
   if (data.length === 0) {
     return (
@@ -39,10 +43,18 @@ export function ViewDataSourcesForm({ orgId }: Props) {
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Open data source: ${source.url}`}
-            className="flex items-center gap-2 border border-[#FF4500]/20 bg-muted px-3 py-2 text-sm font-mono font-medium text-foreground transition-all hover:border-[#FF4500]/60"
+            className={cn(
+              'flex items-center gap-2 border bg-muted px-3 py-2 text-sm font-mono font-medium text-foreground transition-all',
+              source.status === 'ready'
+                ? 'border-[#FF4500]/20 hover:border-[#FF4500]/60'
+                : source.status === 'error'
+                  ? 'border-red-500/30 hover:border-red-500/60'
+                  : 'border-amber-500/30 hover:border-amber-500/60'
+            )}
           >
             <Link2Icon className="size-3.5 shrink-0" />
             <span className="truncate">{source.url}</span>
+            <EmbeddingStatusBadge status={source.status} />
           </a>
         </li>
       ))}

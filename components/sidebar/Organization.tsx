@@ -33,7 +33,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 
-export function Organization({ id, name, slug }: Tables<'organization'>) {
+export function Organization({ id, name, slug, support_email }: Tables<'organization'>) {
   const router = useRouter();
   const params = useParams();
   const [, setUpdateOrganization] = useUpdateOrganization();
@@ -76,7 +76,7 @@ export function Organization({ id, name, slug }: Tables<'organization'>) {
           </div>
         </ContextMenuLabel>
         <ContextMenuSeparator />
-        <ContextMenuItem onSelect={() => setUpdateOrganization(id)}>
+        <ContextMenuItem onSelect={() => setUpdateOrganization({ id, name, support_email })}>
           Edit
           <ContextMenuShortcut>
             <Pencil1Icon />
@@ -108,7 +108,7 @@ export function Organization({ id, name, slug }: Tables<'organization'>) {
                 <FileIcon />
               </ContextMenuShortcut>
             </ContextMenuItem>
-            <ContextMenuItem onSelect={() => setAddDataSource(slug)}>
+            <ContextMenuItem onSelect={() => setAddDataSource({ slug, orgId: id })}>
               Add new sources
               <ContextMenuShortcut>
                 <FilePlusIcon />

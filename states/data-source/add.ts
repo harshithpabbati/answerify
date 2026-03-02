@@ -1,5 +1,7 @@
 import { atom, useAtom } from 'jotai';
 
-const addDataSourceState = atom<string | boolean>(false);
+export type AddDataSourceState = { slug: string; orgId: string } | false;
+
+const addDataSourceState = atom<AddDataSourceState>(false);
 
 export const useAddDataSource = () => useAtom(addDataSourceState);

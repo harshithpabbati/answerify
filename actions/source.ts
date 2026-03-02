@@ -19,6 +19,13 @@ export async function getSources(id: string) {
   return getSourcesCached(id);
 }
 
+// Throws on error – suitable for use as a TanStack Query queryFn.
+export async function fetchSources(id: string) {
+  const { data, error } = await getSourcesCached(id);
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function setupSources(slug: string, sources: { url: string }[]) {
   const supabase = await createServerClient();
   const { data, error } = await supabase

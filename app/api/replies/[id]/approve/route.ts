@@ -43,16 +43,6 @@ export async function POST(request: Request, { params }: Params) {
   // Store edit log and feed the approved content back into the knowledge base
   // so future vector searches can retrieve it.
   try {
-    // Record the edit when the human changed the AI draft
-    if (!isPerfect) {
-      await supabase.from('reply_edit').insert({
-        reply_id: id,
-        organization_id: reply.organization_id,
-        original_content: reply.content,
-        final_content: content,
-      } as never);
-    }
-
     // Find or create an internal knowledge-base datasource for this org
     let { data: kbSource } = await supabase
       .from('datasource')
@@ -79,7 +69,7 @@ export async function POST(request: Request, { params }: Params) {
       const { sections } = processMarkdown(content);
       if (sections.length > 0) {
         const embeddings = await generateEmbeddings(
-          sections.map((s) => s.content),
+          sections.map((s) => s.content)
         );
 
         const sectionRows = sections.map((s, i) => ({

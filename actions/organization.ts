@@ -16,7 +16,7 @@ const getOrganizationBySlugCached = cache(async (slug: string) => {
   const { data, error } = await supabase
     .from('organization')
     .select(
-      'id, name, onboarding, inbound_email, autopilot_enabled, autopilot_threshold'
+      'id, name, onboarding, inbound_email, support_email, autopilot_enabled, autopilot_threshold, tone_policy'
     )
     .match({ slug })
     .single();
@@ -63,6 +63,18 @@ export async function updateAutopilotSettings(
     .eq('id', id)
     .select('autopilot_enabled, autopilot_threshold')
     .single();
+  return { data, error };
+}
+
+export async function updateTonePolicy(id: string, tone_policy: string | null) {
+  const supabase = await createServerClient();
+  const { data, error } = await supabase
+    .from('organization')
+    .update({ tone_policy })
+    .eq('id', id)
+    .select('id, tone_policy')
+    .single();
+  revalidatePath(`/org`);
   return { data, error };
 }
 

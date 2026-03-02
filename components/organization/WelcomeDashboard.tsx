@@ -1,18 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import { updateAutopilotSettings } from '@/actions/organization';
+import {
+  updateAutopilotSettings,
+  updateTonePolicy,
+} from '@/actions/organization';
+import { fetchSources } from '@/actions/source';
 import { Tables } from '@/database.types';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
-import { useInviteMembers, useUpdateOrganization } from '@/states/organization';
+import {
+  useInviteMembers,
+  useTestSandbox,
+  useUpdateOrganization,
+} from '@/states/organization';
 import {
   CheckIcon,
   ClipboardCopyIcon,
   ExternalLinkIcon,
   Link2Icon,
 } from '@radix-ui/react-icons';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { sourcesQueryKey } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { Button } from '@/components/ui/button';
@@ -23,6 +33,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { EmbeddingStatusBadge } from '@/components/ui/EmbeddingStatusBadge';
 
 import { Slider } from '../ui/slider';
 
@@ -31,11 +42,13 @@ interface Props {
   orgName: string;
   slug: string;
   inboundEmail: string;
+  supportEmail: string;
   sources: Tables<'datasource'>[];
   threadsCount: number;
   repliesCount: number;
   autopilotEnabled: boolean;
   autopilotThreshold: number;
+  initialTonePolicy: string | null;
 }
 
 function StepBadge({ step, done }: { step: number; done: boolean }) {
@@ -58,21 +71,41 @@ export function WelcomeDashboard({
   orgName,
   slug,
   inboundEmail,
-  sources,
+  supportEmail,
+  sources: initialSources,
   threadsCount,
   repliesCount,
   autopilotEnabled,
   autopilotThreshold,
+  initialTonePolicy,
 }: Props) {
   const { copied, copyToClipboard } = useCopyToClipboard();
   const [, setAddDataSource] = useAddDataSource();
   const [, setViewDataSource] = useViewDataSource();
   const [, setInviteMembers] = useInviteMembers();
   const [, setUpdateOrganization] = useUpdateOrganization();
+  const [, setTestSandbox] = useTestSandbox();
 
   const [enabled, setEnabled] = useState(autopilotEnabled);
   const [threshold, setThreshold] = useState(autopilotThreshold);
   const [saving, setSaving] = useState(false);
+
+  const [tonePolicy, setTonePolicy] = useState(initialTonePolicy ?? '');
+  const [savingTone, setSavingTone] = useState(false);
+
+  // TanStack Query – seeded with server-fetched data, polls while sources are indexing
+  const { data: sources = initialSources } = useQuery<Tables<'datasource'>[]>({
+    queryKey: sourcesQueryKey(orgId),
+    queryFn: () => fetchSources(orgId),
+    initialData: initialSources,
+    refetchInterval: (query) => {
+      const list = (query.state.data ?? []) as Tables<'datasource'>[];
+      const hasProcessing = list.some(
+        (s) => s.status === 'pending' || s.status === 'processing'
+      );
+      return hasProcessing ? 4_000 : false;
+    },
+  });
 
   const saveAutopilot = async (nextEnabled: boolean, nextThreshold: number) => {
     setSaving(true);
@@ -101,8 +134,21 @@ export function WelcomeDashboard({
     await saveAutopilot(enabled, threshold);
   };
 
+  const handleSaveTonePolicy = async () => {
+    setSavingTone(true);
+    const { error } = await updateTonePolicy(orgId, tonePolicy);
+    setSavingTone(false);
+    if (error) {
+      toast.error('Failed to save tone & policy', {
+        description: error.message,
+      });
+    } else {
+      toast.success('Tone & policy saved');
+    }
+  };
+
   // Show at most this many sources before collapsing the rest into a "N more" button
-  const SOURCE_DISPLAY_LIMIT = 5;
+  const SOURCE_DISPLAY_LIMIT = 6;
   const visibleSources = sources.slice(0, SOURCE_DISPLAY_LIMIT);
   const hiddenCount = sources.length - SOURCE_DISPLAY_LIMIT;
 
@@ -252,11 +298,19 @@ export function WelcomeDashboard({
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`Open data source: ${source.url}`}
-                      className="flex items-center gap-2 border border-[#FF4500]/20 bg-muted px-3 py-2 text-sm font-mono font-medium text-foreground transition-all hover:border-[#FF4500]/60"
+                      className={cn(
+                        'flex items-center gap-2 border bg-muted px-3 py-2 text-sm font-mono font-medium text-foreground transition-all',
+                        source.status === 'ready'
+                          ? 'border-[#FF4500]/20 hover:border-[#FF4500]/60'
+                          : source.status === 'error'
+                            ? 'border-red-500/30 hover:border-red-500/60'
+                            : 'border-amber-500/30 hover:border-amber-500/60'
+                      )}
                     >
                       <Link2Icon className="size-3.5 shrink-0" />
                       <span className="truncate">{source.url}</span>
-                      <ExternalLinkIcon className="ml-auto size-3.5 shrink-0 opacity-50" />
+                      <EmbeddingStatusBadge status={source.status} />
+                      <ExternalLinkIcon className="size-3.5 shrink-0 opacity-50" />
                     </a>
                   </li>
                 ))}
@@ -275,7 +329,7 @@ export function WelcomeDashboard({
             <Button
               variant="default"
               className="w-full"
-              onClick={() => setAddDataSource(slug)}
+              onClick={() => setAddDataSource({ slug, orgId })}
             >
               + Add Data Source
             </Button>
@@ -356,6 +410,7 @@ export function WelcomeDashboard({
               </div>
             </CardContent>
           </Card>
+
           {/* Quick Actions Card */}
           <Card className="sm:col-span-2 lg:col-span-1">
             <CardHeader>
@@ -365,16 +420,25 @@ export function WelcomeDashboard({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-3">
+              <div className="grid grid-cols-3 gap-2">
+                <Button variant="neutral" onClick={() => setTestSandbox(orgId)}>
+                  Sandbox
+                </Button>
                 <Button
                   variant="neutral"
                   onClick={() => setInviteMembers(orgId)}
                 >
-                  Invite Team Members
+                  Invite
                 </Button>
                 <Button
                   variant="default"
-                  onClick={() => setUpdateOrganization(orgId)}
+                  onClick={() =>
+                    setUpdateOrganization({
+                      id: orgId,
+                      name: orgName,
+                      support_email: supportEmail,
+                    })
+                  }
                 >
                   Settings
                 </Button>
@@ -382,6 +446,33 @@ export function WelcomeDashboard({
             </CardContent>
           </Card>
         </div>
+        {/* Tone & Policy Card */}
+        <Card className="sm:col-span-2">
+          <CardHeader>
+            <CardTitle>🎨 Tone &amp; Policy</CardTitle>
+            <CardDescription>
+              Describe how the AI should sound and any rules it must follow when
+              drafting replies (e.g. &ldquo;Always respond formally&rdquo;,
+              &ldquo;Never mention competitor X&rdquo;).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <textarea
+              rows={4}
+              value={tonePolicy}
+              onChange={(e) => setTonePolicy(e.target.value)}
+              placeholder="e.g. Always respond in a formal tone. Never mention pricing. Sign off with 'Warm regards, the Support Team'."
+              className="w-full border border-input bg-background px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FF4500] resize-y"
+            />
+            <Button
+              onClick={handleSaveTonePolicy}
+              disabled={savingTone}
+              className="w-full"
+            >
+              {savingTone ? 'Saving…' : 'Save Tone & Policy'}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getOrganization, updateOrganization } from '@/actions/organization';
-import { Tables } from '@/database.types';
+import { updateOrganization } from '@/actions/organization';
 import { useUpdateOrganization } from '@/states/organization';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -24,21 +23,20 @@ import { Input } from '@/components/ui/input';
 export function UpdateOrganizationForm() {
   const router = useRouter();
   const [error, setError] = useState('');
-  const [orgId, setShow] = useUpdateOrganization();
-  const [organization, setOrganization] =
-    useState<Tables<'organization'> | null>(null);
+  const [org, setShow] = useUpdateOrganization();
 
   const form = useForm<OrganizationSchema>({
     resolver,
     values: {
-      name: organization?.name ?? '',
-      support_email: organization?.support_email ?? '',
+      name: org ? org.name : '',
+      support_email: org ? org.support_email : '',
     },
     mode: 'onChange',
   });
 
-  const handleSubmit = async (org: OrganizationSchema) => {
-    const { data, error } = await updateOrganization(orgId as string, org);
+  const handleSubmit = async (values: OrganizationSchema) => {
+    if (!org) return;
+    const { data, error } = await updateOrganization(org.id, values);
     if (error) {
       console.error(error);
       setError(error.message);
@@ -51,21 +49,6 @@ export function UpdateOrganizationForm() {
     router.push(`/org/${data?.slug}`);
     router.refresh();
   };
-
-  useEffect(() => {
-    if (!Boolean(orgId)) return;
-
-    const fetchOrg = async () => {
-      const { data, error } = await getOrganization(orgId as string);
-      if (error) {
-        setOrganization(null);
-        return;
-      }
-      setOrganization(data);
-    };
-
-    fetchOrg();
-  }, [orgId]);
 
   return (
     <Form {...form}>

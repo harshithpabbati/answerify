@@ -6,6 +6,7 @@ import {
   useCreateOrganization,
   useInviteMembers,
   useMembers,
+  useTestSandbox,
   useUpdateOrganization,
 } from '@/states/organization';
 
@@ -28,6 +29,9 @@ const InviteMembers = dynamic(() =>
 const ViewMembers = dynamic(() =>
   import('./organization').then((mod) => mod.ViewMembers)
 );
+const TestSandbox = dynamic(() =>
+  import('./organization').then((mod) => mod.TestSandbox)
+);
 
 export function Modals() {
   const [showCreateOrganization] = useCreateOrganization();
@@ -36,6 +40,7 @@ export function Modals() {
   const [showDataSources] = useViewDataSource();
   const [inviteMembers] = useInviteMembers();
   const [viewMembers] = useMembers();
+  const [showTestSandbox] = useTestSandbox();
 
   return (
     <>
@@ -45,6 +50,7 @@ export function Modals() {
       {Boolean(showDataSources) && <ViewDataSources />}
       {Boolean(inviteMembers) && <InviteMembers />}
       {Boolean(viewMembers) && <ViewMembers />}
+      {Boolean(showTestSandbox) && <TestSandbox />}
     </>
   );
 }

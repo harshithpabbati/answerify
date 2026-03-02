@@ -5,10 +5,12 @@ import { createServiceClient } from '@/lib/supabase/service';
 /**
  * Webhook triggered when a new datasource row is inserted.
  *
- * 1. Fetches the URL content as markdown via markdown.new
- * 2. Chunks with processMarkdown (splits by headings)
- * 3. Generates embeddings via the configured embedding model
- * 4. Inserts sections into the `section` table
+ * 1. Sets status to 'processing'
+ * 2. Fetches the URL content as markdown via markdown.new
+ * 3. Chunks with processMarkdown (splits by headings)
+ * 4. Generates embeddings via the configured embedding model
+ * 5. Inserts sections into the `section` table
+ * 6. Sets status to 'ready' (or 'error' on failure)
  *
  * Using markdown.new to convert web pages to clean markdown preserves
  * document structure (headings, lists, etc.) so processMarkdown can
@@ -17,6 +19,12 @@ import { createServiceClient } from '@/lib/supabase/service';
 export async function POST(request: Request) {
   const { record } = await request.json();
   const supabase = await createServiceClient();
+
+  // Mark as processing
+  await supabase
+    .from('datasource')
+    .update({ status: 'processing' } as never)
+    .eq('id', record.id);
 
   // Fetch the URL content as markdown via markdown.new
   let textContent: string;
@@ -30,12 +38,20 @@ export async function POST(request: Request) {
     textContent = (await response.text()).trim();
   } catch (error) {
     console.error('Failed to fetch datasource URL:', error);
+    await supabase
+      .from('datasource')
+      .update({ status: 'error' } as never)
+      .eq('id', record.id);
     return new Response(JSON.stringify({ error: 'Failed to fetch URL' }), {
       status: 500,
     });
   }
 
   if (!textContent) {
+    await supabase
+      .from('datasource')
+      .update({ status: 'ready' } as never)
+      .eq('id', record.id);
     return new Response(
       JSON.stringify({ ok: true, message: 'No content found' }),
       { status: 200 }
@@ -51,6 +67,10 @@ export async function POST(request: Request) {
   // Chunk content into sections
   const { sections } = processMarkdown(textContent);
   if (sections.length === 0) {
+    await supabase
+      .from('datasource')
+      .update({ status: 'ready' } as never)
+      .eq('id', record.id);
     return new Response(
       JSON.stringify({ ok: true, message: 'No sections produced' }),
       { status: 200 }
@@ -58,7 +78,20 @@ export async function POST(request: Request) {
   }
 
   // Generate embeddings for all sections
-  const embeddings = await generateEmbeddings(sections.map((s) => s.content));
+  let embeddings: number[][];
+  try {
+    embeddings = await generateEmbeddings(sections.map((s) => s.content));
+  } catch (error) {
+    console.error('Failed to generate embeddings:', error);
+    await supabase
+      .from('datasource')
+      .update({ status: 'error' } as never)
+      .eq('id', record.id);
+    return new Response(
+      JSON.stringify({ error: 'Failed to generate embeddings' }),
+      { status: 500 }
+    );
+  }
 
   // Insert sections with embeddings
   const sectionRows = sections.map((s, i) => ({
@@ -72,10 +105,19 @@ export async function POST(request: Request) {
   const { error } = await supabase.from('section').insert(sectionRows as never);
   if (error) {
     console.error('Failed to insert sections:', error);
+    await supabase
+      .from('datasource')
+      .update({ status: 'error' } as never)
+      .eq('id', record.id);
     return new Response(JSON.stringify({ error: 'Failed to store sections' }), {
       status: 500,
     });
   }
+
+  await supabase
+    .from('datasource')
+    .update({ status: 'ready' } as never)
+    .eq('id', record.id);
 
   return new Response(JSON.stringify({ ok: true, sections: sections.length }), {
     status: 200,

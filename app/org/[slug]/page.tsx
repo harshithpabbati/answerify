@@ -38,6 +38,7 @@ export default async function OrgPage({ params }: Props) {
       orgName={org.name}
       slug={slug}
       inboundEmail={org.inbound_email ?? ''}
+      supportEmail={org.support_email ?? ''}
       sources={sources ?? []}
       threadsCount={threadCount}
       repliesCount={replyCount}
@@ -45,6 +46,7 @@ export default async function OrgPage({ params }: Props) {
       autopilotThreshold={
         org.autopilot_threshold ?? AUTOPILOT_THRESHOLD_DEFAULT
       }
+      initialTonePolicy={org.tone_policy ?? null}
     />
   );
 }

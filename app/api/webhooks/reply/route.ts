@@ -3,10 +3,10 @@ import { codeBlock } from 'common-tags';
 import { Resend } from 'resend';
 
 import { textModel } from '@/lib/ai';
+import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { cleanBody } from '@/lib/cleanBody';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
 import { createServiceClient } from '@/lib/supabase/service';
-import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 
 /**
  * Minimum average similarity from vector search that allows the system to
@@ -25,9 +25,7 @@ const MIN_VECTOR_MATCHES = 2;
 /**
  * Derive a 0–1 confidence score from vector similarity results.
  */
-function computeVectorConfidence(
-  similarities: number[],
-): number {
+function computeVectorConfidence(similarities: number[]): number {
   if (similarities.length === 0) return 0;
   const avg = similarities.reduce((a, b) => a + b, 0) / similarities.length;
   return Math.min(0.99, Math.max(0, avg));
@@ -42,7 +40,7 @@ async function insertClarifyingDraft(
   supabase: Awaited<ReturnType<typeof createServiceClient>>,
   organizationId: string,
   threadId: string,
-  content: string = CLARIFYING_CONTENT,
+  content: string = CLARIFYING_CONTENT
 ): Promise<Response> {
   const { data, error } = await supabase
     .from('reply')
@@ -69,15 +67,17 @@ async function insertClarifyingDraft(
 async function retrieveSections(
   supabase: Awaited<ReturnType<typeof createServiceClient>>,
   organizationId: string,
-  question: string,
-): Promise<Array<{ content: string; datasource_id: string; similarity: number }>> {
+  question: string
+): Promise<
+  Array<{ content: string; datasource_id: string; similarity: number }>
+> {
   const questionEmbedding = await generateEmbedding(question);
   if (questionEmbedding.length === 0) return [];
 
   const { data, error } = await supabase.rpc('match_sections', {
     embedding: serializeEmbedding(questionEmbedding),
     match_threshold: 0.4,
-    organization_id: organizationId,
+    p_organization_id: organizationId,
     match_count: 5,
   });
 
@@ -102,7 +102,7 @@ async function retrieveSections(
 async function runResearchAgentWithSections(
   subject: string,
   question: string,
-  sectionContent: string,
+  sectionContent: string
 ): Promise<string> {
   const researchPrompt = codeBlock`
     You are a research assistant for a customer support team.
@@ -137,7 +137,7 @@ async function runResearchAgentWithSections(
 async function runResearchAgentWithContent(
   subject: string,
   question: string,
-  datasourceContent: string,
+  datasourceContent: string
 ): Promise<string> {
   const researchPrompt = codeBlock`
     You are a research assistant for a customer support team.
@@ -176,7 +176,12 @@ async function runWritingAgent(
   question: string,
   findings: string,
   conversationHistory: string,
+  tonePolicy?: string | null
 ): Promise<string> {
+  const tonePolicySection = tonePolicy?.trim()
+    ? `\n\n    Org tone and policy rules (follow strictly):\n    ${tonePolicy.trim()}`
+    : '';
+
   const writingPrompt = codeBlock`
     You are a friendly and helpful customer support agent. You write like a real person,
     not a documentation bot. Keep your tone warm, conversational, and to the point.
@@ -197,7 +202,7 @@ async function runWritingAgent(
     If the findings do not contain enough information to answer the question,
     respond with only the text: NO_INFORMATION
     Do not explain why. Do not apologize. Do not add anything else.
-
+    ${tonePolicySection}
     ${conversationHistory ? `Previous conversation:\n${conversationHistory}\n` : ''}
     Reply back in HTML and nothing else, avoid using markdown.
     Format the response as follows:
@@ -233,26 +238,23 @@ export async function POST(request: Request) {
   const supabase = await createServiceClient();
 
   // Fetch datasources (including stored content for fallback), org settings, and thread.
-  // The `content` column exists at the DB level but is not in the generated Supabase
-  // types, so we cast the query result to include it.
-  const [{ data: datasources }, { data: org }, { data: thread }] = await Promise.all([
-    supabase
-      .from('datasource')
-      .select('id, url, content' as string)
-      .eq('organization_id', record.organization_id) as unknown as Promise<{
-      data: Array<{ id: string; url: string; content: string | null }> | null;
-    }>,
-    supabase
-      .from('organization')
-      .select('autopilot_enabled, autopilot_threshold')
-      .eq('id', record.organization_id)
-      .single(),
-    supabase
-      .from('thread')
-      .select('email_from, subject, message_id')
-      .eq('id', record.thread_id)
-      .single(),
-  ]);
+  const [{ data: datasources }, { data: org }, { data: thread }] =
+    await Promise.all([
+      supabase
+        .from('datasource')
+        .select('id, url')
+        .eq('organization_id', record.organization_id),
+      supabase
+        .from('organization')
+        .select('autopilot_enabled, autopilot_threshold, tone_policy')
+        .eq('id', record.organization_id)
+        .single(),
+      supabase
+        .from('thread')
+        .select('email_from, subject, message_id')
+        .eq('id', record.thread_id)
+        .single(),
+    ]);
 
   // Fetch previous emails in this thread for conversation context
   const { data: threadEmails, error: threadEmailsError } = await supabase
@@ -273,7 +275,7 @@ export async function POST(request: Request) {
       supabase,
       record.organization_id,
       record.thread_id,
-      `<p>Thank you for reaching out. I wasn't able to find specific information to fully answer your question at this time. Could you please provide more details or clarify your request so we can assist you better?</p>`,
+      `<p>Thank you for reaching out. I wasn't able to find specific information to fully answer your question at this time. Could you please provide more details or clarify your request so we can assist you better?</p>`
     );
   }
 
@@ -300,58 +302,49 @@ export async function POST(request: Request) {
   const matchedSections = await retrieveSections(
     supabase,
     record.organization_id,
-    questionText,
+    questionText
   );
 
-  let findings: string;
-  let confidence: number;
-  let citations: string[];
+  let findings: string = '';
+  let confidence: number = URL_CONTEXT_FALLBACK_CONFIDENCE;
+  let citations: string[] = [];
 
   const highQualityMatches = matchedSections.filter(
-    (s) => s.similarity >= VECTOR_CONFIDENCE_THRESHOLD,
+    (s) => s.similarity >= VECTOR_CONFIDENCE_THRESHOLD
   );
 
   if (highQualityMatches.length >= MIN_VECTOR_MATCHES) {
     // --- Agent 1a: Research (vector context) ---
     // Enough high-quality section matches – use them directly as context.
     // This skips URL fetching entirely and dramatically reduces token usage.
-    const sectionContext = highQualityMatches.map((s) => s.content).join('\n\n---\n\n');
+    const sectionContext = highQualityMatches
+      .map((s) => s.content)
+      .join('\n\n---\n\n');
 
     findings = await runResearchAgentWithSections(
       thread?.subject ?? '',
       record.cleaned_body,
-      sectionContext,
+      sectionContext
     );
 
-    confidence = computeVectorConfidence(highQualityMatches.map((s) => s.similarity));
+    confidence = computeVectorConfidence(
+      highQualityMatches.map((s) => s.similarity)
+    );
 
     // Build citations from matched datasources
-    const matchedDatasourceIds = [...new Set(highQualityMatches.map((s) => s.datasource_id))];
+    const matchedDatasourceIds = [
+      ...new Set(highQualityMatches.map((s) => s.datasource_id)),
+    ];
     citations = datasources
       .filter((d) => matchedDatasourceIds.includes(d.id))
       .map((d) => d.url);
-  } else {
-    // --- Agent 1b: Research (datasource content fallback) ---
-    // Not enough high-quality vector matches – use stored datasource content.
-    const datasourceContent = datasources
-      .map((d) => d.content)
-      .filter(Boolean)
-      .join('\n\n---\n\n');
-
-    findings = await runResearchAgentWithContent(
-      thread?.subject ?? '',
-      record.cleaned_body,
-      datasourceContent,
-    );
-
-    confidence = URL_CONTEXT_FALLBACK_CONFIDENCE;
-    citations = datasources.map((d) => d.url);
   }
 
-  if (!findings || findings.trim() === 'NO_INFORMATION') {
-    // Generate clarifying question draft instead of erroring out
-    return insertClarifyingDraft(supabase, record.organization_id, record.thread_id);
-  }
+  // Determine whether autopilot should auto-send this reply
+  const autopilotEnabled = org?.autopilot_enabled ?? false;
+  const autopilotThreshold = org?.autopilot_threshold ?? 0.65;
+  const tonePolicy = org?.tone_policy ?? null;
+  const shouldAutoSend = autopilotEnabled && confidence >= autopilotThreshold;
 
   // --- Agent 2: Writing ---
   // Take the research findings and produce a polished HTML reply.
@@ -360,19 +353,19 @@ export async function POST(request: Request) {
     record.cleaned_body,
     findings,
     conversationHistory,
+    tonePolicy
   );
 
   if (!rawContent || rawContent.trim() === 'NO_INFORMATION') {
     // Writing agent couldn't produce a response – fall back to clarifying draft
-    return insertClarifyingDraft(supabase, record.organization_id, record.thread_id);
+    return insertClarifyingDraft(
+      supabase,
+      record.organization_id,
+      record.thread_id
+    );
   }
 
   const htmlContent = rawContent.replace(/^```html\s*|\s*```$/g, '');
-
-  // Determine whether autopilot should auto-send this reply
-  const autopilotEnabled = org?.autopilot_enabled ?? false;
-  const autopilotThreshold = org?.autopilot_threshold ?? 0.65;
-  const shouldAutoSend = autopilotEnabled && confidence >= autopilotThreshold;
 
   if (shouldAutoSend) {
     // Auto-send: use the already-fetched thread to send the email
@@ -441,4 +434,3 @@ export async function POST(request: Request) {
 
   return new Response(JSON.stringify({ data, error }), { status: 200 });
 }
-

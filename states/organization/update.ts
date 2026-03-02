@@ -1,6 +1,12 @@
 import { atom, useAtom } from 'jotai';
 
-const updateOrganizationModalState = atom<boolean | string>(false);
+export type UpdateOrganizationState = {
+  id: string;
+  name: string;
+  support_email: string;
+} | false;
+
+const updateOrganizationModalState = atom<UpdateOrganizationState>(false);
 
 export const useUpdateOrganization = () =>
   useAtom(updateOrganizationModalState);
