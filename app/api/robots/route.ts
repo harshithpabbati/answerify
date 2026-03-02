@@ -16,7 +16,7 @@ import { firstPathSegment } from '@/lib/url-section';
 
 const FETCH_TIMEOUT_MS = 5_000;
 const MAX_SITEMAPS = 20; // max sitemap files to fetch per request
-const MAX_PAGES = 1000; // max page URLs to return
+const MAX_PAGES = 10000; // max page URLs to return
 
 // Probe these paths if robots.txt has no Sitemap: directive
 const FALLBACK_SITEMAP_PATHS = [
