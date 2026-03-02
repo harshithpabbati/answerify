@@ -1,5 +1,6 @@
 'use server';
 
+import { cache } from 'react';
 import { revalidatePath } from 'next/cache';
 
 import { slugify } from '@/lib/slug';
@@ -8,24 +9,9 @@ import { createServiceClient } from '@/lib/supabase/service';
 
 import { getUser } from './auth';
 
-export async function getOrganizations() {
-  const supabase = await createServerClient();
-  const { data, error } = await supabase.from('organization').select();
-  if (error) return [];
-  return data;
-}
-
-export async function getOrganization(id: string) {
-  const supabase = await createServerClient();
-  const { data, error } = await supabase
-    .from('organization')
-    .select()
-    .match({ id })
-    .single();
-  return { data, error };
-}
-
-export async function getOrganizationBySlug(slug: string) {
+// Cached so the layout, generateMetadata, and page component all share a
+// single Supabase round-trip for the same slug within one request.
+const getOrganizationBySlugCached = cache(async (slug: string) => {
   const supabase = await createServerClient();
   const { data, error } = await supabase
     .from('organization')
@@ -35,6 +21,32 @@ export async function getOrganizationBySlug(slug: string) {
     .match({ slug })
     .single();
   return { data, error };
+});
+
+// Cached so multiple callers within the same render share one DB round-trip.
+const getOrganizationCached = cache(async (id: string) => {
+  const supabase = await createServerClient();
+  const { data, error } = await supabase
+    .from('organization')
+    .select()
+    .match({ id })
+    .single();
+  return { data, error };
+});
+
+export async function getOrganizations() {
+  const supabase = await createServerClient();
+  const { data, error } = await supabase.from('organization').select();
+  if (error) return [];
+  return data;
+}
+
+export async function getOrganization(id: string) {
+  return getOrganizationCached(id);
+}
+
+export async function getOrganizationBySlug(slug: string) {
+  return getOrganizationBySlugCached(slug);
 }
 
 export async function updateAutopilotSettings(
