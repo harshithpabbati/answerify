@@ -1,10 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { updateAutopilotSettings } from '@/actions/organization';
+import { updateAutopilotSettings, updateTonePolicy } from '@/actions/organization';
 import { Tables } from '@/database.types';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
-import { useInviteMembers, useUpdateOrganization } from '@/states/organization';
+import {
+  useInviteMembers,
+  useTestSandbox,
+  useUpdateOrganization,
+} from '@/states/organization';
 import {
   CheckIcon,
   ClipboardCopyIcon,
@@ -36,6 +40,7 @@ interface Props {
   repliesCount: number;
   autopilotEnabled: boolean;
   autopilotThreshold: number;
+  initialTonePolicy: string | null;
 }
 
 function StepBadge({ step, done }: { step: number; done: boolean }) {
@@ -63,16 +68,21 @@ export function WelcomeDashboard({
   repliesCount,
   autopilotEnabled,
   autopilotThreshold,
+  initialTonePolicy,
 }: Props) {
   const { copied, copyToClipboard } = useCopyToClipboard();
   const [, setAddDataSource] = useAddDataSource();
   const [, setViewDataSource] = useViewDataSource();
   const [, setInviteMembers] = useInviteMembers();
   const [, setUpdateOrganization] = useUpdateOrganization();
+  const [, setTestSandbox] = useTestSandbox();
 
   const [enabled, setEnabled] = useState(autopilotEnabled);
   const [threshold, setThreshold] = useState(autopilotThreshold);
   const [saving, setSaving] = useState(false);
+
+  const [tonePolicy, setTonePolicy] = useState(initialTonePolicy ?? '');
+  const [savingTone, setSavingTone] = useState(false);
 
   const saveAutopilot = async (nextEnabled: boolean, nextThreshold: number) => {
     setSaving(true);
@@ -99,6 +109,19 @@ export function WelcomeDashboard({
   const handleThresholdCommit = async () => {
     if (saving) return;
     await saveAutopilot(enabled, threshold);
+  };
+
+  const handleSaveTonePolicy = async () => {
+    setSavingTone(true);
+    const { error } = await updateTonePolicy(orgId, tonePolicy);
+    setSavingTone(false);
+    if (error) {
+      toast.error('Failed to save tone & policy', {
+        description: error.message,
+      });
+    } else {
+      toast.success('Tone & policy saved');
+    }
   };
 
   // Show at most this many sources before collapsing the rest into a "N more" button
@@ -356,6 +379,35 @@ export function WelcomeDashboard({
               </div>
             </CardContent>
           </Card>
+
+          {/* Tone & Policy Card */}
+          <Card className="sm:col-span-2 lg:col-span-1">
+            <CardHeader>
+              <CardTitle>🎨 Tone &amp; Policy</CardTitle>
+              <CardDescription>
+                Describe how the AI should sound and any rules it must follow
+                when drafting replies (e.g. &ldquo;Always respond
+                formally&rdquo;, &ldquo;Never mention competitor X&rdquo;).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <textarea
+                rows={4}
+                value={tonePolicy}
+                onChange={(e) => setTonePolicy(e.target.value)}
+                placeholder="e.g. Always respond in a formal tone. Never mention pricing. Sign off with 'Warm regards, the Support Team'."
+                className="w-full border border-input bg-background px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FF4500] resize-y"
+              />
+              <Button
+                onClick={handleSaveTonePolicy}
+                disabled={savingTone}
+                className="w-full"
+              >
+                {savingTone ? 'Saving…' : 'Save Tone & Policy'}
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Quick Actions Card */}
           <Card className="sm:col-span-2 lg:col-span-1">
             <CardHeader>
@@ -366,6 +418,12 @@ export function WelcomeDashboard({
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="neutral"
+                  onClick={() => setTestSandbox(orgId)}
+                >
+                  🧪 Test Sandbox
+                </Button>
                 <Button
                   variant="neutral"
                   onClick={() => setInviteMembers(orgId)}

@@ -45,6 +45,7 @@ export default async function OrgPage({ params }: Props) {
       autopilotThreshold={
         org.autopilot_threshold ?? AUTOPILOT_THRESHOLD_DEFAULT
       }
+      initialTonePolicy={org.tone_policy ?? null}
     />
   );
 }

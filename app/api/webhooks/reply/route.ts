@@ -176,7 +176,12 @@ async function runWritingAgent(
   question: string,
   findings: string,
   conversationHistory: string,
+  tonePolicy?: string | null,
 ): Promise<string> {
+  const tonePolicySection = tonePolicy?.trim()
+    ? `\n\n    Org tone and policy rules (follow strictly):\n    ${tonePolicy.trim()}`
+    : '';
+
   const writingPrompt = codeBlock`
     You are a friendly and helpful customer support agent. You write like a real person,
     not a documentation bot. Keep your tone warm, conversational, and to the point.
@@ -197,7 +202,7 @@ async function runWritingAgent(
     If the findings do not contain enough information to answer the question,
     respond with only the text: NO_INFORMATION
     Do not explain why. Do not apologize. Do not add anything else.
-
+    ${tonePolicySection}
     ${conversationHistory ? `Previous conversation:\n${conversationHistory}\n` : ''}
     Reply back in HTML and nothing else, avoid using markdown.
     Format the response as follows:
@@ -233,18 +238,14 @@ export async function POST(request: Request) {
   const supabase = await createServiceClient();
 
   // Fetch datasources (including stored content for fallback), org settings, and thread.
-  // The `content` column exists at the DB level but is not in the generated Supabase
-  // types, so we cast the query result to include it.
   const [{ data: datasources }, { data: org }, { data: thread }] = await Promise.all([
     supabase
       .from('datasource')
-      .select('id, url, content' as string)
-      .eq('organization_id', record.organization_id) as unknown as Promise<{
-      data: Array<{ id: string; url: string; content: string | null }> | null;
-    }>,
+      .select('id, url, content')
+      .eq('organization_id', record.organization_id),
     supabase
       .from('organization')
-      .select('autopilot_enabled, autopilot_threshold')
+      .select('autopilot_enabled, autopilot_threshold, tone_policy')
       .eq('id', record.organization_id)
       .single(),
     supabase
@@ -353,6 +354,12 @@ export async function POST(request: Request) {
     return insertClarifyingDraft(supabase, record.organization_id, record.thread_id);
   }
 
+  // Determine whether autopilot should auto-send this reply
+  const autopilotEnabled = org?.autopilot_enabled ?? false;
+  const autopilotThreshold = org?.autopilot_threshold ?? 0.65;
+  const tonePolicy = org?.tone_policy ?? null;
+  const shouldAutoSend = autopilotEnabled && confidence >= autopilotThreshold;
+
   // --- Agent 2: Writing ---
   // Take the research findings and produce a polished HTML reply.
   const rawContent = await runWritingAgent(
@@ -360,6 +367,7 @@ export async function POST(request: Request) {
     record.cleaned_body,
     findings,
     conversationHistory,
+    tonePolicy,
   );
 
   if (!rawContent || rawContent.trim() === 'NO_INFORMATION') {
@@ -368,11 +376,6 @@ export async function POST(request: Request) {
   }
 
   const htmlContent = rawContent.replace(/^```html\s*|\s*```$/g, '');
-
-  // Determine whether autopilot should auto-send this reply
-  const autopilotEnabled = org?.autopilot_enabled ?? false;
-  const autopilotThreshold = org?.autopilot_threshold ?? 0.65;
-  const shouldAutoSend = autopilotEnabled && confidence >= autopilotThreshold;
 
   if (shouldAutoSend) {
     // Auto-send: use the already-fetched thread to send the email

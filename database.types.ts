@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       datasource: {
         Row: {
+          content: string | null
           created_at: string
           id: string
           is_internal_kb: boolean | null
@@ -23,6 +24,7 @@ export type Database = {
           url: string
         }
         Insert: {
+          content?: string | null
           created_at?: string
           id?: string
           is_internal_kb?: boolean | null
@@ -30,6 +32,7 @@ export type Database = {
           url: string
         }
         Update: {
+          content?: string | null
           created_at?: string
           id?: string
           is_internal_kb?: boolean | null
@@ -150,6 +153,7 @@ export type Database = {
           onboarding: Json
           slug: string
           support_email: string
+          tone_policy: string | null
         }
         Insert: {
           autopilot_enabled?: boolean
@@ -162,6 +166,7 @@ export type Database = {
           onboarding?: Json
           slug: string
           support_email: string
+          tone_policy?: string | null
         }
         Update: {
           autopilot_enabled?: boolean
@@ -174,6 +179,7 @@ export type Database = {
           onboarding?: Json
           slug?: string
           support_email?: string
+          tone_policy?: string | null
         }
         Relationships: []
       }
