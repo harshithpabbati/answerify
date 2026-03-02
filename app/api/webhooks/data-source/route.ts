@@ -23,14 +23,17 @@ export async function POST(request: Request) {
   // Mark as processing
   await supabase
     .from('datasource')
-    .update({ status: 'processing' } as never)
+    .update({ status: 'processing' })
     .eq('id', record.id);
 
   // Fetch the URL content as markdown via markdown.new
   let textContent: string;
   try {
-    const response = await fetch(`https://markdown.new/${record.url}`, {
-      headers: { 'User-Agent': 'Answerify/1.0 (knowledge-base indexer)' },
+    const response = await fetch(`https://r.jina.ai/${record.url}`, {
+      headers: {
+        'User-Agent': 'Answerify/1.0 (knowledge-base indexer)',
+        'X-Return-Format': 'markdown',
+      },
     });
     if (!response.ok) {
       throw new Error(`markdown.new returned ${response.status}`);
@@ -40,7 +43,7 @@ export async function POST(request: Request) {
     console.error('Failed to fetch datasource URL:', error);
     await supabase
       .from('datasource')
-      .update({ status: 'error' } as never)
+      .update({ status: 'error' })
       .eq('id', record.id);
     return new Response(JSON.stringify({ error: 'Failed to fetch URL' }), {
       status: 500,
@@ -50,7 +53,7 @@ export async function POST(request: Request) {
   if (!textContent) {
     await supabase
       .from('datasource')
-      .update({ status: 'ready' } as never)
+      .update({ status: 'ready' })
       .eq('id', record.id);
     return new Response(
       JSON.stringify({ ok: true, message: 'No content found' }),
@@ -58,18 +61,12 @@ export async function POST(request: Request) {
     );
   }
 
-  // Update datasource row with scraped content
-  await supabase
-    .from('datasource')
-    .update({ content: textContent } as never)
-    .eq('id', record.id);
-
   // Chunk content into sections
   const { sections } = processMarkdown(textContent);
   if (sections.length === 0) {
     await supabase
       .from('datasource')
-      .update({ status: 'ready' } as never)
+      .update({ status: 'ready' })
       .eq('id', record.id);
     return new Response(
       JSON.stringify({ ok: true, message: 'No sections produced' }),
@@ -85,7 +82,7 @@ export async function POST(request: Request) {
     console.error('Failed to generate embeddings:', error);
     await supabase
       .from('datasource')
-      .update({ status: 'error' } as never)
+      .update({ status: 'error' })
       .eq('id', record.id);
     return new Response(
       JSON.stringify({ error: 'Failed to generate embeddings' }),
@@ -102,12 +99,12 @@ export async function POST(request: Request) {
     embedding: serializeEmbedding(embeddings[i]),
   }));
 
-  const { error } = await supabase.from('section').insert(sectionRows as never);
+  const { error } = await supabase.from('section').insert(sectionRows);
   if (error) {
     console.error('Failed to insert sections:', error);
     await supabase
       .from('datasource')
-      .update({ status: 'error' } as never)
+      .update({ status: 'error' })
       .eq('id', record.id);
     return new Response(JSON.stringify({ error: 'Failed to store sections' }), {
       status: 500,
@@ -116,7 +113,7 @@ export async function POST(request: Request) {
 
   await supabase
     .from('datasource')
-    .update({ status: 'ready' } as never)
+    .update({ status: 'ready' })
     .eq('id', record.id);
 
   return new Response(JSON.stringify({ ok: true, sections: sections.length }), {
