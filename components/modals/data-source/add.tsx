@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAddDataSource } from '@/states/data-source';
 import { toast } from 'sonner';
 
@@ -66,14 +67,16 @@ function DataSourceContent({ slug, onAdd }: { slug: string; onAdd(): void }) {
 
 export function AddDataSource() {
   const isMobile = useIsMobile();
+  const router = useRouter();
   const [slug, setOpen] = useAddDataSource();
 
   const handleOnAdd = useCallback(() => {
     setOpen(false);
+    router.refresh();
     toast.success('Successfully added new data-sources', {
       description: 'Processing the new sources',
     });
-  }, [setOpen]);
+  }, [setOpen, router]);
 
   if (isMobile) {
     return (

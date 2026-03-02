@@ -1,5 +1,7 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+
 import { createServerClient } from '@/lib/supabase/server';
 
 export async function getSources(id: string) {
@@ -19,7 +21,7 @@ export async function setupSources(slug: string, sources: { url: string }[]) {
     .single();
   if (error || !data?.id) return { data: null, error };
 
-  return await supabase
+  const result = await supabase
     .from('datasource')
     .insert(
       sources
@@ -31,4 +33,10 @@ export async function setupSources(slug: string, sources: { url: string }[]) {
         }))
     )
     .select();
+
+  if (!result.error) {
+    revalidatePath(`/org/${slug}`);
+  }
+
+  return result;
 }

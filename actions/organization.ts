@@ -1,5 +1,7 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+
 import { slugify } from '@/lib/slug';
 import { createServerClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -92,6 +94,7 @@ export async function createOrganization({
     .single();
   if (memberError) return { data: null, error: memberError };
 
+  revalidatePath('/dashboard');
   return { data, error };
 }
 
@@ -106,6 +109,12 @@ export async function updateOrganization(
     .eq('id', id)
     .select()
     .single();
+
+  if (!error && data?.slug) {
+    revalidatePath(`/org/${data.slug}`);
+    revalidatePath('/dashboard');
+  }
+
   return { data, error };
 }
 
