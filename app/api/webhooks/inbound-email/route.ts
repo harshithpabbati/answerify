@@ -92,7 +92,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { error: emailError } = await supabase
+  const { data: emailData, error: emailError } = await supabase
     .from('email')
     .insert({
       organization_id: orgData.id,
@@ -103,19 +103,31 @@ export async function POST(request: Request) {
       cleaned_body: text,
       role: 'user',
     })
+    .select('created_at')
     .single();
-
-  if (thread.status === 'closed') {
-    await supabase
-      .from('thread')
-      .update({ status: 'open' })
-      .match({ id: thread.id });
-  }
 
   if (emailError) {
     return new Response(JSON.stringify({ error: 'Failed to create email' }), {
       status: 200,
     });
+  }
+
+  const threadUpdate: { last_message_created_at: string; status?: 'open' } = {
+    last_message_created_at: emailData.created_at,
+  };
+  if (thread.status === 'closed') {
+    threadUpdate.status = 'open';
+  }
+  const { error: threadUpdateError } = await supabase
+    .from('thread')
+    .update(threadUpdate)
+    .match({ id: thread.id });
+
+  if (threadUpdateError) {
+    return new Response(
+      JSON.stringify({ error: 'Failed to update thread' }),
+      { status: 200 }
+    );
   }
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });
