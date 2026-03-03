@@ -2,10 +2,11 @@
 
 import { useTransition } from 'react';
 import Link from 'next/link';
-import { deleteSource, reindexSource } from '@/actions/source';
+import { deleteSource, reindexAllSources, reindexSource } from '@/actions/source';
 import type { AdminSource, RecentReply } from '@/actions/source';
 import {
   Cross2Icon,
+  ExclamationTriangleIcon,
   ExternalLinkIcon,
   Link2Icon,
   ReloadIcon,
@@ -105,6 +106,27 @@ export function AdminPage({
     });
   };
 
+  const handleReindexAll = () => {
+    startTransition(async () => {
+      toast.loading('Re-indexing all sources…', { id: 'reindex-all' });
+      const result = await reindexAllSources(orgId, slug);
+      if (result.error) {
+        toast.error('Reindex all failed', {
+          id: 'reindex-all',
+          description:
+            result.error instanceof Error
+              ? result.error.message
+              : String(result.error),
+        });
+      } else {
+        toast.success(
+          `Reindexed ${result.count} source${result.count !== 1 ? 's' : ''} — ${result.succeeded} succeeded, ${result.failed} failed`,
+          { id: 'reindex-all' }
+        );
+      }
+    });
+  };
+
   const handleDelete = (sourceId: string) => {
     startTransition(async () => {
       const { error } = await deleteSource(sourceId, slug);
@@ -117,6 +139,10 @@ export function AdminPage({
       }
     });
   };
+
+  const zeroSectionSources = initialSources.filter(
+    (s) => s.status === 'ready' && s.section_count === 0
+  );
 
   return (
     <div className="flex h-screen flex-col overflow-auto">
@@ -150,14 +176,48 @@ export function AdminPage({
             <SectionLabel>{`// Datasource Health`}</SectionLabel>
             <Card className="border-[#FF4500]/15">
               <CardHeader>
-                <CardTitle>📚 Datasource Health</CardTitle>
-                <CardDescription>
-                  All data sources for this organization with their indexing
-                  status and section counts. Use the actions to reindex stuck or
-                  errored sources, or delete them entirely.
-                </CardDescription>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <CardTitle>📚 Datasource Health</CardTitle>
+                    <CardDescription>
+                      All data sources for this organization with their indexing
+                      status and section counts. Use the actions to reindex stuck or
+                      errored sources, or delete them entirely.
+                    </CardDescription>
+                  </div>
+                  {initialSources.length > 0 && (
+                    <Button
+                      variant="neutral"
+                      size="sm"
+                      disabled={isPending}
+                      onClick={handleReindexAll}
+                      className="shrink-0 gap-1.5 text-xs"
+                    >
+                      <ReloadIcon className="size-3" />
+                      Reindex All
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
+                {zeroSectionSources.length > 0 && (
+                  <div className="mb-4 flex items-start gap-2 border border-amber-500/40 bg-amber-500/5 px-4 py-3">
+                    <ExclamationTriangleIcon className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                    <div>
+                      <p className="font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">
+                        {zeroSectionSources.length} source
+                        {zeroSectionSources.length !== 1 ? 's' : ''} indexed with
+                        0 sections
+                      </p>
+                      <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                        This usually means the page returned no readable content
+                        (e.g. JavaScript-rendered SPA, empty response, or the
+                        content has no headings). Try reindexing — if it stays at
+                        0 sections the URL may not be scrapable.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 {initialSources.length === 0 ? (
                   <p className="font-mono text-sm text-muted-foreground py-4 text-center">
                     No data sources configured yet.
@@ -185,57 +245,76 @@ export function AdminPage({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#FF4500]/10">
-                        {initialSources.map((source) => (
-                          <tr key={source.id} className="group">
-                            <td className="py-3 pr-4 max-w-xs">
-                              <a
-                                href={source.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1.5 text-foreground hover:text-[#FF4500] transition-colors truncate"
-                              >
-                                <Link2Icon className="size-3 shrink-0" />
-                                <span className="truncate">{source.url}</span>
-                                <ExternalLinkIcon className="size-3 shrink-0 opacity-50" />
-                              </a>
-                            </td>
-                            <td className="py-3 pr-4">
-                              <EmbeddingStatusBadge status={source.status} />
-                            </td>
-                            <td className="py-3 pr-4 tabular-nums text-muted-foreground">
-                              {source.section_count}
-                            </td>
-                            <td className="py-3 pr-4 whitespace-nowrap text-muted-foreground text-xs">
-                              {new Date(source.created_at).toLocaleString()}
-                            </td>
-                            <td className="py-3">
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="neutral"
-                                  size="sm"
-                                  disabled={isPending}
-                                  onClick={() => handleReindex(source.id)}
-                                  title="Re-index this source"
-                                  className="gap-1.5 text-xs"
+                        {initialSources.map((source) => {
+                          const isEmptyReady =
+                            source.status === 'ready' && source.section_count === 0;
+                          return (
+                            <tr
+                              key={source.id}
+                              className={cn(
+                                'group',
+                                isEmptyReady && 'bg-amber-500/5'
+                              )}
+                            >
+                              <td className="py-3 pr-4 max-w-xs">
+                                <a
+                                  href={source.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 text-foreground hover:text-[#FF4500] transition-colors truncate"
                                 >
-                                  <ReloadIcon className="size-3" />
-                                  Reindex
-                                </Button>
-                                <Button
-                                  variant="neutral"
-                                  size="sm"
-                                  disabled={isPending}
-                                  onClick={() => handleDelete(source.id)}
-                                  title="Delete this source"
-                                  className="gap-1.5 text-xs text-red-500 hover:text-red-600"
-                                >
-                                  <TrashIcon className="size-3" />
-                                  Delete
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                                  <Link2Icon className="size-3 shrink-0" />
+                                  <span className="truncate">{source.url}</span>
+                                  <ExternalLinkIcon className="size-3 shrink-0 opacity-50" />
+                                </a>
+                              </td>
+                              <td className="py-3 pr-4">
+                                <EmbeddingStatusBadge status={source.status} />
+                              </td>
+                              <td className="py-3 pr-4 tabular-nums">
+                                {isEmptyReady ? (
+                                  <span className="flex items-center gap-1 text-amber-500 font-semibold">
+                                    <ExclamationTriangleIcon className="size-3" />
+                                    0
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">
+                                    {source.section_count}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 pr-4 whitespace-nowrap text-muted-foreground text-xs">
+                                {new Date(source.created_at).toLocaleString()}
+                              </td>
+                              <td className="py-3">
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="neutral"
+                                    size="sm"
+                                    disabled={isPending}
+                                    onClick={() => handleReindex(source.id)}
+                                    title="Re-index this source"
+                                    className="gap-1.5 text-xs"
+                                  >
+                                    <ReloadIcon className="size-3" />
+                                    Reindex
+                                  </Button>
+                                  <Button
+                                    variant="neutral"
+                                    size="sm"
+                                    disabled={isPending}
+                                    onClick={() => handleDelete(source.id)}
+                                    title="Delete this source"
+                                    className="gap-1.5 text-xs text-red-500 hover:text-red-600"
+                                  >
+                                    <TrashIcon className="size-3" />
+                                    Delete
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

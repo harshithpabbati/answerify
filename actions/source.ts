@@ -89,6 +89,38 @@ export async function reindexSource(id: string, slug: string) {
   return { error: null };
 }
 
+export async function reindexAllSources(orgId: string, slug: string) {
+  const supabase = await createServiceClient();
+
+  // Fetch all datasource records for this org
+  const { data: sources, error: fetchError } = await supabase
+    .from('datasource')
+    .select('id, url, organization_id')
+    .eq('organization_id', orgId);
+
+  if (fetchError) return { error: fetchError, count: 0, succeeded: 0, failed: 0 };
+  if (!sources?.length) return { error: null, count: 0, succeeded: 0, failed: 0 };
+
+  // Drop all existing sections for this org at once, then reindex in parallel
+  const { error: deleteError } = await supabase
+    .from('section')
+    .delete()
+    .eq('organization_id', orgId);
+  if (deleteError) return { error: deleteError, count: 0, succeeded: 0, failed: 0 };
+
+  const results = await Promise.allSettled(
+    sources.map((source) => indexDatasource(source))
+  );
+
+  const succeeded = results.filter(
+    (r) => r.status === 'fulfilled' && r.value.ok
+  ).length;
+  const failed = results.length - succeeded;
+
+  revalidatePath(`/org/${slug}/admin`);
+  return { error: null, count: sources.length, succeeded, failed };
+}
+
 export type AdminSource = {
   id: string;
   url: string;
