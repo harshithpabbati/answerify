@@ -84,16 +84,29 @@ async function retrieveSections(
   const neighborFilter = matched
     .flatMap((s) => {
       if (!UUID_REGEX.test(s.datasource_id)) return [];
-      return [s.position - 1, s.position + 1].map(
-        (pos) => `and(datasource_id.eq.${s.datasource_id},position.eq.${pos})`
-      );
+      return [s.position - 1, s.position + 1]
+        .filter((pos) => pos >= 0)
+        .map(
+          (pos) => `and(datasource_id.eq.${s.datasource_id},position.eq.${pos})`
+        );
     })
     .join(',');
 
-  const { data: neighborData } = await supabase
-    .from('section')
-    .select('id, datasource_id, content, heading, position')
-    .or(neighborFilter);
+  const neighborData: Array<{
+    id: string;
+    datasource_id: string;
+    content: string;
+    heading: string | null;
+    position: number;
+  }> = [];
+
+  if (neighborFilter) {
+    const { data } = await supabase
+      .from('section')
+      .select('id, datasource_id, content, heading, position')
+      .or(neighborFilter);
+    if (data) neighborData.push(...data);
+  }
 
   // Deduplicate neighbors, excluding sections already in the matched set
   const seenIds = new Set(matchedIds);
@@ -105,7 +118,7 @@ async function retrieveSections(
     position: number;
   }> = [];
 
-  for (const n of neighborData ?? []) {
+  for (const n of neighborData) {
     if (!seenIds.has(n.id)) {
       seenIds.add(n.id);
       uniqueNeighbors.push(n);
@@ -116,7 +129,7 @@ async function retrieveSections(
   // by position so the LLM sees coherent, in-order context blocks.
   const allSections = [
     ...matched,
-    ...uniqueNeighbors.map((n) => ({ ...n, similarity: 0 })),
+    ...uniqueNeighbors.map((n) => ({ ...n, similarity: NEIGHBOR_SIMILARITY })),
   ].sort((a, b) => {
     if (a.datasource_id !== b.datasource_id)
       return a.datasource_id.localeCompare(b.datasource_id);

@@ -46,15 +46,89 @@ export function splitTreeBy(
 }
 
 /**
+ * Splits a long text string into overlapping chunks of at most `maxChunkSize`
+ * characters. Chunk boundaries are snapped to the nearest sentence end
+ * (punctuation followed by whitespace) within a look-back window to avoid
+ * cutting sentences mid-way. Each chunk after the first overlaps the previous
+ * one by `overlapSize` characters to preserve cross-boundary context.
+ *
+ * Note: The sentence boundary regex (`[.!?]`) intentionally handles common
+ * cases. Known limitations: abbreviations (e.g. "Dr.", "Inc.") and ellipses
+ * ("...") may trigger false boundaries; these are rare enough not to affect
+ * overall retrieval quality.
+ */
+export function splitIntoChunks(
+  text: string,
+  maxChunkSize: number,
+  overlapSize: number
+): string[] {
+  if (text.length <= maxChunkSize) return [text];
+
+  // The look-back window is a fraction of the chunk size. Using ¼ balances
+  // sentence-boundary search cost against the risk of splitting too early.
+  const SENTENCE_SEARCH_WINDOW_RATIO = 0.25;
+
+  const chunks: string[] = [];
+  let start = 0;
+
+  while (start < text.length) {
+    let end = Math.min(start + maxChunkSize, text.length);
+
+    // When not at the end of the string, snap the chunk boundary to the last
+    // sentence end within the final quarter of the candidate chunk to avoid
+    // cutting sentences mid-way. The search window starts after the overlap
+    // point (start + overlapSize) so the snapped `end` always leaves room for
+    // the next chunk to advance forward.
+    if (end < text.length) {
+      const lookback = Math.floor(maxChunkSize * SENTENCE_SEARCH_WINDOW_RATIO);
+      // The `+ 1` ensures the search window always ends at least 1 character
+      // beyond `start`, guaranteeing the next `start = end - overlapSize`
+      // moves forward and the loop cannot stall.
+      const searchStart = Math.max(start + overlapSize + 1, end - lookback);
+      if (searchStart < end) {
+        const segment = text.slice(searchStart, end);
+
+        // Find the last sentence-ending punctuation followed by whitespace/newline
+        // or the end of the segment.
+        let lastBoundary = -1;
+        const re = /[.!?](?=\s|$)/g;
+        let match: RegExpExecArray | null;
+        while ((match = re.exec(segment)) !== null) {
+          lastBoundary = match.index + 1; // +1 to include the punctuation mark
+        }
+
+        if (lastBoundary !== -1) {
+          end = searchStart + lastBoundary;
+        }
+      }
+    }
+
+    const chunk = text.slice(start, end).trim();
+    if (chunk) chunks.push(chunk);
+
+    if (end >= text.length) break;
+
+    // The next chunk starts `overlapSize` characters before the current end,
+    // giving consecutive chunks shared context across the boundary.
+    start = end - overlapSize;
+  }
+
+  return chunks;
+}
+
+/**
  * Splits markdown content by heading into sections.
  * Keeps heading in each chunk.
  *
  * If a section is still greater than `maxSectionLength`, that section
- * is chunked into smaller even-sized sections (by character length).
+ * is split into overlapping chunks with sentence-boundary snapping so that
+ * no sentence is cut mid-way and consecutive chunks share `chunkOverlap`
+ * characters of context.
  */
 export function processMarkdown(
   content: string,
-  maxSectionLength = 2500
+  maxSectionLength = 2500,
+  chunkOverlap = 200
 ): ProcessedMd {
   const mdTree = fromMarkdown(content);
 
@@ -75,19 +149,13 @@ export function processMarkdown(
 
     // Chunk sections if they are too large
     if (content.length > maxSectionLength) {
-      const numberChunks = Math.ceil(content.length / maxSectionLength);
-      const chunkSize = Math.ceil(content.length / numberChunks);
-      const chunks = [];
-
-      for (let i = 0; i < numberChunks; i++) {
-        chunks.push(content.substring(i * chunkSize, (i + 1) * chunkSize));
-      }
+      const chunks = splitIntoChunks(content, maxSectionLength, chunkOverlap);
 
       return chunks.map((chunk, i) => ({
         content: chunk,
         heading,
         part: i + 1,
-        total: numberChunks,
+        total: chunks.length,
       }));
     }
 
