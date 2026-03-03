@@ -10,9 +10,12 @@
 -- each section's embedding against itself instead of against the query
 -- embedding, returning incorrect results or raising an ambiguity error.
 --
--- Fix: restore `#variable_conflict use_variable` so `embedding` in the
--- function body always refers to the function parameter (the query vector),
--- not the section.embedding column.
+-- Fix: add a DECLARE block that copies the `embedding` parameter into a
+-- local `query_embedding` variable before the RETURN QUERY, so the query
+-- body references an unambiguous name. Also switch from the inner-product
+-- operator (<#>) to the cosine-distance operator (<=>) so that similarity
+-- is computed as 1 - cosine_distance, matching the standard pgvector
+-- convention used elsewhere in this project.
 
 CREATE OR REPLACE FUNCTION "public"."match_sections"(
     "embedding"          extensions.vector,
@@ -32,6 +35,8 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 AS $$
 #variable_conflict use_variable
+DECLARE
+  query_embedding extensions.vector := embedding;
 BEGIN
   RETURN QUERY
   SELECT
@@ -41,11 +46,11 @@ BEGIN
     section.content,
     section.heading,
     section.position,
-    -(section.embedding <#> embedding) AS similarity
+    (1 - (section.embedding <=> query_embedding))::double precision AS similarity
   FROM section
-  WHERE -(section.embedding <#> embedding) > match_threshold
+  WHERE (1 - (section.embedding <=> query_embedding)) > match_threshold
     AND section.organization_id = p_organization_id
-  ORDER BY section.embedding <#> embedding
+  ORDER BY section.embedding <=> query_embedding
   LIMIT match_count;
 END;
 $$;
