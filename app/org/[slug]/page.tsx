@@ -4,6 +4,7 @@ import { getApiConnections } from '@/actions/api-connection';
 import { getOrgStats } from '@/actions/email';
 import { getOrganizationBySlug } from '@/actions/organization';
 import { getSources } from '@/actions/source';
+import { getWorkflows } from '@/actions/workflow';
 
 import {
   AUTOPILOT_ENABLED_DEFAULT,
@@ -28,12 +29,17 @@ export default async function OrgPage({ params }: Props) {
   const { data: org } = await getOrganizationBySlug(slug);
   if (!org?.id) return notFound();
 
-  const [{ data: sources }, { threadCount, replyCount }, { data: apiConnections }] =
-    await Promise.all([
-      getSources(org.id),
-      getOrgStats(org.id),
-      getApiConnections(org.id),
-    ]);
+  const [
+    { data: sources },
+    { threadCount, replyCount },
+    { data: apiConnections },
+    { data: workflows },
+  ] = await Promise.all([
+    getSources(org.id),
+    getOrgStats(org.id),
+    getApiConnections(org.id),
+    getWorkflows(org.id),
+  ]);
 
   return (
     <WelcomeDashboard
@@ -51,6 +57,7 @@ export default async function OrgPage({ params }: Props) {
       }
       initialTonePolicy={org.tone_policy ?? null}
       initialApiConnections={apiConnections ?? []}
+      workflowsCount={workflows?.length ?? 0}
     />
   );
 }
