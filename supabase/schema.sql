@@ -114,20 +114,12 @@ CREATE TABLE IF NOT EXISTS "public"."reply" (
     "confidence_score" double precision,
     "citations" "jsonb",
     "sent_at" timestamp with time zone,
-    "sent_via" "text"
+    "sent_via" "text",
+    "human_content" "text",
+    "learned" boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE "public"."reply" OWNER TO "postgres";
-
-CREATE TABLE IF NOT EXISTS "public"."reply_edit" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "reply_id" "uuid" NOT NULL,
-    "organization_id" "uuid" NOT NULL,
-    "original_content" "text" NOT NULL,
-    "final_content" "text" NOT NULL,
-    "learned" boolean DEFAULT false NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS "public"."thread" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -143,9 +135,6 @@ CREATE TABLE IF NOT EXISTS "public"."thread" (
 );
 
 ALTER TABLE "public"."thread" OWNER TO "postgres";
-
-ALTER TABLE ONLY "public"."reply_edit"
-    ADD CONSTRAINT "reply_edit_pkey" PRIMARY KEY ("id");
 
 ALTER TABLE ONLY "public"."datasource"
     ADD CONSTRAINT "datasource_pkey" PRIMARY KEY ("id");
@@ -187,10 +176,6 @@ CREATE INDEX "reply_thread_status_idx" ON "public"."reply" USING "btree" ("threa
 
 CREATE INDEX "reply_organization_id_idx" ON "public"."reply" USING "btree" ("organization_id");
 
-CREATE INDEX "reply_edit_reply_id_created_at_idx" ON "public"."reply_edit" USING "btree" ("reply_id", "created_at" DESC);
-
-CREATE INDEX "reply_edit_organization_id_idx" ON "public"."reply_edit" USING "btree" ("organization_id");
-
 CREATE INDEX "thread_org_status_last_msg_idx" ON "public"."thread" USING "btree" ("organization_id", "status", "last_message_created_at" DESC);
 
 CREATE INDEX "thread_message_id_idx" ON "public"."thread" USING "btree" ("message_id");
@@ -222,12 +207,6 @@ ALTER TABLE ONLY "public"."reply"
 
 ALTER TABLE ONLY "public"."reply"
     ADD CONSTRAINT "public_reply_thread_id_fkey" FOREIGN KEY ("thread_id") REFERENCES "public"."thread"("id") ON UPDATE CASCADE ON DELETE CASCADE;
-
-ALTER TABLE ONLY "public"."reply_edit"
-    ADD CONSTRAINT "public_reply_edit_reply_id_fkey" FOREIGN KEY ("reply_id") REFERENCES "public"."reply"("id") ON UPDATE CASCADE ON DELETE CASCADE;
-
-ALTER TABLE ONLY "public"."reply_edit"
-    ADD CONSTRAINT "public_reply_edit_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
 ALTER TABLE ONLY "public"."thread"
     ADD CONSTRAINT "public_thread_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON UPDATE CASCADE ON DELETE CASCADE;
@@ -278,8 +257,6 @@ ALTER TABLE "public"."organization" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."reply" ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE "public"."reply_edit" ENABLE ROW LEVEL SECURITY;
-
 ALTER TABLE "public"."thread" ENABLE ROW LEVEL SECURITY;
 
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
@@ -318,10 +295,6 @@ GRANT ALL ON TABLE "public"."organization" TO "service_role";
 GRANT ALL ON TABLE "public"."reply" TO "anon";
 GRANT ALL ON TABLE "public"."reply" TO "authenticated";
 GRANT ALL ON TABLE "public"."reply" TO "service_role";
-
-GRANT ALL ON TABLE "public"."reply_edit" TO "anon";
-GRANT ALL ON TABLE "public"."reply_edit" TO "authenticated";
-GRANT ALL ON TABLE "public"."reply_edit" TO "service_role";
 
 GRANT ALL ON TABLE "public"."thread" TO "anon";
 GRANT ALL ON TABLE "public"."thread" TO "authenticated";
