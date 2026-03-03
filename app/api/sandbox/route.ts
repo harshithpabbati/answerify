@@ -105,7 +105,10 @@ async function runGroundedAnswerAgent({
   });
 
   try {
-    return JSON.parse(text);
+    // LLMs (especially Gemini) often wrap JSON in markdown code fences
+    // (e.g. ```json ... ```). Strip them before parsing.
+    const jsonString = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    return JSON.parse(jsonString);
   } catch {
     return { status: 'NO_INFORMATION', confidence: 0 };
   }
@@ -208,7 +211,7 @@ export async function POST(request: Request) {
   }
 
   const vectorConfidence = computeVectorConfidence(
-    matchedSections.map((s) => s.similarity)
+    matchedSections.filter((s) => s.similarity > 0).map((s) => s.similarity)
   );
   const retrievedContext = matchedSections
     .map((s) => s.content)
