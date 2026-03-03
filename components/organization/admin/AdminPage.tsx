@@ -1,8 +1,8 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { deleteSource, reindexAllSources, reindexSource } from '@/actions/source';
+import { deleteSource, reindexAllSources, reindexSelectedSources, reindexSource } from '@/actions/source';
 import type { AdminSource, RecentReply } from '@/actions/source';
 import {
   Cross2Icon,
@@ -88,6 +88,27 @@ export function AdminPage({
   initialReplies,
 }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const allIds = useMemo(() => initialSources.map((s) => s.id), [initialSources]);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const someSelected = selected.size > 0;
+
+  const toggleAll = () => {
+    setSelected(allSelected ? new Set() : new Set(allIds));
+  };
+
+  const toggleOne = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const handleReindex = (sourceId: string) => {
     startTransition(async () => {
@@ -102,6 +123,31 @@ export function AdminPage({
         toast.success('Source re-indexed successfully', {
           id: `reindex-${sourceId}`,
         });
+      }
+    });
+  };
+
+  const handleReindexSelected = () => {
+    const ids = Array.from(selected);
+    startTransition(async () => {
+      toast.loading(`Re-indexing ${ids.length} selected source${ids.length !== 1 ? 's' : ''}…`, {
+        id: 'reindex-selected',
+      });
+      const result = await reindexSelectedSources(ids, slug);
+      if (result.error) {
+        toast.error('Reindex failed', {
+          id: 'reindex-selected',
+          description:
+            result.error instanceof Error
+              ? result.error.message
+              : String(result.error),
+        });
+      } else {
+        toast.success(
+          `Reindexed ${result.count} source${result.count !== 1 ? 's' : ''} — ${result.succeeded} succeeded, ${result.failed} failed`,
+          { id: 'reindex-selected' }
+        );
+        setSelected(new Set());
       }
     });
   };
@@ -123,6 +169,7 @@ export function AdminPage({
           `Reindexed ${result.count} source${result.count !== 1 ? 's' : ''} — ${result.succeeded} succeeded, ${result.failed} failed`,
           { id: 'reindex-all' }
         );
+        setSelected(new Set());
       }
     });
   };
@@ -136,6 +183,11 @@ export function AdminPage({
         });
       } else {
         toast.success('Data source deleted');
+        setSelected((prev) => {
+          const next = new Set(prev);
+          next.delete(sourceId);
+          return next;
+        });
       }
     });
   };
@@ -186,16 +238,30 @@ export function AdminPage({
                     </CardDescription>
                   </div>
                   {initialSources.length > 0 && (
-                    <Button
-                      variant="neutral"
-                      size="sm"
-                      disabled={isPending}
-                      onClick={handleReindexAll}
-                      className="shrink-0 gap-1.5 text-xs"
-                    >
-                      <ReloadIcon className="size-3" />
-                      Reindex All
-                    </Button>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {someSelected && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isPending}
+                          onClick={handleReindexSelected}
+                          className="gap-1.5 text-xs"
+                        >
+                          <ReloadIcon className="size-3" />
+                          Reindex Selected ({selected.size})
+                        </Button>
+                      )}
+                      <Button
+                        variant="neutral"
+                        size="sm"
+                        disabled={isPending}
+                        onClick={handleReindexAll}
+                        className="gap-1.5 text-xs"
+                      >
+                        <ReloadIcon className="size-3" />
+                        Reindex All
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardHeader>
@@ -227,6 +293,15 @@ export function AdminPage({
                     <table className="w-full text-sm font-mono">
                       <thead>
                         <tr className="border-b border-[#FF4500]/20 text-left">
+                          <th className="pb-3 pr-4 w-8">
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              onChange={toggleAll}
+                              className="cursor-pointer accent-[#FF4500]"
+                              aria-label="Select all sources"
+                            />
+                          </th>
                           <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
                             URL
                           </th>
@@ -253,9 +328,19 @@ export function AdminPage({
                               key={source.id}
                               className={cn(
                                 'group',
-                                isEmptyReady && 'bg-amber-500/5'
+                                isEmptyReady && 'bg-amber-500/5',
+                                selected.has(source.id) && 'bg-[#FF4500]/5'
                               )}
                             >
+                              <td className="py-3 pr-4">
+                                <input
+                                  type="checkbox"
+                                  checked={selected.has(source.id)}
+                                  onChange={() => toggleOne(source.id)}
+                                  className="cursor-pointer accent-[#FF4500]"
+                                  aria-label={`Select ${source.url}`}
+                                />
+                              </td>
                               <td className="py-3 pr-4 max-w-xs">
                                 <a
                                   href={source.url}

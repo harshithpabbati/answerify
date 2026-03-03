@@ -89,6 +89,40 @@ export async function reindexSource(id: string, slug: string) {
   return { error: null };
 }
 
+export async function reindexSelectedSources(ids: string[], slug: string) {
+  if (!ids.length) return { error: null, count: 0, succeeded: 0, failed: 0 };
+
+  const supabase = await createServiceClient();
+
+  // Fetch only the requested datasource records
+  const { data: sources, error: fetchError } = await supabase
+    .from('datasource')
+    .select('id, url, organization_id')
+    .in('id', ids);
+
+  if (fetchError) return { error: fetchError, count: 0, succeeded: 0, failed: 0 };
+  if (!sources?.length) return { error: null, count: 0, succeeded: 0, failed: 0 };
+
+  // Drop existing sections for these specific sources
+  const { error: deleteError } = await supabase
+    .from('section')
+    .delete()
+    .in('datasource_id', ids);
+  if (deleteError) return { error: deleteError, count: 0, succeeded: 0, failed: 0 };
+
+  const results = await Promise.allSettled(
+    sources.map((source) => indexDatasource(source))
+  );
+
+  const succeeded = results.filter(
+    (r) => r.status === 'fulfilled' && r.value.ok
+  ).length;
+  const failed = results.length - succeeded;
+
+  revalidatePath(`/org/${slug}/admin`);
+  return { error: null, count: sources.length, succeeded, failed };
+}
+
 export async function reindexAllSources(orgId: string, slug: string) {
   const supabase = await createServiceClient();
 
