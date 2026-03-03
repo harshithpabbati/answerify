@@ -77,6 +77,7 @@ export async function POST(request: Request, { params }: Params) {
           organization_id: reply.organization_id,
           content: s.content,
           heading: s.heading ?? null,
+          position: i,
           embedding: serializeEmbedding(embeddings[i]),
         }));
 

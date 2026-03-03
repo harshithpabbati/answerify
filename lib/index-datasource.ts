@@ -1,4 +1,4 @@
-import { generateEmbeddings, serializeEmbedding } from '@/lib/embeddings';
+import { generateEmbeddingsInBatches, serializeEmbedding } from '@/lib/embeddings';
 import { processMarkdown } from '@/lib/processMarkdown';
 import { createServiceClient } from '@/lib/supabase/service';
 
@@ -78,7 +78,7 @@ export async function indexDatasource(record: DatasourceRecord) {
 
   let embeddings: number[][];
   try {
-    embeddings = await generateEmbeddings(sections.map((s) => s.content));
+    embeddings = await generateEmbeddingsInBatches(sections.map((s) => s.content));
   } catch (error) {
     console.error('Failed to generate embeddings:', error);
     await supabase

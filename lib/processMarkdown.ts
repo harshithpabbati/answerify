@@ -127,7 +127,7 @@ export function splitIntoChunks(
  */
 export function processMarkdown(
   content: string,
-  maxSectionLength = 2500,
+  maxSectionLength = 5000,
   chunkOverlap = 200
 ): ProcessedMd {
   const mdTree = fromMarkdown(content);
