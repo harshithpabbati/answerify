@@ -30,6 +30,13 @@ function blendConfidence(
 
 const CLARIFYING_HTML = `<p>Thank you for reaching out. I wasn't able to find enough information to fully answer your question. Could you please provide a bit more detail so we can assist you better?</p>`;
 
+/** Similarity assigned to neighbor sections fetched for context expansion (not vector-matched themselves). */
+const NEIGHBOR_SIMILARITY = 0;
+
+/** Validates a UUID string before interpolating it into a Supabase filter expression. */
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /* -------------------------------------------------------------------------- */
 /*                             VECTOR RETRIEVAL                               */
 /* -------------------------------------------------------------------------- */
@@ -54,11 +61,82 @@ async function retrieveSections(
     return [];
   }
 
-  return (data ?? []) as Array<{
+  const matched = (data ?? []) as Array<{
     content: string;
     datasource_id: string;
+    heading: string | null;
+    id: string;
+    position: number;
     similarity: number;
   }>;
+
+  if (matched.length === 0) return matched;
+
+  // Expand context by fetching the immediate neighbors (position ± 1) of each
+  // matched section within the same datasource. This ensures the LLM receives
+  // the surrounding context even when the most relevant sentence falls at a
+  // chunk boundary.
+  const matchedIds = new Set(matched.map((s) => s.id));
+
+  // Build a single OR-filter covering all (datasource_id, position) neighbor pairs
+  // to avoid N individual round-trips. datasource_id values are validated against
+  // a UUID regex before interpolation as a defense-in-depth measure.
+  const neighborFilter = matched
+    .flatMap((s) => {
+      if (!UUID_REGEX.test(s.datasource_id)) return [];
+      return [s.position - 1, s.position + 1]
+        .filter((pos) => pos >= 0)
+        .map(
+          (pos) => `and(datasource_id.eq.${s.datasource_id},position.eq.${pos})`
+        );
+    })
+    .join(',');
+
+  const neighborData: Array<{
+    id: string;
+    datasource_id: string;
+    content: string;
+    heading: string | null;
+    position: number;
+  }> = [];
+
+  if (neighborFilter) {
+    const { data } = await supabase
+      .from('section')
+      .select('id, datasource_id, content, heading, position')
+      .or(neighborFilter);
+    if (data) neighborData.push(...data);
+  }
+
+  // Deduplicate neighbors, excluding sections already in the matched set
+  const seenIds = new Set(matchedIds);
+  const uniqueNeighbors: Array<{
+    id: string;
+    datasource_id: string;
+    content: string;
+    heading: string | null;
+    position: number;
+  }> = [];
+
+  for (const n of neighborData) {
+    if (!seenIds.has(n.id)) {
+      seenIds.add(n.id);
+      uniqueNeighbors.push(n);
+    }
+  }
+
+  // Merge matched sections with neighbors, grouped by datasource and ordered
+  // by position so the LLM sees coherent, in-order context blocks.
+  const allSections = [
+    ...matched,
+    ...uniqueNeighbors.map((n) => ({ ...n, similarity: NEIGHBOR_SIMILARITY })),
+  ].sort((a, b) => {
+    if (a.datasource_id !== b.datasource_id)
+      return a.datasource_id.localeCompare(b.datasource_id);
+    return a.position - b.position;
+  });
+
+  return allSections;
 }
 
 /* -------------------------------------------------------------------------- */
