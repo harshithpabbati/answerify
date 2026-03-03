@@ -4,7 +4,7 @@ import { indexDatasource } from '@/lib/index-datasource';
 import { createServerClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const supabase = await createServerClient();
