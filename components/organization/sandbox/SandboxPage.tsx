@@ -34,11 +34,7 @@ function ConfidenceBar({
 }) {
   const pct = Math.round(value * 100);
   const color =
-    pct >= 65
-      ? 'bg-emerald-500'
-      : pct >= 40
-        ? 'bg-amber-500'
-        : 'bg-red-500';
+    pct >= 65 ? 'bg-emerald-500' : pct >= 40 ? 'bg-amber-500' : 'bg-red-500';
 
   return (
     <div className="space-y-1">
@@ -74,13 +70,7 @@ function ConfidenceBar({
   );
 }
 
-export function SandboxPage({
-  orgId,
-  slug,
-}: {
-  orgId: string;
-  slug: string;
-}) {
+export function SandboxPage({ orgId, slug }: { orgId: string; slug: string }) {
   const [subject, setSubject] = useState('');
   const [question, setQuestion] = useState('');
   const [result, setResult] = useState<SandboxResult | null>(null);
@@ -267,7 +257,26 @@ export function SandboxPage({
                 {'// Matched Knowledge Base Sections'}
               </p>
               <div className="space-y-2">
-                {result.sections.map((section, i) => (
+                {Object.values(
+                  result.sections
+                    .filter((section) => section?.similarity > 0)
+                    .reduce((acc: Record<string, SandboxSection>, section) => {
+                      const key = section.datasourceUrl || section.content;
+                      if (acc[key]) {
+                        acc[key] = {
+                          ...acc[key],
+                          content: acc[key].content + '\n\n' + section.content,
+                          similarity: Math.max(
+                            acc[key].similarity,
+                            section.similarity
+                          ),
+                        };
+                      } else {
+                        acc[key] = { ...section };
+                      }
+                      return acc;
+                    }, {})
+                ).map((section, i) => (
                   <div
                     key={i}
                     className="border border-[#FF4500]/15 bg-card transition-colors hover:border-[#FF4500]/40"

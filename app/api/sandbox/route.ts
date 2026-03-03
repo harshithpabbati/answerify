@@ -108,7 +108,7 @@ async function runGroundedAnswerAgent({
   try {
     return parseLLMJSON(text);
   } catch {
-    return { status: 'NO_INFORMATION', confidence: 0 };
+    return { status: 'NO_INFORMATION', confidence: 0, html: null };
   }
 }
 
