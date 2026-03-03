@@ -152,7 +152,7 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
             title="Settings"
             className={cn(
               'flex size-7 items-center justify-center border transition-colors',
-              pathname === `/org/${slug}/sandbox`
+              pathname === `/org/${slug}/admin`
                 ? 'border-[#FF4500] bg-[#FF4500] text-white'
                 : 'border-[#FF4500]/30 text-muted-foreground hover:border-[#FF4500] hover:text-[#FF4500]'
             )}
