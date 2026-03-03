@@ -94,10 +94,19 @@ export function AdminPage({
 }: Props) {
   const [isPending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(initialSources.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedSources = initialSources.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
 
   const allIds = useMemo(
-    () => initialSources.map((s) => s.id),
-    [initialSources]
+    () => paginatedSources.map((s) => s.id),
+    [paginatedSources]
   );
   const allSelected =
     allIds.length > 0 && allIds.every((id) => selected.has(id));
@@ -275,7 +284,7 @@ export function AdminPage({
                               checked={allSelected}
                               onChange={toggleAll}
                               className="cursor-pointer accent-[#FF4500]"
-                              aria-label="Select all sources"
+                              aria-label="Select all sources on this page"
                             />
                           </th>
                           <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
@@ -296,7 +305,7 @@ export function AdminPage({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#FF4500]/10">
-                        {initialSources.map((source) => {
+                        {paginatedSources.map((source) => {
                           const isEmptyReady =
                             source.status === 'ready' &&
                             source.section_count === 0;
@@ -382,6 +391,34 @@ export function AdminPage({
                         })}
                       </tbody>
                     </table>
+                    {totalPages > 1 && (
+                      <div className="mt-4 flex items-center justify-between font-mono text-xs text-muted-foreground">
+                        <span>
+                          Page {safePage} of {totalPages} &mdash;{' '}
+                          {initialSources.length} total
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={safePage === 1 || isPending}
+                            onClick={() => setCurrentPage((p) => p - 1)}
+                            className="text-xs"
+                          >
+                            ← Prev
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={safePage === totalPages || isPending}
+                            onClick={() => setCurrentPage((p) => p + 1)}
+                            className="text-xs"
+                          >
+                            Next →
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
