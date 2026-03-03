@@ -4,6 +4,7 @@ import { codeBlock } from 'common-tags';
 import { textModel } from '@/lib/ai';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
+import { parseLLMJSON } from '@/lib/parse-llm-json';
 import { createServerClient } from '@/lib/supabase/server';
 
 /**
@@ -105,10 +106,7 @@ async function runGroundedAnswerAgent({
   });
 
   try {
-    // LLMs (especially Gemini) often wrap JSON in markdown code fences
-    // (e.g. ```json ... ```). Strip them before parsing.
-    const jsonString = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-    return JSON.parse(jsonString);
+    return parseLLMJSON(text);
   } catch {
     return { status: 'NO_INFORMATION', confidence: 0 };
   }
