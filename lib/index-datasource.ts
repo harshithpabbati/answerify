@@ -93,6 +93,7 @@ export async function indexDatasource(record: DatasourceRecord) {
     organization_id: record.organization_id,
     content: s.content,
     heading: s.heading ?? null,
+    position: i,
     embedding: serializeEmbedding(embeddings[i]),
   }));
 

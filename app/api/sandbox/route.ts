@@ -138,6 +138,9 @@ export async function POST(request: Request) {
   const matchedSections: Array<{
     content: string;
     datasource_id: string;
+    heading: string | null;
+    id: string;
+    position: number;
     similarity: number;
   }> = [];
 
@@ -152,6 +155,42 @@ export async function POST(request: Request) {
       });
       if (data) matchedSections.push(...data);
     }
+  }
+
+  // Expand context by fetching immediate neighbors (position ± 1) of each
+  // matched section so the LLM has surrounding context at chunk boundaries.
+  if (matchedSections.length > 0) {
+    const matchedIds = new Set(matchedSections.map((s) => s.id));
+
+    // Build a single OR-filter covering all (datasource_id, position) neighbor pairs
+    // to avoid N individual round-trips.
+    const neighborFilter = matchedSections
+      .flatMap((s) =>
+        [s.position - 1, s.position + 1].map(
+          (pos) => `and(datasource_id.eq.${s.datasource_id},position.eq.${pos})`
+        )
+      )
+      .join(',');
+
+    const { data: neighborData } = await supabase
+      .from('section')
+      .select('id, datasource_id, content, heading, position')
+      .or(neighborFilter);
+
+    const seenIds = new Set(matchedIds);
+    for (const n of neighborData ?? []) {
+      if (!seenIds.has(n.id)) {
+        seenIds.add(n.id);
+        matchedSections.push({ ...n, similarity: 0 });
+      }
+    }
+
+    // Sort by datasource then position for coherent in-order context blocks
+    matchedSections.sort((a, b) => {
+      if (a.datasource_id !== b.datasource_id)
+        return a.datasource_id.localeCompare(b.datasource_id);
+      return a.position - b.position;
+    });
   }
 
   const vectorConfidence = computeVectorConfidence(

@@ -281,6 +281,7 @@ export type Database = {
           heading: string | null
           id: string
           organization_id: string
+          position: number
         }
         Insert: {
           content: string
@@ -290,6 +291,7 @@ export type Database = {
           heading?: string | null
           id?: string
           organization_id: string
+          position?: number
         }
         Update: {
           content?: string
@@ -299,6 +301,7 @@ export type Database = {
           heading?: string | null
           id?: string
           organization_id?: string
+          position?: number
         }
         Relationships: [
           {
@@ -428,8 +431,10 @@ export type Database = {
         Returns: {
           content: string
           datasource_id: string
+          heading: string | null
           id: string
           organization_id: string
+          position: number
           similarity: number
         }[]
       }
