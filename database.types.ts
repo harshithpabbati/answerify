@@ -364,6 +364,47 @@ export type Database = {
           },
         ]
       }
+      workflow: {
+        Row: {
+          created_at: string
+          description: string | null
+          enabled: boolean
+          id: string
+          name: string
+          organization_id: string
+          steps: Json
+          trigger: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          name: string
+          organization_id: string
+          steps?: Json
+          trigger: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          name?: string
+          organization_id?: string
+          steps?: Json
+          trigger?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

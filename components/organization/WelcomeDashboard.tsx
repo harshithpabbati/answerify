@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   updateAutopilotSettings,
   updateTonePolicy,
@@ -460,6 +461,15 @@ export function WelcomeDashboard({
                   onClick={() => setManageApiConnections({ orgId, slug })}
                 >
                   🔌 API Connections
+                </Button>
+                <Button
+                  variant="neutral"
+                  className="col-span-3"
+                  asChild
+                >
+                  <Link href={`/org/${slug}/workflows`}>
+                    ⚡ Workflows
+                  </Link>
                 </Button>
               </div>
             </CardContent>

@@ -2,6 +2,7 @@ import { Tables } from '@/database.types';
 import PostalMime from 'postal-mime';
 
 import { createServiceClient } from '@/lib/supabase/service';
+import { runWorkflows } from '@/lib/workflow-runner';
 
 export async function POST(request: Request) {
   const secret = request.headers.get('X-Webhook-Secret');
@@ -117,6 +118,11 @@ export async function POST(request: Request) {
       status: 200,
     });
   }
+
+  // Run matching workflows in the background — errors must not fail the webhook.
+  runWorkflows(supabase, thread).catch((err) =>
+    console.error('Workflow runner error:', err)
+  );
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });
 }
