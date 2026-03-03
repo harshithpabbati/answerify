@@ -1,0 +1,336 @@
+'use client';
+
+import { useTransition } from 'react';
+import Link from 'next/link';
+import { deleteSource, reindexSource } from '@/actions/source';
+import type { AdminSource, RecentReply } from '@/actions/source';
+import {
+  Cross2Icon,
+  ExternalLinkIcon,
+  Link2Icon,
+  ReloadIcon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
+import { toast } from 'sonner';
+
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { EmbeddingStatusBadge } from '@/components/ui/EmbeddingStatusBadge';
+
+interface Props {
+  orgId: string;
+  slug: string;
+  initialSources: AdminSource[];
+  initialReplies: RecentReply[];
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-5 flex items-center gap-4">
+      <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
+        {children}
+      </p>
+      <div className="h-px flex-1 bg-gradient-to-r from-[#FF4500]/30 to-transparent" />
+    </div>
+  );
+}
+
+function ConfidenceBadge({ score }: { score: number }) {
+  const pct = Math.round(score * 100);
+  const color =
+    pct >= 80
+      ? 'text-emerald-500 border-emerald-500/30'
+      : pct >= 50
+        ? 'text-amber-500 border-amber-500/30'
+        : 'text-red-500 border-red-500/30';
+  return (
+    <span
+      className={cn(
+        'border px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums',
+        color
+      )}
+    >
+      {pct}%
+    </span>
+  );
+}
+
+function ReplyStatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    sent: 'text-emerald-500',
+    pending: 'text-amber-500',
+    draft: 'text-muted-foreground',
+  };
+  return (
+    <span
+      className={cn(
+        'font-mono text-[10px] font-semibold uppercase tracking-wider',
+        map[status] ?? 'text-muted-foreground'
+      )}
+    >
+      {status}
+    </span>
+  );
+}
+
+export function AdminPage({
+  orgId,
+  slug,
+  initialSources,
+  initialReplies,
+}: Props) {
+  const [isPending, startTransition] = useTransition();
+
+  const handleReindex = (sourceId: string) => {
+    startTransition(async () => {
+      toast.loading('Re-indexing source…', { id: `reindex-${sourceId}` });
+      const { error } = await reindexSource(sourceId, slug);
+      if (error) {
+        toast.error('Re-index failed', {
+          id: `reindex-${sourceId}`,
+          description: error instanceof Error ? error.message : String(error),
+        });
+      } else {
+        toast.success('Source re-indexed successfully', {
+          id: `reindex-${sourceId}`,
+        });
+      }
+    });
+  };
+
+  const handleDelete = (sourceId: string) => {
+    startTransition(async () => {
+      const { error } = await deleteSource(sourceId, slug);
+      if (error) {
+        toast.error('Delete failed', {
+          description: error instanceof Error ? error.message : String(error),
+        });
+      } else {
+        toast.success('Data source deleted');
+      }
+    });
+  };
+
+  return (
+    <div className="flex h-screen flex-col overflow-auto">
+      {/* ── Page header ─────────────────────────────────────────────────── */}
+      <div className="relative border-b border-[#FF4500]/20 px-6 py-6 md:px-10 overflow-hidden">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              'linear-gradient(#FF4500 1px, transparent 1px), linear-gradient(90deg, #FF4500 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+        <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
+          {'// ADMIN'}
+        </p>
+        <h1 className="font-display text-3xl font-black uppercase tracking-tight text-foreground">
+          Admin Panel
+        </h1>
+        <p className="mt-2 font-mono text-xs text-muted-foreground">
+          Monitor datasource health, reindex stuck sources, and review AI reply
+          logs.
+        </p>
+      </div>
+
+      {/* ── Body ────────────────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-auto p-6 md:p-10">
+        <div className="space-y-10">
+          {/* ── Datasource Health ──────────────────────────────────────────── */}
+          <div>
+            <SectionLabel>{`// Datasource Health`}</SectionLabel>
+            <Card className="border-[#FF4500]/15">
+              <CardHeader>
+                <CardTitle>📚 Datasource Health</CardTitle>
+                <CardDescription>
+                  All data sources for this organization with their indexing
+                  status and section counts. Use the actions to reindex stuck or
+                  errored sources, or delete them entirely.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {initialSources.length === 0 ? (
+                  <p className="font-mono text-sm text-muted-foreground py-4 text-center">
+                    No data sources configured yet.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm font-mono">
+                      <thead>
+                        <tr className="border-b border-[#FF4500]/20 text-left">
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+                            URL
+                          </th>
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                            Status
+                          </th>
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                            Sections
+                          </th>
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                            Indexed At
+                          </th>
+                          <th className="pb-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#FF4500]/10">
+                        {initialSources.map((source) => (
+                          <tr key={source.id} className="group">
+                            <td className="py-3 pr-4 max-w-xs">
+                              <a
+                                href={source.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-foreground hover:text-[#FF4500] transition-colors truncate"
+                              >
+                                <Link2Icon className="size-3 shrink-0" />
+                                <span className="truncate">{source.url}</span>
+                                <ExternalLinkIcon className="size-3 shrink-0 opacity-50" />
+                              </a>
+                            </td>
+                            <td className="py-3 pr-4">
+                              <EmbeddingStatusBadge status={source.status} />
+                            </td>
+                            <td className="py-3 pr-4 tabular-nums text-muted-foreground">
+                              {source.section_count}
+                            </td>
+                            <td className="py-3 pr-4 whitespace-nowrap text-muted-foreground text-xs">
+                              {new Date(source.created_at).toLocaleString()}
+                            </td>
+                            <td className="py-3">
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="neutral"
+                                  size="sm"
+                                  disabled={isPending}
+                                  onClick={() => handleReindex(source.id)}
+                                  title="Re-index this source"
+                                  className="gap-1.5 text-xs"
+                                >
+                                  <ReloadIcon className="size-3" />
+                                  Reindex
+                                </Button>
+                                <Button
+                                  variant="neutral"
+                                  size="sm"
+                                  disabled={isPending}
+                                  onClick={() => handleDelete(source.id)}
+                                  title="Delete this source"
+                                  className="gap-1.5 text-xs text-red-500 hover:text-red-600"
+                                >
+                                  <TrashIcon className="size-3" />
+                                  Delete
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <div className="mt-4 flex justify-end">
+                  <Button variant="default" asChild>
+                    <Link href={`/org/${slug}`}>← Back to Dashboard</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ── Reply Logs ─────────────────────────────────────────────────── */}
+          <div>
+            <SectionLabel>{`// Reply Logs`}</SectionLabel>
+            <Card className="border-[#FF4500]/15">
+              <CardHeader>
+                <CardTitle>📋 Recent AI Reply Logs</CardTitle>
+                <CardDescription>
+                  The last 20 AI-generated replies across all threads, with
+                  confidence scores and delivery status.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {initialReplies.length === 0 ? (
+                  <p className="font-mono text-sm text-muted-foreground py-4 text-center">
+                    No replies generated yet.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm font-mono">
+                      <thead>
+                        <tr className="border-b border-[#FF4500]/20 text-left">
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+                            Thread
+                          </th>
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                            Confidence
+                          </th>
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+                            Status
+                          </th>
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                            Perfect?
+                          </th>
+                          <th className="pb-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                            Created At
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#FF4500]/10">
+                        {initialReplies.map((reply) => (
+                          <tr key={reply.id} className="group">
+                            <td className="py-3 pr-4">
+                              <Link
+                                href={`/org/${slug}/${reply.thread_id}`}
+                                className="text-foreground hover:text-[#FF4500] transition-colors font-medium underline underline-offset-2"
+                              >
+                                {reply.thread_id.slice(0, 8)}…
+                              </Link>
+                            </td>
+                            <td className="py-3 pr-4">
+                              <ConfidenceBadge
+                                score={reply.confidence_score}
+                              />
+                            </td>
+                            <td className="py-3 pr-4">
+                              <ReplyStatusBadge status={reply.status} />
+                            </td>
+                            <td className="py-3 pr-4">
+                              {reply.is_perfect === true ? (
+                                <span className="text-emerald-500 font-bold">
+                                  ✓
+                                </span>
+                              ) : reply.is_perfect === false ? (
+                                <Cross2Icon className="size-3 text-red-500" />
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 whitespace-nowrap text-muted-foreground text-xs">
+                              {new Date(reply.created_at).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
