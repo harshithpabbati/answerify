@@ -136,6 +136,27 @@ export function AdminPage({
     });
   };
 
+  const handleReindexAll = () => {
+    startTransition(async () => {
+      toast.loading('Re-indexing all sources…', { id: 'reindex-all' });
+      const result = await reindexAllSources(orgId, slug);
+      if (result.error) {
+        toast.error('Reindex all failed', {
+          id: 'reindex-all',
+          description:
+            result.error instanceof Error
+              ? result.error.message
+              : String(result.error),
+        });
+      } else {
+        toast.success(
+          `Reindexed ${result.count} source${result.count !== 1 ? 's' : ''} — ${result.succeeded} succeeded, ${result.failed} failed`,
+          { id: 'reindex-all' }
+        );
+      }
+    });
+  };
+
   const handleReindexSelected = () => {
     const ids = Array.from(selected);
     startTransition(async () => {
@@ -227,17 +248,31 @@ export function AdminPage({
                       stuck or errored sources, or delete them entirely.
                     </CardDescription>
                   </div>
-                  {initialSources.length > 0 && someSelected && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={isPending}
-                      onClick={handleReindexSelected}
-                      className="gap-1.5 text-xs"
-                    >
-                      <ReloadIcon className="size-3" />
-                      Reindex Selected ({selected.size})
-                    </Button>
+                  {initialSources.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      {someSelected && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isPending}
+                          onClick={handleReindexSelected}
+                          className="gap-1.5 text-xs"
+                        >
+                          <ReloadIcon className="size-3" />
+                          Reindex Selected ({selected.size})
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={isPending}
+                        onClick={handleReindexAll}
+                        className="gap-1.5 text-xs"
+                      >
+                        <ReloadIcon className="size-3" />
+                        Reindex All
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardHeader>
