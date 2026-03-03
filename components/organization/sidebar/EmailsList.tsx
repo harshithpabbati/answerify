@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { getThreads } from '@/actions/email';
 import { Tables } from '@/database.types';
 import { RealtimeChannel } from '@supabase/supabase-js';
-import { LightningBoltIcon } from '@radix-ui/react-icons';
+import { LightningBoltIcon, MixIcon } from '@radix-ui/react-icons';
 
 import { createBrowserClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -134,6 +134,18 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
             )}
           >
             <LightningBoltIcon className="size-3.5" />
+          </Link>
+          <Link
+            href={`/org/${slug}/sandbox`}
+            title="Sandbox"
+            className={cn(
+              'flex size-7 items-center justify-center border transition-colors',
+              pathname === `/org/${slug}/sandbox`
+                ? 'border-[#FF4500] bg-[#FF4500] text-white'
+                : 'border-[#FF4500]/30 text-muted-foreground hover:border-[#FF4500] hover:text-[#FF4500]'
+            )}
+          >
+            <MixIcon className="size-3.5" />
           </Link>
           <div className="flex items-center gap-0.5 border border-[#FF4500]/40 p-0.5">
           {(['open', 'closed'] as const).map((s) => {
