@@ -13,7 +13,6 @@ import { useManageApiConnections } from '@/states/api-connection';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
 import {
   useInviteMembers,
-  useTestSandbox,
   useUpdateOrganization,
 } from '@/states/organization';
 import {
@@ -181,7 +180,6 @@ export function WelcomeDashboard({
   const [, setViewDataSource] = useViewDataSource();
   const [, setInviteMembers] = useInviteMembers();
   const [, setUpdateOrganization] = useUpdateOrganization();
-  const [, setTestSandbox] = useTestSandbox();
   const [, setManageApiConnections] = useManageApiConnections();
 
   const [enabled, setEnabled] = useState(autopilotEnabled);
@@ -655,12 +653,8 @@ export function WelcomeDashboard({
                 title="Sandbox"
                 description="Send a test email to preview how Answerify would respond."
               >
-                <Button
-                  variant="default"
-                  className="w-full"
-                  onClick={() => setTestSandbox(orgId)}
-                >
-                  Open Sandbox
+                <Button variant="default" className="w-full" asChild>
+                  <Link href={`/org/${slug}/sandbox`}>Open Sandbox</Link>
                 </Button>
               </ToolCard>
 
