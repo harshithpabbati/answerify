@@ -100,15 +100,18 @@ export async function reindexSelectedSources(ids: string[], slug: string) {
     .select('id, url, organization_id')
     .in('id', ids);
 
-  if (fetchError) return { error: fetchError, count: 0, succeeded: 0, failed: 0 };
-  if (!sources?.length) return { error: null, count: 0, succeeded: 0, failed: 0 };
+  if (fetchError)
+    return { error: fetchError, count: 0, succeeded: 0, failed: 0 };
+  if (!sources?.length)
+    return { error: null, count: 0, succeeded: 0, failed: 0 };
 
   // Drop existing sections for these specific sources
   const { error: deleteError } = await supabase
     .from('section')
     .delete()
     .in('datasource_id', ids);
-  if (deleteError) return { error: deleteError, count: 0, succeeded: 0, failed: 0 };
+  if (deleteError)
+    return { error: deleteError, count: 0, succeeded: 0, failed: 0 };
 
   const results = await Promise.allSettled(
     sources.map((source) => indexDatasource(source))
@@ -132,15 +135,18 @@ export async function reindexAllSources(orgId: string, slug: string) {
     .select('id, url, organization_id')
     .eq('organization_id', orgId);
 
-  if (fetchError) return { error: fetchError, count: 0, succeeded: 0, failed: 0 };
-  if (!sources?.length) return { error: null, count: 0, succeeded: 0, failed: 0 };
+  if (fetchError)
+    return { error: fetchError, count: 0, succeeded: 0, failed: 0 };
+  if (!sources?.length)
+    return { error: null, count: 0, succeeded: 0, failed: 0 };
 
   // Drop all existing sections for this org at once, then reindex in parallel
   const { error: deleteError } = await supabase
     .from('section')
     .delete()
     .eq('organization_id', orgId);
-  if (deleteError) return { error: deleteError, count: 0, succeeded: 0, failed: 0 };
+  if (deleteError)
+    return { error: deleteError, count: 0, succeeded: 0, failed: 0 };
 
   const results = await Promise.allSettled(
     sources.map((source) => indexDatasource(source))
@@ -165,31 +171,35 @@ export type AdminSource = {
   section_count: number;
 };
 
-export async function getAdminSources(
-  orgId: string
-): Promise<AdminSource[]> {
+export async function getAdminSources(orgId: string): Promise<AdminSource[]> {
   const supabase = await createServerClient();
 
-  const [{ data: sources }, { data: sectionCounts }] = await Promise.all([
-    supabase
-      .from('datasource')
-      .select('id, url, status, created_at, organization_id, is_internal_kb')
-      .eq('organization_id', orgId)
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('section')
-      .select('datasource_id')
-      .eq('organization_id', orgId),
-  ]);
+  const { data, error } = await supabase
+    .from('datasource')
+    .select(
+      `
+      id,
+      url,
+      status,
+      created_at,
+      organization_id,
+      is_internal_kb,
+      section:section(count)
+    `
+    )
+    .eq('organization_id', orgId)
+    .order('created_at', { ascending: false });
 
-  const countMap: Record<string, number> = {};
-  for (const row of sectionCounts ?? []) {
-    countMap[row.datasource_id] = (countMap[row.datasource_id] ?? 0) + 1;
-  }
+  if (error) throw error;
 
-  return (sources ?? []).map((s) => ({
-    ...s,
-    section_count: countMap[s.id] ?? 0,
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    url: row.url,
+    status: row.status,
+    created_at: row.created_at,
+    organization_id: row.organization_id,
+    is_internal_kb: row.is_internal_kb,
+    section_count: row.section?.[0]?.count ?? 0,
   }));
 }
 

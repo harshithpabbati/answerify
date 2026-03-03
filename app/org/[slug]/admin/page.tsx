@@ -1,7 +1,7 @@
 import { type Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getAdminSources, getRecentReplies } from '@/actions/source';
 import { getOrganizationBySlug } from '@/actions/organization';
+import { getAdminSources, getRecentReplies } from '@/actions/source';
 
 import { AdminPage } from '@/components/organization/admin/AdminPage';
 

@@ -2,7 +2,12 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { deleteSource, reindexAllSources, reindexSelectedSources, reindexSource } from '@/actions/source';
+import {
+  deleteSource,
+  reindexAllSources,
+  reindexSelectedSources,
+  reindexSource,
+} from '@/actions/source';
 import type { AdminSource, RecentReply } from '@/actions/source';
 import {
   Cross2Icon,
@@ -90,8 +95,12 @@ export function AdminPage({
   const [isPending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const allIds = useMemo(() => initialSources.map((s) => s.id), [initialSources]);
-  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const allIds = useMemo(
+    () => initialSources.map((s) => s.id),
+    [initialSources]
+  );
+  const allSelected =
+    allIds.length > 0 && allIds.every((id) => selected.has(id));
   const someSelected = selected.size > 0;
 
   const toggleAll = () => {
@@ -130,9 +139,12 @@ export function AdminPage({
   const handleReindexSelected = () => {
     const ids = Array.from(selected);
     startTransition(async () => {
-      toast.loading(`Re-indexing ${ids.length} selected source${ids.length !== 1 ? 's' : ''}…`, {
-        id: 'reindex-selected',
-      });
+      toast.loading(
+        `Re-indexing ${ids.length} selected source${ids.length !== 1 ? 's' : ''}…`,
+        {
+          id: 'reindex-selected',
+        }
+      );
       const result = await reindexSelectedSources(ids, slug);
       if (result.error) {
         toast.error('Reindex failed', {
@@ -146,28 +158,6 @@ export function AdminPage({
         toast.success(
           `Reindexed ${result.count} source${result.count !== 1 ? 's' : ''} — ${result.succeeded} succeeded, ${result.failed} failed`,
           { id: 'reindex-selected' }
-        );
-        setSelected(new Set());
-      }
-    });
-  };
-
-  const handleReindexAll = () => {
-    startTransition(async () => {
-      toast.loading('Re-indexing all sources…', { id: 'reindex-all' });
-      const result = await reindexAllSources(orgId, slug);
-      if (result.error) {
-        toast.error('Reindex all failed', {
-          id: 'reindex-all',
-          description:
-            result.error instanceof Error
-              ? result.error.message
-              : String(result.error),
-        });
-      } else {
-        toast.success(
-          `Reindexed ${result.count} source${result.count !== 1 ? 's' : ''} — ${result.succeeded} succeeded, ${result.failed} failed`,
-          { id: 'reindex-all' }
         );
         setSelected(new Set());
       }
@@ -233,35 +223,21 @@ export function AdminPage({
                     <CardTitle>📚 Datasource Health</CardTitle>
                     <CardDescription>
                       All data sources for this organization with their indexing
-                      status and section counts. Use the actions to reindex stuck or
-                      errored sources, or delete them entirely.
+                      status and section counts. Use the actions to reindex
+                      stuck or errored sources, or delete them entirely.
                     </CardDescription>
                   </div>
-                  {initialSources.length > 0 && (
-                    <div className="flex shrink-0 items-center gap-2">
-                      {someSelected && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={isPending}
-                          onClick={handleReindexSelected}
-                          className="gap-1.5 text-xs"
-                        >
-                          <ReloadIcon className="size-3" />
-                          Reindex Selected ({selected.size})
-                        </Button>
-                      )}
-                      <Button
-                        variant="neutral"
-                        size="sm"
-                        disabled={isPending}
-                        onClick={handleReindexAll}
-                        className="gap-1.5 text-xs"
-                      >
-                        <ReloadIcon className="size-3" />
-                        Reindex All
-                      </Button>
-                    </div>
+                  {initialSources.length > 0 && someSelected && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isPending}
+                      onClick={handleReindexSelected}
+                      className="gap-1.5 text-xs"
+                    >
+                      <ReloadIcon className="size-3" />
+                      Reindex Selected ({selected.size})
+                    </Button>
                   )}
                 </div>
               </CardHeader>
@@ -272,14 +248,14 @@ export function AdminPage({
                     <div>
                       <p className="font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">
                         {zeroSectionSources.length} source
-                        {zeroSectionSources.length !== 1 ? 's' : ''} indexed with
-                        0 sections
+                        {zeroSectionSources.length !== 1 ? 's' : ''} indexed
+                        with 0 sections
                       </p>
                       <p className="mt-0.5 font-mono text-xs text-muted-foreground">
                         This usually means the page returned no readable content
                         (e.g. JavaScript-rendered SPA, empty response, or the
-                        content has no headings). Try reindexing — if it stays at
-                        0 sections the URL may not be scrapable.
+                        content has no headings). Try reindexing — if it stays
+                        at 0 sections the URL may not be scrapable.
                       </p>
                     </div>
                   </div>
@@ -322,7 +298,8 @@ export function AdminPage({
                       <tbody className="divide-y divide-[#FF4500]/10">
                         {initialSources.map((source) => {
                           const isEmptyReady =
-                            source.status === 'ready' && source.section_count === 0;
+                            source.status === 'ready' &&
+                            source.section_count === 0;
                           return (
                             <tr
                               key={source.id}
@@ -368,7 +345,10 @@ export function AdminPage({
                                   </span>
                                 )}
                               </td>
-                              <td className="py-3 pr-4 whitespace-nowrap text-muted-foreground text-xs">
+                              <td
+                                className="py-3 pr-4 whitespace-nowrap text-muted-foreground text-xs"
+                                suppressHydrationWarning
+                              >
                                 {new Date(source.created_at).toLocaleString()}
                               </td>
                               <td className="py-3">
@@ -404,11 +384,6 @@ export function AdminPage({
                     </table>
                   </div>
                 )}
-                <div className="mt-4 flex justify-end">
-                  <Button variant="default" asChild>
-                    <Link href={`/org/${slug}`}>← Back to Dashboard</Link>
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           </div>
@@ -463,9 +438,7 @@ export function AdminPage({
                               </Link>
                             </td>
                             <td className="py-3 pr-4">
-                              <ConfidenceBadge
-                                score={reply.confidence_score}
-                              />
+                              <ConfidenceBadge score={reply.confidence_score} />
                             </td>
                             <td className="py-3 pr-4">
                               <ReplyStatusBadge status={reply.status} />
@@ -481,7 +454,10 @@ export function AdminPage({
                                 <span className="text-muted-foreground">—</span>
                               )}
                             </td>
-                            <td className="py-3 whitespace-nowrap text-muted-foreground text-xs">
+                            <td
+                              className="py-3 whitespace-nowrap text-muted-foreground text-xs"
+                              suppressHydrationWarning
+                            >
                               {new Date(reply.created_at).toLocaleString()}
                             </td>
                           </tr>
