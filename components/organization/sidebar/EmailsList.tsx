@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useReducer, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { getThreads } from '@/actions/email';
 import { Tables } from '@/database.types';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { LightningBoltIcon } from '@radix-ui/react-icons';
 
 import { createBrowserClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -48,6 +50,7 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
 export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const statusRef = useRef<'open' | 'closed' | undefined>(undefined);
 
@@ -119,7 +122,20 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
         <h3 className="font-mono truncate font-semibold text-foreground uppercase tracking-wider text-sm">
           {name}
         </h3>
-        <div className="flex items-center gap-0.5 border border-[#FF4500]/40 p-0.5">
+        <div className="flex items-center gap-1.5">
+          <Link
+            href={`/org/${slug}/workflows`}
+            title="Workflows"
+            className={cn(
+              'flex size-7 items-center justify-center border transition-colors',
+              pathname.includes('/workflows')
+                ? 'border-[#FF4500] bg-[#FF4500] text-white'
+                : 'border-[#FF4500]/30 text-muted-foreground hover:border-[#FF4500] hover:text-[#FF4500]'
+            )}
+          >
+            <LightningBoltIcon className="size-3.5" />
+          </Link>
+          <div className="flex items-center gap-0.5 border border-[#FF4500]/40 p-0.5">
           {(['open', 'closed'] as const).map((s) => {
             const active = (searchParams.get('status') ?? 'open') === s;
             return (
@@ -137,6 +153,7 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
               </button>
             );
           })}
+          </div>
         </div>
       </div>
       <div className="flex h-[calc(100dvh-60px)] flex-col overflow-auto">

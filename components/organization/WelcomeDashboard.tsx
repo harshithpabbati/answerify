@@ -1,12 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { fetchApiConnections } from '@/actions/api-connection';
 import {
   updateAutopilotSettings,
   updateTonePolicy,
 } from '@/actions/organization';
 import { fetchSources } from '@/actions/source';
 import { Tables } from '@/database.types';
+import { useManageApiConnections } from '@/states/api-connection';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
 import {
   useInviteMembers,
@@ -22,7 +25,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { sourcesQueryKey } from '@/lib/query-keys';
+import { apiConnectionsQueryKey, sourcesQueryKey } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { Button } from '@/components/ui/button';
@@ -49,15 +52,36 @@ interface Props {
   autopilotEnabled: boolean;
   autopilotThreshold: number;
   initialTonePolicy: string | null;
+  initialApiConnections: Tables<'api_connection'>[];
+  workflowsCount: number;
 }
+
+// ─── Stat chip ────────────────────────────────────────────────────────────────
+
+function StatChip({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="group relative flex items-center gap-3 border border-[#FF4500]/20 bg-muted/50 px-4 py-3 transition-all duration-200 hover:border-[#FF4500]/60 hover:bg-[#FF4500]/5 overflow-hidden">
+      {/* Animated left accent bar */}
+      <span className="absolute left-0 top-0 h-full w-0.5 bg-[#FF4500] scale-y-0 origin-bottom transition-transform duration-200 group-hover:scale-y-100" />
+      <span className="font-display text-2xl font-black tabular-nums text-foreground transition-colors group-hover:text-[#FF4500]">
+        {value.toLocaleString()}
+      </span>
+      <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// ─── Step badge ───────────────────────────────────────────────────────────────
 
 function StepBadge({ step, done }: { step: number; done: boolean }) {
   return (
     <span
       className={cn(
-        'flex size-6 shrink-0 items-center justify-center border-2 text-xs font-bold font-mono',
+        'flex size-6 shrink-0 items-center justify-center border-2 text-xs font-bold font-mono transition-all duration-200',
         done
-          ? 'border-[#FF4500] bg-[#FF4500] text-white'
+          ? 'border-[#FF4500] bg-[#FF4500] text-white shadow-[0_0_8px_rgba(255,69,0,0.4)]'
           : 'border-[#FF4500]/40 bg-background text-muted-foreground'
       )}
     >
@@ -65,6 +89,77 @@ function StepBadge({ step, done }: { step: number; done: boolean }) {
     </span>
   );
 }
+
+// ─── Tool card ────────────────────────────────────────────────────────────────
+
+function ToolCard({
+  icon,
+  title,
+  description,
+  badge,
+  accentColor = '#FF4500',
+  children,
+}: {
+  icon: string;
+  title: string;
+  description: string;
+  badge?: React.ReactNode;
+  accentColor?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="group relative flex flex-col border border-[#FF4500]/15 bg-card transition-all duration-300 hover:border-[#FF4500]/50 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(255,69,0,0.12)]">
+      {/* Top accent line */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#FF4500]/50 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+      {/* Corner decoration */}
+      <div className="absolute top-0 right-0 size-0 border-l-[20px] border-b-[20px] border-l-transparent border-b-[#FF4500]/10 transition-all duration-300 group-hover:border-b-[#FF4500]/30" />
+
+      <div className="flex items-start justify-between gap-2 p-5 pb-2">
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 items-center justify-center border border-[#FF4500]/20 bg-[#FF4500]/5 text-lg transition-all duration-200 group-hover:border-[#FF4500]/40 group-hover:bg-[#FF4500]/10">
+            {icon}
+          </span>
+          <div>
+            <p className="font-display text-sm font-black uppercase tracking-wide text-foreground">
+              {title}
+            </p>
+          </div>
+        </div>
+        {badge}
+      </div>
+
+      <p className="px-5 pb-4 font-mono text-xs leading-relaxed text-muted-foreground">
+        {description}
+      </p>
+
+      <div className="mt-auto px-5 pb-5">{children}</div>
+    </div>
+  );
+}
+
+function CountBadge({ count }: { count: number }) {
+  return (
+    <span className="border border-[#FF4500] bg-[#FF4500]/10 px-2 py-0.5 font-mono text-xs font-bold text-[#FF4500] shadow-[0_0_6px_rgba(255,69,0,0.2)]">
+      {count}
+    </span>
+  );
+}
+
+// ─── Section label ────────────────────────────────────────────────────────────
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-5 flex items-center gap-4">
+      <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
+        {children}
+      </p>
+      <div className="h-px flex-1 bg-gradient-to-r from-[#FF4500]/30 to-transparent" />
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function WelcomeDashboard({
   orgId,
@@ -78,6 +173,8 @@ export function WelcomeDashboard({
   autopilotEnabled,
   autopilotThreshold,
   initialTonePolicy,
+  initialApiConnections,
+  workflowsCount,
 }: Props) {
   const { copied, copyToClipboard } = useCopyToClipboard();
   const [, setAddDataSource] = useAddDataSource();
@@ -85,6 +182,7 @@ export function WelcomeDashboard({
   const [, setInviteMembers] = useInviteMembers();
   const [, setUpdateOrganization] = useUpdateOrganization();
   const [, setTestSandbox] = useTestSandbox();
+  const [, setManageApiConnections] = useManageApiConnections();
 
   const [enabled, setEnabled] = useState(autopilotEnabled);
   const [threshold, setThreshold] = useState(autopilotThreshold);
@@ -93,7 +191,6 @@ export function WelcomeDashboard({
   const [tonePolicy, setTonePolicy] = useState(initialTonePolicy ?? '');
   const [savingTone, setSavingTone] = useState(false);
 
-  // TanStack Query – seeded with server-fetched data, polls while sources are indexing
   const { data: sources = initialSources } = useQuery<Tables<'datasource'>[]>({
     queryKey: sourcesQueryKey(orgId),
     queryFn: () => fetchSources(orgId),
@@ -105,6 +202,14 @@ export function WelcomeDashboard({
       );
       return hasProcessing ? 4_000 : false;
     },
+  });
+
+  const { data: apiConnections = initialApiConnections } = useQuery<
+    Tables<'api_connection'>[]
+  >({
+    queryKey: apiConnectionsQueryKey(orgId),
+    queryFn: () => fetchApiConnections(orgId),
+    initialData: initialApiConnections,
   });
 
   const saveAutopilot = async (nextEnabled: boolean, nextThreshold: number) => {
@@ -147,332 +252,420 @@ export function WelcomeDashboard({
     }
   };
 
-  // Show at most this many sources before collapsing the rest into a "N more" button
-  const SOURCE_DISPLAY_LIMIT = 6;
+  const SOURCE_DISPLAY_LIMIT = 9;
   const visibleSources = sources.slice(0, SOURCE_DISPLAY_LIMIT);
   const hiddenCount = sources.length - SOURCE_DISPLAY_LIMIT;
 
   return (
-    <div className="flex h-screen flex-col overflow-auto p-6 md:p-10">
-      <div className="mb-8">
-        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500] mb-2">
-          {`// WORKSPACE`}
+    <div className="flex h-screen flex-col overflow-auto">
+      {/* ── Page header ─────────────────────────────────────────────────── */}
+      <div className="relative border-b border-[#FF4500]/20 px-6 py-6 md:px-10 overflow-hidden">
+        {/* Subtle grid background */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              'linear-gradient(#FF4500 1px, transparent 1px), linear-gradient(90deg, #FF4500 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+        <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
+          {'// WORKSPACE'}
         </p>
         <h1 className="font-display text-3xl font-black uppercase tracking-tight text-foreground">
-          Welcome to {orgName}
+          {orgName}
         </h1>
-        <p className="font-mono mt-2 text-sm text-gray-400">
-          Here&apos;s everything you need to get started with Answerify.
-        </p>
+
+        {/* Stats row */}
+        <div className="mt-5 flex flex-wrap gap-3">
+          <StatChip value={threadsCount} label="Threads" />
+          <StatChip value={repliesCount} label="Replies sent" />
+          <StatChip value={sources.length} label="Data sources" />
+          <StatChip value={apiConnections.length} label="API connections" />
+          <StatChip value={workflowsCount} label="Workflows" />
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Inbound Email Card */}
-        <Card className="sm:col-span-2 lg:col-span-1">
-          <CardHeader>
-            <CardTitle>📬 Inbound Email Address</CardTitle>
-            <CardDescription>
-              Forward your support emails to this address and Answerify will
-              handle them automatically.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between gap-3 border border-[#FF4500]/30 bg-muted px-4 py-3">
-              <span className="truncate font-mono text-sm font-medium text-foreground">
-                {inboundEmail || 'Not configured yet'}
-              </span>
-              {inboundEmail && (
-                <button
-                  onClick={() => copyToClipboard(inboundEmail)}
-                  className="shrink-0 rounded p-1 transition-opacity hover:opacity-70"
-                  aria-label="Copy inbound email"
-                >
-                  {copied ? (
-                    <CheckIcon className="size-5" />
-                  ) : (
-                    <ClipboardCopyIcon className="size-5" />
-                  )}
-                </button>
-              )}
-            </div>
-            <p className="text-gray-400 mt-3 text-sm font-mono">
-              Set up email forwarding from your support account to this address.
-              See guides for{' '}
-              <a
-                href="https://support.google.com/mail/answer/10957"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                Gmail
-              </a>
-              ,{' '}
-              <a
-                href="https://support.google.com/a/answer/10486484"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                Google Workspace
-              </a>
-              , or{' '}
-              <a
-                href="https://docs.microsoft.com/en-us/microsoft-365/admin/email/configure-email-forwarding"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                Microsoft 365
-              </a>
-              .
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Quick Start Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>🚀 Quick Start</CardTitle>
-            <CardDescription>
-              Follow these steps to get Answerify working for your team.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ol className="space-y-3">
-              <li className="flex items-start gap-3">
-                <StepBadge step={1} done={!!inboundEmail} />
-                <span className="font-mono text-sm text-muted-foreground">
-                  Copy your inbound email address
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <StepBadge step={2} done={threadsCount > 0} />
-                <span className="font-mono text-sm text-muted-foreground">
-                  Set up email forwarding from your support account
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <StepBadge step={3} done={sources.length > 0} />
-                <span className="font-mono text-sm text-muted-foreground">
-                  Add data sources to power AI replies
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <StepBadge step={4} done={repliesCount > 0} />
-                <span className="font-mono text-sm text-muted-foreground">
-                  Send a test email and watch Answerify reply!
-                </span>
-              </li>
-            </ol>
-          </CardContent>
-        </Card>
-
-        {/* Data Sources Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <CardTitle>📚 Data Sources</CardTitle>
-                <CardDescription>
-                  Knowledge base articles and docs that Answerify uses to
-                  generate replies.
-                </CardDescription>
-              </div>
-              <span className="border border-[#FF4500] bg-[#FF4500]/10 shrink-0 px-2 py-0.5 text-sm font-bold font-mono text-[#FF4500]">
-                {sources.length}
-              </span>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {sources.length === 0 ? (
-              <p className="font-mono text-gray-400 text-sm">
-                No data sources yet. Add links to your docs, help center, or
-                blog to improve AI-generated replies.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {visibleSources.map((source) => (
-                  <li key={source.id}>
+      {/* ── Body ────────────────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-auto p-6 md:p-10">
+        <div className="space-y-8">
+          {/* ── Row 1: Setup ─────────────────────────────────────────────── */}
+          <div>
+            <SectionLabel>{`// Setup`}</SectionLabel>
+            <div className="grid gap-5 md:grid-cols-2">
+              {/* Inbound Email */}
+              <Card className="border-[#FF4500]/15 transition-all duration-300 hover:border-[#FF4500]/40 hover:shadow-[0_4px_24px_rgba(255,69,0,0.08)]">
+                <CardHeader>
+                  <CardTitle>📬 Inbound Email</CardTitle>
+                  <CardDescription>
+                    Forward your support emails here and Answerify handles the
+                    rest automatically.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="group/copy flex items-center justify-between gap-3 border border-[#FF4500]/30 bg-muted px-4 py-3 transition-colors hover:border-[#FF4500]/60 hover:bg-[#FF4500]/5">
+                    <span className="truncate font-mono text-sm font-medium text-foreground">
+                      {inboundEmail || 'Not configured yet'}
+                    </span>
+                    {inboundEmail && (
+                      <button
+                        onClick={() => copyToClipboard(inboundEmail)}
+                        className="shrink-0 p-1 transition-opacity hover:opacity-70"
+                        aria-label="Copy inbound email"
+                      >
+                        {copied ? (
+                          <CheckIcon className="size-5 text-[#FF4500]" />
+                        ) : (
+                          <ClipboardCopyIcon className="size-5" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  <p className="font-mono text-xs text-muted-foreground">
+                    Forwarding guides:{' '}
                     <a
-                      href={source.url}
+                      href="https://support.google.com/mail/answer/10957"
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label={`Open data source: ${source.url}`}
-                      className={cn(
-                        'flex items-center gap-2 border bg-muted px-3 py-2 text-sm font-mono font-medium text-foreground transition-all',
-                        source.status === 'ready'
-                          ? 'border-[#FF4500]/20 hover:border-[#FF4500]/60'
-                          : source.status === 'error'
-                            ? 'border-red-500/30 hover:border-red-500/60'
-                            : 'border-amber-500/30 hover:border-amber-500/60'
-                      )}
+                      className="text-[#FF4500] underline underline-offset-2 transition-opacity hover:opacity-70"
                     >
-                      <Link2Icon className="size-3.5 shrink-0" />
-                      <span className="truncate">{source.url}</span>
-                      <EmbeddingStatusBadge status={source.status} />
-                      <ExternalLinkIcon className="size-3.5 shrink-0 opacity-50" />
+                      Gmail
                     </a>
-                  </li>
-                ))}
-                {hiddenCount > 0 && (
-                  <li>
-                    <button
-                      onClick={() => setViewDataSource(orgId)}
-                      className="w-full border border-dashed border-[#FF4500]/30 py-2 text-center text-xs font-mono font-semibold text-gray-500 hover:border-[#FF4500] hover:text-[#FF4500]"
+                    {' · '}
+                    <a
+                      href="https://support.google.com/a/answer/10486484"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#FF4500] underline underline-offset-2 transition-opacity hover:opacity-70"
                     >
-                      +{hiddenCount} more source{hiddenCount !== 1 ? 's' : ''}
-                    </button>
-                  </li>
-                )}
-              </ul>
-            )}
-            <Button
-              variant="default"
-              className="w-full"
-              onClick={() => setAddDataSource({ slug, orgId })}
-            >
-              + Add Data Source
-            </Button>
-          </CardContent>
-        </Card>
+                      Google Workspace
+                    </a>
+                    {' · '}
+                    <a
+                      href="https://docs.microsoft.com/en-us/microsoft-365/admin/email/configure-email-forwarding"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#FF4500] underline underline-offset-2 transition-opacity hover:opacity-70"
+                    >
+                      Microsoft 365
+                    </a>
+                  </p>
+                </CardContent>
+              </Card>
 
-        <div className="flex flex-col gap-3">
-          {/* AI Auto-Reply Card */}
-          <Card className="sm:col-span-2 lg:col-span-1">
-            <CardHeader>
-              <CardTitle>🤖 AI Auto-Reply</CardTitle>
-              <CardDescription>
-                When enabled, Answerify automatically sends replies when the AI
-                confidence meets the threshold. Adjust the slider to control how
-                confident the AI must be before sending.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Toggle row */}
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-mono text-sm font-semibold text-foreground">
-                    Enable Auto-Reply
-                  </p>
-                  <p className="font-mono text-gray-400 text-xs">
-                    {enabled
-                      ? 'Replies will be sent automatically when confidence is high enough.'
-                      : 'Replies require manual approval before sending.'}
-                  </p>
-                </div>
-                <button
-                  role="switch"
-                  aria-checked={enabled}
-                  onClick={handleToggle}
-                  disabled={saving}
-                  className={cn(
-                    'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4500] disabled:opacity-50',
-                    enabled
-                      ? 'border-[#FF4500] bg-[#FF4500]'
-                      : 'border-[#FF4500]/30 bg-background'
+              {/* Quick Start */}
+              <Card className="border-[#FF4500]/15 transition-all duration-300 hover:border-[#FF4500]/40 hover:shadow-[0_4px_24px_rgba(255,69,0,0.08)]">
+                <CardHeader>
+                  <CardTitle>🚀 Quick Start</CardTitle>
+                  <CardDescription>
+                    Follow these steps to get Answerify working for your team.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ol className="space-y-4">
+                    {[
+                      {
+                        label: 'Copy your inbound email address',
+                        done: !!inboundEmail,
+                      },
+                      {
+                        label:
+                          'Set up email forwarding from your support account',
+                        done: threadsCount > 0,
+                      },
+                      {
+                        label: 'Add data sources to power AI replies',
+                        done: sources.length > 0,
+                      },
+                      {
+                        label: 'Send a test email and watch Answerify reply!',
+                        done: repliesCount > 0,
+                      },
+                    ].map(({ label, done }, i) => (
+                      <li key={i} className="flex items-start gap-3">
+                        <StepBadge step={i + 1} done={done} />
+                        <span
+                          className={cn(
+                            'font-mono text-sm leading-snug transition-colors',
+                            done
+                              ? 'text-muted-foreground line-through'
+                              : 'text-foreground'
+                          )}
+                        >
+                          {label}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* ── Row 2: Data Sources + AI config ─────────────────────────── */}
+          <div>
+            <SectionLabel>{`// Configuration`}</SectionLabel>
+            <div className="grid gap-5 lg:grid-cols-2">
+              {/* Data Sources */}
+              <Card className="border-[#FF4500]/15 transition-all duration-300 hover:border-[#FF4500]/40 hover:shadow-[0_4px_24px_rgba(255,69,0,0.08)]">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <CardTitle>📚 Data Sources</CardTitle>
+                      <CardDescription>
+                        Knowledge base articles and docs that power AI replies.
+                      </CardDescription>
+                    </div>
+                    <CountBadge count={sources.length} />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {sources.length === 0 ? (
+                    <p className="font-mono text-sm text-muted-foreground">
+                      No data sources yet. Add links to your docs, help center,
+                      or blog to improve AI-generated replies.
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {visibleSources.map((source) => (
+                        <li key={source.id}>
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Open data source: ${source.url}`}
+                            className={cn(
+                              'flex items-center gap-2 border bg-muted px-3 py-2 text-sm font-mono font-medium text-foreground transition-all',
+                              source.status === 'ready'
+                                ? 'border-[#FF4500]/20 hover:border-[#FF4500]/60 hover:bg-[#FF4500]/5'
+                                : source.status === 'error'
+                                  ? 'border-red-500/30 hover:border-red-500/60'
+                                  : 'border-amber-500/30 hover:border-amber-500/60'
+                            )}
+                          >
+                            <Link2Icon className="size-3.5 shrink-0" />
+                            <span className="truncate">{source.url}</span>
+                            <EmbeddingStatusBadge status={source.status} />
+                            <ExternalLinkIcon className="size-3.5 shrink-0 opacity-50" />
+                          </a>
+                        </li>
+                      ))}
+                      {hiddenCount > 0 && (
+                        <li>
+                          <button
+                            onClick={() => setViewDataSource(orgId)}
+                            className="w-full border border-dashed border-[#FF4500]/30 py-2 text-center text-xs font-mono font-semibold text-muted-foreground transition-all hover:border-[#FF4500] hover:bg-[#FF4500]/5 hover:text-[#FF4500]"
+                          >
+                            +{hiddenCount} more source
+                            {hiddenCount !== 1 ? 's' : ''}
+                          </button>
+                        </li>
+                      )}
+                    </ul>
                   )}
-                >
-                  <span
-                    className={cn(
-                      'pointer-events-none inline-block size-5 border-2 bg-white shadow-sm transition-transform',
-                      enabled
-                        ? 'translate-x-5 border-white'
-                        : 'translate-x-0.5 border-[#FF4500]/40'
+                  <div className="flex gap-2">
+                    {sources.length > 0 && (
+                      <Button
+                        variant="neutral"
+                        className="flex-1"
+                        onClick={() => setViewDataSource(orgId)}
+                      >
+                        View All
+                      </Button>
                     )}
-                  />
-                </button>
-              </div>
+                    <Button
+                      variant="default"
+                      className={sources.length > 0 ? 'flex-1' : 'w-full'}
+                      onClick={() => setAddDataSource({ slug, orgId })}
+                    >
+                      + Add Source
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
 
-              {/* Threshold slider row */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="font-mono text-sm font-semibold text-foreground">
-                    Confidence Threshold
-                  </p>
-                  <span className="border border-[#FF4500] bg-[#FF4500]/10 px-2 py-0.5 text-xs font-bold font-mono tabular-nums text-[#FF4500]">
-                    {Math.round(threshold * 100)}%
-                  </span>
-                </div>
-                <Slider
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={[threshold]}
-                  onValueChange={(v) => setThreshold(v[0])}
-                  disabled={saving}
-                  onMouseUp={handleThresholdCommit}
-                  onTouchEnd={handleThresholdCommit}
-                />
-                <div className="font-mono text-gray-500 flex justify-between text-xs">
-                  <span>0% — Send everything</span>
-                  <span>100% — Only perfect matches</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              {/* AI Config column */}
+              <div className="flex flex-col gap-5">
+                {/* AI Auto-Reply */}
+                <Card className="border-[#FF4500]/15 transition-all duration-300 hover:border-[#FF4500]/40 hover:shadow-[0_4px_24px_rgba(255,69,0,0.08)]">
+                  <CardHeader>
+                    <CardTitle>🤖 AI Auto-Reply</CardTitle>
+                    <CardDescription>
+                      Automatically send replies when the AI confidence meets
+                      the threshold you set.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="font-mono text-sm font-semibold text-foreground">
+                          Enable Auto-Reply
+                        </p>
+                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                          {enabled
+                            ? 'Replies sent automatically when confidence is high enough.'
+                            : 'Replies require manual approval before sending.'}
+                        </p>
+                      </div>
+                      <button
+                        role="switch"
+                        aria-checked={enabled}
+                        onClick={handleToggle}
+                        disabled={saving}
+                        className={cn(
+                          'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center border-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4500] disabled:opacity-50',
+                          enabled
+                            ? 'border-[#FF4500] bg-[#FF4500] shadow-[0_0_10px_rgba(255,69,0,0.3)]'
+                            : 'border-[#FF4500]/30 bg-background'
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'pointer-events-none inline-block size-5 border-2 bg-white shadow-sm transition-transform',
+                            enabled
+                              ? 'translate-x-5 border-white'
+                              : 'translate-x-0.5 border-[#FF4500]/40'
+                          )}
+                        />
+                      </button>
+                    </div>
 
-          {/* Quick Actions Card */}
-          <Card className="sm:col-span-2 lg:col-span-1">
-            <CardHeader>
-              <CardTitle>⚡ Quick Actions</CardTitle>
-              <CardDescription>
-                Configure your workspace without digging through menus.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-2">
-                <Button variant="neutral" onClick={() => setTestSandbox(orgId)}>
-                  Sandbox
-                </Button>
-                <Button
-                  variant="neutral"
-                  onClick={() => setInviteMembers(orgId)}
-                >
-                  Invite
-                </Button>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="font-mono text-sm font-semibold text-foreground">
+                          Confidence Threshold
+                        </p>
+                        <span className="border border-[#FF4500] bg-[#FF4500]/10 px-2 py-0.5 font-mono text-xs font-bold tabular-nums text-[#FF4500] shadow-[0_0_6px_rgba(255,69,0,0.2)]">
+                          {Math.round(threshold * 100)}%
+                        </span>
+                      </div>
+                      <Slider
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={[threshold]}
+                        onValueChange={(v) => setThreshold(v[0])}
+                        disabled={saving}
+                        onMouseUp={handleThresholdCommit}
+                        onTouchEnd={handleThresholdCommit}
+                      />
+                      <div className="flex justify-between font-mono text-xs text-muted-foreground">
+                        <span>0% — Send everything</span>
+                        <span>100% — Only perfect matches</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Tone & Policy */}
+                <Card className="border-[#FF4500]/15 transition-all duration-300 hover:border-[#FF4500]/40 hover:shadow-[0_4px_24px_rgba(255,69,0,0.08)]">
+                  <CardHeader>
+                    <CardTitle>🎨 Tone &amp; Policy</CardTitle>
+                    <CardDescription>
+                      Describe how the AI should sound and any rules it must
+                      follow (e.g. &ldquo;Always respond formally&rdquo;).
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <textarea
+                      rows={4}
+                      value={tonePolicy}
+                      onChange={(e) => setTonePolicy(e.target.value)}
+                      placeholder="e.g. Always respond in a formal tone. Never mention pricing. Sign off with 'Warm regards, the Support Team'."
+                      className="w-full resize-y border border-input bg-background px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-[#FF4500] focus:border-[#FF4500]/50"
+                    />
+                    <Button
+                      onClick={handleSaveTonePolicy}
+                      disabled={savingTone}
+                      className="w-full"
+                    >
+                      {savingTone ? 'Saving…' : 'Save Tone & Policy'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Row 3: Tools grid ─────────────────────────────────────────── */}
+          <div>
+            <SectionLabel>{`// Tools &amp; Settings`}</SectionLabel>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {/* Team */}
+              <ToolCard
+                icon="👥"
+                title="Team"
+                description="Invite team members and manage workspace settings."
+              >
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="default"
+                    className="w-full"
+                    onClick={() => setInviteMembers(orgId)}
+                  >
+                    Invite Members
+                  </Button>
+                  <Button
+                    variant="neutral"
+                    className="w-full"
+                    onClick={() =>
+                      setUpdateOrganization({
+                        id: orgId,
+                        name: orgName,
+                        support_email: supportEmail,
+                      })
+                    }
+                  >
+                    Settings
+                  </Button>
+                </div>
+              </ToolCard>
+
+              {/* API Connections */}
+              <ToolCard
+                icon="🔌"
+                title="Connections"
+                description="Connect external APIs to enrich AI context and actions."
+                badge={<CountBadge count={apiConnections.length} />}
+              >
                 <Button
                   variant="default"
-                  onClick={() =>
-                    setUpdateOrganization({
-                      id: orgId,
-                      name: orgName,
-                      support_email: supportEmail,
-                    })
-                  }
+                  className="w-full"
+                  onClick={() => setManageApiConnections({ orgId, slug })}
                 >
-                  Settings
+                  Manage Connections
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </ToolCard>
+
+              {/* Workflows */}
+              <ToolCard
+                icon="⚡"
+                title="Workflows"
+                description="Automate actions based on email conditions — tag threads, send replies, call webhooks and more."
+                badge={<CountBadge count={workflowsCount} />}
+              >
+                <Button variant="default" className="w-full" asChild>
+                  <Link href={`/org/${slug}/workflows`}>Open Workflows</Link>
+                </Button>
+              </ToolCard>
+
+              {/* Sandbox */}
+              <ToolCard
+                icon="🧪"
+                title="Sandbox"
+                description="Send a test email to preview how Answerify would respond."
+              >
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={() => setTestSandbox(orgId)}
+                >
+                  Open Sandbox
+                </Button>
+              </ToolCard>
+            </div>
+          </div>
         </div>
-        {/* Tone & Policy Card */}
-        <Card className="sm:col-span-2">
-          <CardHeader>
-            <CardTitle>🎨 Tone &amp; Policy</CardTitle>
-            <CardDescription>
-              Describe how the AI should sound and any rules it must follow when
-              drafting replies (e.g. &ldquo;Always respond formally&rdquo;,
-              &ldquo;Never mention competitor X&rdquo;).
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <textarea
-              rows={4}
-              value={tonePolicy}
-              onChange={(e) => setTonePolicy(e.target.value)}
-              placeholder="e.g. Always respond in a formal tone. Never mention pricing. Sign off with 'Warm regards, the Support Team'."
-              className="w-full border border-input bg-background px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FF4500] resize-y"
-            />
-            <Button
-              onClick={handleSaveTonePolicy}
-              disabled={savingTone}
-              className="w-full"
-            >
-              {savingTone ? 'Saving…' : 'Save Tone & Policy'}
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

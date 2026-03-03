@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_connection: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          name: string
+          base_url: string
+          api_key: string
+          description: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          name: string
+          base_url: string
+          api_key: string
+          description?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          name?: string
+          base_url?: string
+          api_key?: string
+          description?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_connection_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       datasource: {
         Row: {
           created_at: string
@@ -319,6 +357,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "public_thread_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow: {
+        Row: {
+          created_at: string
+          description: string | null
+          enabled: boolean
+          id: string
+          name: string
+          organization_id: string
+          steps: Json
+          trigger: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          name: string
+          organization_id: string
+          steps?: Json
+          trigger: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          id?: string
+          name?: string
+          organization_id?: string
+          steps?: Json
+          trigger?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organization"

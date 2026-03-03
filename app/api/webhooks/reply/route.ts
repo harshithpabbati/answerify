@@ -213,6 +213,103 @@ async function runWritingAgent(
   return text;
 }
 
+/**
+ * Agent 0 – API Routing Agent
+ *
+ * Determines whether any connected API should be called to answer the customer
+ * question.  If a call is warranted it returns a structured decision; otherwise
+ * it returns null so the pipeline falls through to vector-search alone.
+ */
+async function runApiRoutingAgent(
+  subject: string,
+  question: string,
+  apiConnections: Array<{ id: string; name: string; base_url: string; description: string | null }>
+): Promise<{ api_id: string; endpoint: string; query_params?: Record<string, string> } | null> {
+  if (apiConnections.length === 0) return null;
+
+  const apiList = apiConnections
+    .map(
+      (c) =>
+        `- id: ${c.id}\n  name: ${c.name}\n  base_url: ${c.base_url}\n  description: ${c.description ?? 'No description'}`
+    )
+    .join('\n');
+
+  const { text } = await generateText({
+    model: textModel,
+    system: codeBlock`
+      You are an API routing assistant for a customer support system.
+      Your job is to decide whether any of the connected APIs should be called
+      to answer a customer's question with live data.
+
+      Rules:
+      - Only suggest an API call when the question clearly requires live, personalized
+        data (e.g. "What is my latest invoice?", "How much have I used this month?").
+      - Do NOT suggest an API call for general knowledge questions.
+      - If an API call is needed, output ONLY valid JSON (no markdown) in this exact shape:
+        { "api_id": "<id from the list>", "endpoint": "<path relative to base_url>", "query_params": {} }
+      - If no API call is needed, output ONLY the word: NONE
+    `,
+    prompt: `Subject: ${subject}\nCustomer question:\n${question}\n\nConnected APIs:\n${apiList}`,
+    maxOutputTokens: 256,
+    temperature: 0,
+  });
+
+  const trimmed = text.trim();
+  if (trimmed === 'NONE' || trimmed === '') return null;
+
+  try {
+    return JSON.parse(trimmed) as {
+      api_id: string;
+      endpoint: string;
+      query_params?: Record<string, string>;
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Maximum number of characters to keep from an external API response. */
+const MAX_API_RESPONSE_LENGTH = 4000;
+
+/**
+ * Executes an API call against a connected external API.
+ * Returns the response body as a string, or null on failure.
+ */
+async function callExternalApi(
+  connection: { base_url: string; api_key: string },
+  endpoint: string,
+  queryParams: Record<string, string>
+): Promise<string | null> {
+  try {
+    const url = new URL(
+      endpoint.startsWith('/') ? endpoint : `/${endpoint}`,
+      connection.base_url.endsWith('/')
+        ? connection.base_url
+        : `${connection.base_url}/`
+    );
+    for (const [k, v] of Object.entries(queryParams)) {
+      url.searchParams.set(k, v);
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${connection.api_key}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) return null;
+    const body = await response.text();
+    // Truncate large responses to avoid overwhelming the AI context
+    return body.length > MAX_API_RESPONSE_LENGTH
+      ? `${body.slice(0, MAX_API_RESPONSE_LENGTH)}…`
+      : body;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
   const { origin } = new URL(request.url);
   const { record } = await request.json();
@@ -224,7 +321,7 @@ export async function POST(request: Request) {
   const supabase = await createServiceClient();
 
   // Fetch datasources (including stored content for fallback), org settings, and thread.
-  const [{ data: datasources }, { data: org }, { data: thread }] =
+  const [{ data: datasources }, { data: org }, { data: thread }, { data: apiConnections }] =
     await Promise.all([
       supabase
         .from('datasource')
@@ -240,6 +337,10 @@ export async function POST(request: Request) {
         .select('email_from, subject, message_id')
         .eq('id', record.thread_id)
         .single(),
+      supabase
+        .from('api_connection')
+        .select('id, name, base_url, api_key, description')
+        .eq('organization_id', record.organization_id),
     ]);
 
   // Fetch previous emails in this thread for conversation context
@@ -281,6 +382,33 @@ export async function POST(request: Request) {
           .join('\n\n')
       : '';
 
+  // --- Agent 0: API Routing ---
+  // Determine if any connected API should be called for live customer data.
+  let apiDataContext = '';
+  if (apiConnections && apiConnections.length > 0) {
+    const routingDecision = await runApiRoutingAgent(
+      thread?.subject ?? '',
+      record.cleaned_body,
+      apiConnections
+    );
+
+    if (routingDecision) {
+      const chosenConnection = apiConnections.find(
+        (c) => c.id === routingDecision.api_id
+      );
+      if (chosenConnection) {
+        const apiResponse = await callExternalApi(
+          chosenConnection,
+          routingDecision.endpoint,
+          routingDecision.query_params ?? {}
+        );
+        if (apiResponse) {
+          apiDataContext = `Live API data from ${chosenConnection.name}:\n${apiResponse}`;
+        }
+      }
+    }
+  }
+
   // --- Agentic RAG: Retrieval ---
   // Step 1: Embed the customer question and search the section table for
   //         semantically similar pre-indexed content chunks.
@@ -300,10 +428,14 @@ export async function POST(request: Request) {
       .map((s) => s.content)
       .join('\n\n---\n\n');
 
+    const combinedContext = apiDataContext
+      ? `${apiDataContext}\n\n---\n\n${sectionContext}`
+      : sectionContext;
+
     findings = await runResearchAgentWithSections(
       thread?.subject ?? '',
       record.cleaned_body,
-      sectionContext
+      combinedContext
     );
 
     confidence = computeVectorConfidence(
@@ -316,6 +448,14 @@ export async function POST(request: Request) {
     citations = datasources
       .filter((d) => matchedDatasourceIds.includes(d.id))
       .map((d) => d.url);
+  } else if (apiDataContext) {
+    // No vector matches but API data is available — use it directly as findings
+    findings = await runResearchAgentWithContent(
+      thread?.subject ?? '',
+      record.cleaned_body,
+      apiDataContext
+    );
+    confidence = URL_CONTEXT_FALLBACK_CONFIDENCE;
   }
 
   // Determine whether autopilot should auto-send this reply

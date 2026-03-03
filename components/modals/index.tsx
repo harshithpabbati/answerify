@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
+import { useManageApiConnections } from '@/states/api-connection';
 import {
   useCreateOrganization,
   useInviteMembers,
@@ -32,6 +33,9 @@ const ViewMembers = dynamic(() =>
 const TestSandbox = dynamic(() =>
   import('./organization').then((mod) => mod.TestSandbox)
 );
+const ManageApiConnections = dynamic(() =>
+  import('./api-connection').then((mod) => mod.ManageApiConnections)
+);
 
 export function Modals() {
   const [showCreateOrganization] = useCreateOrganization();
@@ -41,6 +45,7 @@ export function Modals() {
   const [inviteMembers] = useInviteMembers();
   const [viewMembers] = useMembers();
   const [showTestSandbox] = useTestSandbox();
+  const [showApiConnections] = useManageApiConnections();
 
   return (
     <>
@@ -51,6 +56,7 @@ export function Modals() {
       {Boolean(inviteMembers) && <InviteMembers />}
       {Boolean(viewMembers) && <ViewMembers />}
       {Boolean(showTestSandbox) && <TestSandbox />}
+      {Boolean(showApiConnections) && <ManageApiConnections />}
     </>
   );
 }
