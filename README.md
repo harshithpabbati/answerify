@@ -89,47 +89,13 @@ Citations are rendered as footnotes in the reply HTML and also displayed in the 
 When a human edits an AI draft and clicks **"Approve & Send"**, the system automatically:
 
 1. Sends the reply to the customer.
-2. Stores an edit log (`reply_edit` table) with the original and final content if the reply was edited.
+2. Tracks the human's edited version in `human_content` on the `reply` table (if different from the AI draft); sets `learned = false` initially.
 3. Finds or creates an internal knowledge-base datasource (`is_internal_kb = true`) for the organization.
 4. Chunks the final answer into sections and generates embeddings.
 5. Inserts the sections into the `section` table so they affect future retrieval.
+6. Sets `learned = true` on the `reply` row once embeddings are successfully stored.
 
 This progressively improves the quality of future AI replies without any extra manual steps.
-
-### reply_edit table SQL
-
-Run the following in Supabase to create the `reply_edit` table:
-
-```sql
-CREATE TABLE IF NOT EXISTS "public"."reply_edit" (
-    "id" uuid DEFAULT gen_random_uuid() NOT NULL,
-    "created_at" timestamp with time zone DEFAULT now() NOT NULL,
-    "reply_id" uuid NOT NULL,
-    "organization_id" uuid NOT NULL,
-    "original_content" text NOT NULL,
-    "final_content" text NOT NULL,
-    "learned" boolean DEFAULT false NOT NULL,
-    CONSTRAINT "reply_edit_pkey" PRIMARY KEY ("id"),
-    CONSTRAINT "public_reply_edit_reply_id_fkey"
-        FOREIGN KEY ("reply_id") REFERENCES "public"."reply"("id")
-        ON UPDATE CASCADE ON DELETE CASCADE,
-    CONSTRAINT "public_reply_edit_organization_id_fkey"
-        FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id")
-        ON UPDATE CASCADE ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS "reply_edit_reply_id_idx"
-    ON "public"."reply_edit" USING btree ("reply_id");
-
-CREATE INDEX IF NOT EXISTS "reply_edit_organization_id_idx"
-    ON "public"."reply_edit" USING btree ("organization_id");
-
-ALTER TABLE "public"."reply_edit" ENABLE ROW LEVEL SECURITY;
-
-GRANT ALL ON TABLE "public"."reply_edit" TO "anon";
-GRANT ALL ON TABLE "public"."reply_edit" TO "authenticated";
-GRANT ALL ON TABLE "public"."reply_edit" TO "service_role";
-```
 
 ---
 

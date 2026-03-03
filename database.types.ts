@@ -227,8 +227,10 @@ export type Database = {
           confidence_score: number
           content: string
           created_at: string
+          human_content: string | null
           id: string
           is_perfect: boolean | null
+          learned: boolean
           organization_id: string
           status: string
           thread_id: string
@@ -238,8 +240,10 @@ export type Database = {
           confidence_score?: number
           content: string
           created_at?: string
+          human_content?: string | null
           id?: string
           is_perfect?: boolean | null
+          learned?: boolean
           organization_id: string
           status?: string
           thread_id?: string
@@ -249,8 +253,10 @@ export type Database = {
           confidence_score?: number
           content?: string
           created_at?: string
+          human_content?: string | null
           id?: string
           is_perfect?: boolean | null
+          learned?: boolean
           organization_id?: string
           status?: string
           thread_id?: string

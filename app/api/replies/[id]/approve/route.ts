@@ -34,6 +34,8 @@ export async function POST(request: Request, { params }: Params) {
       content,
       status: reply.status === 'sent' ? 'sent' : 'approved',
       is_perfect: isPerfect,
+      human_content: isPerfect ? null : content,
+      learned: false,
     })
     .eq('id', id)
     .select()
@@ -82,6 +84,13 @@ export async function POST(request: Request, { params }: Params) {
         }));
 
         await supabase.from('section').insert(sectionRows as never);
+        const { error: learnedError } = await supabase
+          .from('reply')
+          .update({ learned: true })
+          .eq('id', id);
+        if (learnedError) {
+          console.error('Failed to set learned=true on reply:', learnedError);
+        }
       }
     }
   } catch (err) {
