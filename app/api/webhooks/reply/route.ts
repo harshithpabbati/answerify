@@ -6,6 +6,7 @@ import { textModel } from '@/lib/ai';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { cleanBody } from '@/lib/cleanBody';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
+import { parseLLMJSON } from '@/lib/parse-llm-json';
 import { createServiceClient } from '@/lib/supabase/service';
 
 /* -------------------------------------------------------------------------- */
@@ -183,7 +184,7 @@ async function runApiRoutingAgent(
   if (trimmed === 'NONE') return null;
 
   try {
-    return JSON.parse(trimmed);
+    return parseLLMJSON(trimmed);
   } catch {
     return null;
   }
@@ -284,7 +285,7 @@ async function runGroundedAnswerAgent({
   });
 
   try {
-    return JSON.parse(text);
+    return parseLLMJSON(text);
   } catch {
     return { status: 'NO_INFORMATION', confidence: 0 };
   }
@@ -383,7 +384,7 @@ export async function POST(request: Request) {
   );
 
   const vectorConfidence = computeVectorConfidence(
-    matchedSections.map((s) => s.similarity)
+    matchedSections.filter((s) => s.similarity > 0).map((s) => s.similarity)
   );
 
   const retrievedContext = matchedSections

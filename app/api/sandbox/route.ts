@@ -4,6 +4,7 @@ import { codeBlock } from 'common-tags';
 import { textModel } from '@/lib/ai';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
+import { parseLLMJSON } from '@/lib/parse-llm-json';
 import { createServerClient } from '@/lib/supabase/server';
 
 /**
@@ -105,9 +106,9 @@ async function runGroundedAnswerAgent({
   });
 
   try {
-    return JSON.parse(text);
+    return parseLLMJSON(text);
   } catch {
-    return { status: 'NO_INFORMATION', confidence: 0 };
+    return { status: 'NO_INFORMATION', confidence: 0, html: null };
   }
 }
 
@@ -208,7 +209,7 @@ export async function POST(request: Request) {
   }
 
   const vectorConfidence = computeVectorConfidence(
-    matchedSections.map((s) => s.similarity)
+    matchedSections.filter((s) => s.similarity > 0).map((s) => s.similarity)
   );
   const retrievedContext = matchedSections
     .map((s) => s.content)
