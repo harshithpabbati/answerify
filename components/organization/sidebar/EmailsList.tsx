@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { getThreads } from '@/actions/email';
 import { Tables } from '@/database.types';
+import { GearIcon, LightningBoltIcon, MixIcon } from '@radix-ui/react-icons';
 import { RealtimeChannel } from '@supabase/supabase-js';
-import { LightningBoltIcon, MixIcon } from '@radix-ui/react-icons';
 
 import { createBrowserClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
@@ -147,24 +147,36 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
           >
             <MixIcon className="size-3.5" />
           </Link>
+          <Link
+            href={`/org/${slug}/admin`}
+            title="Settings"
+            className={cn(
+              'flex size-7 items-center justify-center border transition-colors',
+              pathname === `/org/${slug}/sandbox`
+                ? 'border-[#FF4500] bg-[#FF4500] text-white'
+                : 'border-[#FF4500]/30 text-muted-foreground hover:border-[#FF4500] hover:text-[#FF4500]'
+            )}
+          >
+            <GearIcon className="size-3.5" />
+          </Link>
           <div className="flex items-center gap-0.5 border border-[#FF4500]/40 p-0.5">
-          {(['open', 'closed'] as const).map((s) => {
-            const active = (searchParams.get('status') ?? 'open') === s;
-            return (
-              <button
-                key={s}
-                onClick={() => router.push(`?status=${s}`)}
-                className={cn(
-                  'px-2.5 py-0.5 text-xs font-mono font-medium uppercase tracking-wider transition-colors',
-                  active
-                    ? 'bg-[#FF4500] text-white'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {s}
-              </button>
-            );
-          })}
+            {(['open', 'closed'] as const).map((s) => {
+              const active = (searchParams.get('status') ?? 'open') === s;
+              return (
+                <button
+                  key={s}
+                  onClick={() => router.push(`?status=${s}`)}
+                  className={cn(
+                    'px-2.5 py-0.5 text-xs font-mono font-medium uppercase tracking-wider transition-colors',
+                    active
+                      ? 'bg-[#FF4500] text-white'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {s}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

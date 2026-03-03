@@ -1,0 +1,476 @@
+'use client';
+
+import { useMemo, useState, useTransition } from 'react';
+import Link from 'next/link';
+import {
+  deleteSource,
+  reindexAllSources,
+  reindexSelectedSources,
+  reindexSource,
+} from '@/actions/source';
+import type { AdminSource, RecentReply } from '@/actions/source';
+import {
+  Cross2Icon,
+  ExclamationTriangleIcon,
+  ExternalLinkIcon,
+  Link2Icon,
+  ReloadIcon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
+import { toast } from 'sonner';
+
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { EmbeddingStatusBadge } from '@/components/ui/EmbeddingStatusBadge';
+
+interface Props {
+  orgId: string;
+  slug: string;
+  initialSources: AdminSource[];
+  initialReplies: RecentReply[];
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-5 flex items-center gap-4">
+      <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
+        {children}
+      </p>
+      <div className="h-px flex-1 bg-gradient-to-r from-[#FF4500]/30 to-transparent" />
+    </div>
+  );
+}
+
+function ConfidenceBadge({ score }: { score: number }) {
+  const pct = Math.round(score * 100);
+  const color =
+    pct >= 80
+      ? 'text-emerald-500 border-emerald-500/30'
+      : pct >= 50
+        ? 'text-amber-500 border-amber-500/30'
+        : 'text-red-500 border-red-500/30';
+  return (
+    <span
+      className={cn(
+        'border px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums',
+        color
+      )}
+    >
+      {pct}%
+    </span>
+  );
+}
+
+function ReplyStatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    sent: 'text-emerald-500',
+    pending: 'text-amber-500',
+    draft: 'text-muted-foreground',
+  };
+  return (
+    <span
+      className={cn(
+        'font-mono text-[10px] font-semibold uppercase tracking-wider',
+        map[status] ?? 'text-muted-foreground'
+      )}
+    >
+      {status}
+    </span>
+  );
+}
+
+export function AdminPage({
+  orgId,
+  slug,
+  initialSources,
+  initialReplies,
+}: Props) {
+  const [isPending, startTransition] = useTransition();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const allIds = useMemo(
+    () => initialSources.map((s) => s.id),
+    [initialSources]
+  );
+  const allSelected =
+    allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const someSelected = selected.size > 0;
+
+  const toggleAll = () => {
+    setSelected(allSelected ? new Set() : new Set(allIds));
+  };
+
+  const toggleOne = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleReindex = (sourceId: string) => {
+    startTransition(async () => {
+      toast.loading('Re-indexing source…', { id: `reindex-${sourceId}` });
+      const { error } = await reindexSource(sourceId, slug);
+      if (error) {
+        toast.error('Re-index failed', {
+          id: `reindex-${sourceId}`,
+          description: error instanceof Error ? error.message : String(error),
+        });
+      } else {
+        toast.success('Source re-indexed successfully', {
+          id: `reindex-${sourceId}`,
+        });
+      }
+    });
+  };
+
+  const handleReindexSelected = () => {
+    const ids = Array.from(selected);
+    startTransition(async () => {
+      toast.loading(
+        `Re-indexing ${ids.length} selected source${ids.length !== 1 ? 's' : ''}…`,
+        {
+          id: 'reindex-selected',
+        }
+      );
+      const result = await reindexSelectedSources(ids, slug);
+      if (result.error) {
+        toast.error('Reindex failed', {
+          id: 'reindex-selected',
+          description:
+            result.error instanceof Error
+              ? result.error.message
+              : String(result.error),
+        });
+      } else {
+        toast.success(
+          `Reindexed ${result.count} source${result.count !== 1 ? 's' : ''} — ${result.succeeded} succeeded, ${result.failed} failed`,
+          { id: 'reindex-selected' }
+        );
+        setSelected(new Set());
+      }
+    });
+  };
+
+  const handleDelete = (sourceId: string) => {
+    startTransition(async () => {
+      const { error } = await deleteSource(sourceId, slug);
+      if (error) {
+        toast.error('Delete failed', {
+          description: error instanceof Error ? error.message : String(error),
+        });
+      } else {
+        toast.success('Data source deleted');
+        setSelected((prev) => {
+          const next = new Set(prev);
+          next.delete(sourceId);
+          return next;
+        });
+      }
+    });
+  };
+
+  const zeroSectionSources = initialSources.filter(
+    (s) => s.status === 'ready' && s.section_count === 0
+  );
+
+  return (
+    <div className="flex h-screen flex-col overflow-auto">
+      {/* ── Page header ─────────────────────────────────────────────────── */}
+      <div className="relative border-b border-[#FF4500]/20 px-6 py-6 md:px-10 overflow-hidden">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              'linear-gradient(#FF4500 1px, transparent 1px), linear-gradient(90deg, #FF4500 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+        <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
+          {'// ADMIN'}
+        </p>
+        <h1 className="font-display text-3xl font-black uppercase tracking-tight text-foreground">
+          Admin Panel
+        </h1>
+        <p className="mt-2 font-mono text-xs text-muted-foreground">
+          Monitor datasource health, reindex stuck sources, and review AI reply
+          logs.
+        </p>
+      </div>
+
+      {/* ── Body ────────────────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-auto p-6 md:p-10">
+        <div className="space-y-10">
+          {/* ── Datasource Health ──────────────────────────────────────────── */}
+          <div>
+            <SectionLabel>{`// Datasource Health`}</SectionLabel>
+            <Card className="border-[#FF4500]/15">
+              <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <CardTitle>📚 Datasource Health</CardTitle>
+                    <CardDescription>
+                      All data sources for this organization with their indexing
+                      status and section counts. Use the actions to reindex
+                      stuck or errored sources, or delete them entirely.
+                    </CardDescription>
+                  </div>
+                  {initialSources.length > 0 && someSelected && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isPending}
+                      onClick={handleReindexSelected}
+                      className="gap-1.5 text-xs"
+                    >
+                      <ReloadIcon className="size-3" />
+                      Reindex Selected ({selected.size})
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {zeroSectionSources.length > 0 && (
+                  <div className="mb-4 flex items-start gap-2 border border-amber-500/40 bg-amber-500/5 px-4 py-3">
+                    <ExclamationTriangleIcon className="mt-0.5 size-4 shrink-0 text-amber-500" />
+                    <div>
+                      <p className="font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">
+                        {zeroSectionSources.length} source
+                        {zeroSectionSources.length !== 1 ? 's' : ''} indexed
+                        with 0 sections
+                      </p>
+                      <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                        This usually means the page returned no readable content
+                        (e.g. JavaScript-rendered SPA, empty response, or the
+                        content has no headings). Try reindexing — if it stays
+                        at 0 sections the URL may not be scrapable.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {initialSources.length === 0 ? (
+                  <p className="font-mono text-sm text-muted-foreground py-4 text-center">
+                    No data sources configured yet.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm font-mono">
+                      <thead>
+                        <tr className="border-b border-[#FF4500]/20 text-left">
+                          <th className="pb-3 pr-4 w-8">
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              onChange={toggleAll}
+                              className="cursor-pointer accent-[#FF4500]"
+                              aria-label="Select all sources"
+                            />
+                          </th>
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+                            URL
+                          </th>
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                            Status
+                          </th>
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                            Sections
+                          </th>
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                            Indexed At
+                          </th>
+                          <th className="pb-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#FF4500]/10">
+                        {initialSources.map((source) => {
+                          const isEmptyReady =
+                            source.status === 'ready' &&
+                            source.section_count === 0;
+                          return (
+                            <tr
+                              key={source.id}
+                              className={cn(
+                                'group',
+                                isEmptyReady && 'bg-amber-500/5',
+                                selected.has(source.id) && 'bg-[#FF4500]/5'
+                              )}
+                            >
+                              <td className="py-3 pr-4">
+                                <input
+                                  type="checkbox"
+                                  checked={selected.has(source.id)}
+                                  onChange={() => toggleOne(source.id)}
+                                  className="cursor-pointer accent-[#FF4500]"
+                                  aria-label={`Select ${source.url}`}
+                                />
+                              </td>
+                              <td className="py-3 pr-4 max-w-xs">
+                                <a
+                                  href={source.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 text-foreground hover:text-[#FF4500] transition-colors truncate"
+                                >
+                                  <Link2Icon className="size-3 shrink-0" />
+                                  <span className="truncate">{source.url}</span>
+                                  <ExternalLinkIcon className="size-3 shrink-0 opacity-50" />
+                                </a>
+                              </td>
+                              <td className="py-3 pr-4">
+                                <EmbeddingStatusBadge status={source.status} />
+                              </td>
+                              <td className="py-3 pr-4 tabular-nums">
+                                {isEmptyReady ? (
+                                  <span className="flex items-center gap-1 text-amber-500 font-semibold">
+                                    <ExclamationTriangleIcon className="size-3" />
+                                    0
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">
+                                    {source.section_count}
+                                  </span>
+                                )}
+                              </td>
+                              <td
+                                className="py-3 pr-4 whitespace-nowrap text-muted-foreground text-xs"
+                                suppressHydrationWarning
+                              >
+                                {new Date(source.created_at).toLocaleString()}
+                              </td>
+                              <td className="py-3">
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="neutral"
+                                    size="sm"
+                                    disabled={isPending}
+                                    onClick={() => handleReindex(source.id)}
+                                    title="Re-index this source"
+                                    className="gap-1.5 text-xs"
+                                  >
+                                    <ReloadIcon className="size-3" />
+                                    Reindex
+                                  </Button>
+                                  <Button
+                                    variant="neutral"
+                                    size="sm"
+                                    disabled={isPending}
+                                    onClick={() => handleDelete(source.id)}
+                                    title="Delete this source"
+                                    className="gap-1.5 text-xs text-red-500 hover:text-red-600"
+                                  >
+                                    <TrashIcon className="size-3" />
+                                    Delete
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ── Reply Logs ─────────────────────────────────────────────────── */}
+          <div>
+            <SectionLabel>{`// Reply Logs`}</SectionLabel>
+            <Card className="border-[#FF4500]/15">
+              <CardHeader>
+                <CardTitle>📋 Recent AI Reply Logs</CardTitle>
+                <CardDescription>
+                  The last 20 AI-generated replies across all threads, with
+                  confidence scores and delivery status.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {initialReplies.length === 0 ? (
+                  <p className="font-mono text-sm text-muted-foreground py-4 text-center">
+                    No replies generated yet.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm font-mono">
+                      <thead>
+                        <tr className="border-b border-[#FF4500]/20 text-left">
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+                            Thread
+                          </th>
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                            Confidence
+                          </th>
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+                            Status
+                          </th>
+                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                            Perfect?
+                          </th>
+                          <th className="pb-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                            Created At
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#FF4500]/10">
+                        {initialReplies.map((reply) => (
+                          <tr key={reply.id} className="group">
+                            <td className="py-3 pr-4">
+                              <Link
+                                href={`/org/${slug}/${reply.thread_id}`}
+                                className="text-foreground hover:text-[#FF4500] transition-colors font-medium underline underline-offset-2"
+                              >
+                                {reply.thread_id.slice(0, 8)}…
+                              </Link>
+                            </td>
+                            <td className="py-3 pr-4">
+                              <ConfidenceBadge score={reply.confidence_score} />
+                            </td>
+                            <td className="py-3 pr-4">
+                              <ReplyStatusBadge status={reply.status} />
+                            </td>
+                            <td className="py-3 pr-4">
+                              {reply.is_perfect === true ? (
+                                <span className="text-emerald-500 font-bold">
+                                  ✓
+                                </span>
+                              ) : reply.is_perfect === false ? (
+                                <Cross2Icon className="size-3 text-red-500" />
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                            <td
+                              className="py-3 whitespace-nowrap text-muted-foreground text-xs"
+                              suppressHydrationWarning
+                            >
+                              {new Date(reply.created_at).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

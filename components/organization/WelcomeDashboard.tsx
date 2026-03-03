@@ -587,8 +587,8 @@ export function WelcomeDashboard({
 
           {/* ── Row 3: Tools grid ─────────────────────────────────────────── */}
           <div>
-            <SectionLabel>{`// Tools &amp; Settings`}</SectionLabel>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <SectionLabel>{`// Tools & Settings`}</SectionLabel>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {/* Team */}
               <ToolCard
                 icon="👥"
@@ -655,6 +655,17 @@ export function WelcomeDashboard({
               >
                 <Button variant="default" className="w-full" asChild>
                   <Link href={`/org/${slug}/sandbox`}>Open Sandbox</Link>
+                </Button>
+              </ToolCard>
+
+              {/* Admin */}
+              <ToolCard
+                icon="🛡️"
+                title="Admin"
+                description="Monitor datasource health, reindex stuck sources, and review AI reply logs."
+              >
+                <Button variant="default" className="w-full" asChild>
+                  <Link href={`/org/${slug}/admin`}>Open Admin</Link>
                 </Button>
               </ToolCard>
             </div>
