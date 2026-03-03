@@ -140,70 +140,76 @@ export function AdminPage({
     });
   };
 
+  const REINDEX_CONCURRENCY = 3;
+
   const handleReindexAll = () => {
     startTransition(async () => {
-      toast.loading('Re-indexing all sources…', { id: 'reindex-all' });
-      try {
-        const res = await fetch('/api/reindex', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orgId, slug }),
-        });
-        const result = await res.json();
-        if (!res.ok) {
-          toast.error('Reindex all failed', {
-            id: 'reindex-all',
-            description: result.error ?? 'Unknown error',
-          });
-        } else {
-          toast.success(
-            `Reindexed ${result.count} source${result.count !== 1 ? 's' : ''} — ${result.succeeded} succeeded, ${result.failed} failed`,
-            { id: 'reindex-all' }
-          );
+      const total = initialSources.length;
+      let succeeded = 0;
+      let failed = 0;
+      toast.loading(`Re-indexing sources… (0/${total})`, { id: 'reindex-all' });
+      for (let i = 0; i < total; i += REINDEX_CONCURRENCY) {
+        const batch = initialSources.slice(i, i + REINDEX_CONCURRENCY);
+        const results = await Promise.allSettled(
+          batch.map((source) => reindexSource(source.id, slug))
+        );
+        for (const result of results) {
+          if (result.status === 'fulfilled' && !result.value.error) succeeded++;
+          else {
+            failed++;
+            if (result.status === 'rejected')
+              console.error('Reindex error:', result.reason);
+          }
         }
-      } catch (err) {
-        toast.error('Reindex all failed', {
-          id: 'reindex-all',
-          description: err instanceof Error ? err.message : String(err),
-        });
+        const processed = i + batch.length;
+        if (processed < total) {
+          toast.loading(`Re-indexing sources… (${processed}/${total})`, {
+            id: 'reindex-all',
+          });
+        }
       }
+      toast.success(
+        `Reindexed ${total} source${total !== 1 ? 's' : ''} — ${succeeded} succeeded, ${failed} failed`,
+        { id: 'reindex-all' }
+      );
     });
   };
 
   const handleReindexSelected = () => {
     const ids = Array.from(selected);
     startTransition(async () => {
-      toast.loading(
-        `Re-indexing ${ids.length} selected source${ids.length !== 1 ? 's' : ''}…`,
-        {
-          id: 'reindex-selected',
+      const total = ids.length;
+      let succeeded = 0;
+      let failed = 0;
+      toast.loading(`Re-indexing selected sources… (0/${total})`, {
+        id: 'reindex-selected',
+      });
+      for (let i = 0; i < total; i += REINDEX_CONCURRENCY) {
+        const batch = ids.slice(i, i + REINDEX_CONCURRENCY);
+        const results = await Promise.allSettled(
+          batch.map((id) => reindexSource(id, slug))
+        );
+        for (const result of results) {
+          if (result.status === 'fulfilled' && !result.value.error) succeeded++;
+          else {
+            failed++;
+            if (result.status === 'rejected')
+              console.error('Reindex error:', result.reason);
+          }
         }
-      );
-      try {
-        const res = await fetch('/api/reindex', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orgId, slug, ids }),
-        });
-        const result = await res.json();
-        if (!res.ok) {
-          toast.error('Reindex failed', {
-            id: 'reindex-selected',
-            description: result.error ?? 'Unknown error',
-          });
-        } else {
-          toast.success(
-            `Reindexed ${result.count} source${result.count !== 1 ? 's' : ''} — ${result.succeeded} succeeded, ${result.failed} failed`,
+        const processed = i + batch.length;
+        if (processed < total) {
+          toast.loading(
+            `Re-indexing selected sources… (${processed}/${total})`,
             { id: 'reindex-selected' }
           );
-          setSelected(new Set());
         }
-      } catch (err) {
-        toast.error('Reindex failed', {
-          id: 'reindex-selected',
-          description: err instanceof Error ? err.message : String(err),
-        });
       }
+      toast.success(
+        `Reindexed ${total} source${total !== 1 ? 's' : ''} — ${succeeded} succeeded, ${failed} failed`,
+        { id: 'reindex-selected' }
+      );
+      setSelected(new Set());
     });
   };
 
