@@ -18,6 +18,9 @@ interface Props {
 
 export function MobileNav({ slug }: Props) {
   const pathname = usePathname();
+  // Use exact sub-route segment comparison to avoid false matches on slugs
+  // that contain nav keywords (e.g. slug="admin-billing").
+  const subRoute = pathname.split('/')[3] ?? '';
 
   const navItems = [
     {
@@ -26,34 +29,31 @@ export function MobileNav({ slug }: Props) {
       label: 'Inbox',
       active:
         pathname.startsWith(`/org/${slug}`) &&
-        !pathname.includes('/workflows') &&
-        !pathname.includes('/sandbox') &&
-        !pathname.includes('/admin') &&
-        !pathname.includes('/dashboard'),
+        !['workflows', 'admin', 'sandbox', 'dashboard'].includes(subRoute),
     },
     {
       href: `/org/${slug}/dashboard`,
       icon: HomeIcon,
       label: 'Dashboard',
-      active: pathname.includes('/dashboard'),
+      active: subRoute === 'dashboard',
     },
     {
       href: `/org/${slug}/workflows`,
       icon: LightningBoltIcon,
       label: 'Workflows',
-      active: pathname.includes('/workflows'),
+      active: subRoute === 'workflows',
     },
     {
       href: `/org/${slug}/sandbox`,
       icon: MixIcon,
       label: 'Sandbox',
-      active: pathname.includes('/sandbox'),
+      active: subRoute === 'sandbox',
     },
     {
       href: `/org/${slug}/admin`,
       icon: GearIcon,
       label: 'Admin',
-      active: pathname.includes('/admin'),
+      active: subRoute === 'admin',
     },
   ];
 

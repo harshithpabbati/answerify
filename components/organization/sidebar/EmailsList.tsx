@@ -180,7 +180,7 @@ export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
           </div>
         </div>
       </div>
-      <div className="flex h-[calc(100dvh-60px)] flex-col overflow-auto">
+      <div className="flex h-[calc(100dvh-60px-4rem)] flex-col overflow-auto md:h-[calc(100dvh-60px)]">
         {state.isLoading ? (
           Array.from({ length: 10 }).map((_, index) => (
             <EmailSkeleton key={`skeleton-${index}`} />

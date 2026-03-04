@@ -85,7 +85,7 @@ export function Conversations({
   const confidenceScore = reply?.confidence_score ?? 0;
 
   return (
-    <div className="flex h-[calc(100dvh-60px)] flex-col items-start justify-between">
+    <div className="flex h-[calc(100dvh-60px-4rem)] flex-col items-start justify-between md:h-[calc(100dvh-60px)]">
       <div
         ref={divRef}
         className="flex size-full flex-col gap-4 overflow-scroll p-4"

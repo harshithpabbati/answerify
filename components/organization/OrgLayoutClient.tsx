@@ -16,30 +16,37 @@ export function OrgLayoutClient({ sidebar, children }: Props) {
   const pathname = usePathname();
   // Extract the org slug from the pathname: /org/[slug]/...
   const slug = pathname.split('/')[2] ?? '';
-  // Full-page routes always show content (not the sidebar) on mobile.
-  const isFullPage =
-    pathname.includes('/workflows') ||
-    pathname.includes('/admin') ||
-    pathname.includes('/sandbox') ||
-    pathname.includes('/dashboard');
-  // On the dashboard index, mobile shows the sidebar (thread list).
-  // On a conversation or a full-page route, mobile shows the content.
-  const hasContent = !!params.id || isFullPage;
+  // hasContent: conversation or any full-page sub-route → hide sidebar on mobile, show content.
+  // Otherwise (inbox root): show sidebar full-width on mobile.
+  // Use exact segment matching (segments[3]) to avoid false positives from slugs
+  // that contain sub-route keywords (e.g. slug="admin-billing").
+  const subRoute = pathname.split('/')[3] ?? '';
+  const hasContent =
+    !!params.id ||
+    ['workflows', 'admin', 'sandbox', 'dashboard'].includes(subRoute);
 
   return (
     <div className="flex size-full max-h-dvh max-w-dvw overflow-hidden">
-      <div className={hasContent ? 'hidden md:flex' : 'flex w-full md:w-auto'}>
+      {/* Sidebar: full-width on mobile (inbox) or hidden (conversation / full-page) */}
+      <div
+        className={
+          hasContent
+            ? 'hidden md:flex'
+            : 'flex w-full pb-16 md:w-auto md:pb-0'
+        }
+      >
         {sidebar}
       </div>
+      {/* Main content: always gets bottom padding so nothing hides under the fixed nav */}
       <div
         className={cn(
-          hasContent ? 'flex-1' : 'hidden flex-1 md:block',
-          isFullPage && 'pb-16 md:pb-0'
+          hasContent ? 'flex-1 pb-16 md:pb-0' : 'hidden flex-1 md:block'
         )}
       >
         {children}
       </div>
-      {isFullPage && <MobileNav slug={slug} />}
+      {/* MobileNav is shown on all pages so users can always navigate */}
+      <MobileNav slug={slug} />
     </div>
   );
 }
