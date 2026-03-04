@@ -142,7 +142,7 @@ export function SandboxPage({ orgId, slug }: { orgId: string; slug: string }) {
           {'// TEST SANDBOX'}
         </p>
         <h1 className="font-display text-3xl font-black uppercase tracking-tight text-foreground">
-          🧪 AI Preview
+          AI Preview
         </h1>
         <p className="mt-2 font-mono text-sm text-muted-foreground">
           Preview how the AI would reply to a sample customer question using
@@ -243,10 +243,12 @@ export function SandboxPage({ orgId, slug }: { orgId: string; slug: string }) {
               <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
                 {'// AI Reply Preview'}
               </p>
-              <div
-                className="prose prose-sm max-w-none border border-[#FF4500]/20 bg-muted p-6 font-mono text-sm text-foreground"
-                dangerouslySetInnerHTML={{ __html: result.html }}
-              />
+              <div className="bg-background border-[#FF4500]/20 overflow-hidden break-words border p-4 text-sm text-foreground">
+                <div
+                  className="email-content"
+                  dangerouslySetInnerHTML={{ __html: result.html }}
+                />
+              </div>
             </div>
           )}
 

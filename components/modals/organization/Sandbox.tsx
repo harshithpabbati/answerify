@@ -91,7 +91,7 @@ function SandboxContent({ orgId }: { orgId: string }) {
       {previewHtml && (
         <div className="space-y-2">
           <p className="font-mono text-xs font-semibold uppercase tracking-widest text-[#FF4500]">
-            // Preview
+            {`// Preview`}
           </p>
           <div
             className="prose prose-sm max-w-none border border-[#FF4500]/20 bg-muted p-4 text-sm font-mono text-foreground"
