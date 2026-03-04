@@ -236,7 +236,7 @@ export function AdminPage({
   );
 
   return (
-    <div className="flex h-screen flex-col overflow-auto">
+    <div className="flex h-full flex-col overflow-auto">
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="relative border-b border-[#FF4500]/20 px-6 py-6 md:px-10 overflow-hidden">
         <div

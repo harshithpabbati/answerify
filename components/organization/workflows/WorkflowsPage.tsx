@@ -16,7 +16,7 @@ import type {
   WorkflowStep,
   WorkflowTrigger,
 } from '@/lib/workflow-types';
-import { Pencil1Icon, PlusIcon, TrashIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, Pencil1Icon, PlusIcon, TrashIcon } from '@radix-ui/react-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -343,7 +343,7 @@ function WorkflowEditor({
   };
 
   return (
-    <div className="flex h-full flex-col overflow-auto p-6 space-y-6">
+    <div className="flex h-full flex-col overflow-auto p-4 md:p-6 space-y-6">
       {/* Name */}
       <div className="space-y-3">
         <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
@@ -486,7 +486,7 @@ function WorkflowDetail({
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
-    <div className="flex h-full flex-col overflow-auto p-6">
+    <div className="flex h-full flex-col overflow-auto p-4 md:p-6">
       {/* Header */}
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
@@ -648,15 +648,27 @@ export function WorkflowsPage({ orgId, slug, initialWorkflows }: Props) {
     setMode('view');
   };
 
+  const handleMobileBack = () => {
+    if (mode === 'create' || mode === 'edit') {
+      setSelectedId(workflows[0]?.id ?? null);
+      setMode('view');
+    } else {
+      setSelectedId(null);
+    }
+  };
+
   const startCreate = () => {
     setSelectedId(null);
     setMode('create');
   };
 
+  // On mobile: show list panel when nothing is focused; show right panel when focused
+  const mobileShowList = mode === 'view' && !selected;
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Page header */}
-      <div className="flex h-[60px] shrink-0 items-center justify-between border-b border-[#FF4500]/20 px-6">
+      <div className="flex h-[60px] shrink-0 items-center justify-between border-b border-[#FF4500]/20 px-4 md:px-6">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
             {'// AUTOMATIONS'}
@@ -673,8 +685,15 @@ export function WorkflowsPage({ orgId, slug, initialWorkflows }: Props) {
 
       {/* Split layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left panel – workflow list */}
-        <div className="w-72 shrink-0 overflow-y-auto border-r border-[#FF4500]/20 bg-muted/20">
+        {/* Left panel – workflow list (full-width on mobile when showing list, hidden on mobile when detail/editor is shown) */}
+        <div
+          className={cn(
+            'shrink-0 overflow-y-auto border-r border-[#FF4500]/20 bg-muted/20',
+            mobileShowList
+              ? 'w-full md:w-72'
+              : 'hidden md:block md:w-72'
+          )}
+        >
           {workflows.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
               <p className="font-mono text-xs text-muted-foreground">
@@ -738,8 +757,22 @@ export function WorkflowsPage({ orgId, slug, initialWorkflows }: Props) {
           )}
         </div>
 
-        {/* Right panel */}
-        <div className="flex-1 overflow-hidden">
+        {/* Right panel (full-width on mobile when detail/editor active, hidden on mobile when showing list) */}
+        <div
+          className={cn(
+            'overflow-hidden',
+            mobileShowList ? 'hidden md:flex md:flex-1' : 'flex flex-1 flex-col'
+          )}
+        >
+          {/* Mobile back button */}
+          <button
+            onClick={handleMobileBack}
+            className="flex items-center gap-1.5 border-b border-[#FF4500]/20 px-4 py-3 font-mono text-xs text-muted-foreground transition-colors hover:text-[#FF4500] md:hidden"
+          >
+            <ArrowLeftIcon className="size-3" />
+            Back to workflows
+          </button>
+          <div className="flex-1 overflow-hidden">
           {mode === 'create' && (
             <WorkflowEditor
               orgId={orgId}
@@ -789,6 +822,7 @@ export function WorkflowsPage({ orgId, slug, initialWorkflows }: Props) {
               </Button>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>
