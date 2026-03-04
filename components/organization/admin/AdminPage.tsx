@@ -328,123 +328,207 @@ export function AdminPage({
                     No data sources configured yet.
                   </p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm font-mono">
-                      <thead>
-                        <tr className="border-b border-[#FF4500]/20 text-left">
-                          <th className="pb-3 pr-4 w-8">
-                            <input
-                              type="checkbox"
-                              checked={allSelected}
-                              onChange={toggleAll}
-                              className="cursor-pointer accent-[#FF4500]"
-                              aria-label="Select all sources on this page"
-                            />
-                          </th>
-                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
-                            URL
-                          </th>
-                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
-                            Status
-                          </th>
-                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
-                            Sections
-                          </th>
-                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
-                            Indexed At
-                          </th>
-                          <th className="pb-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#FF4500]/10">
-                        {paginatedSources.map((source) => {
-                          const isEmptyReady =
-                            source.status === 'ready' &&
-                            source.section_count === 0;
-                          return (
-                            <tr
-                              key={source.id}
-                              className={cn(
-                                'group',
-                                isEmptyReady && 'bg-amber-500/5',
-                                selected.has(source.id) && 'bg-[#FF4500]/5'
-                              )}
-                            >
-                              <td className="py-3 pr-4">
-                                <input
-                                  type="checkbox"
-                                  checked={selected.has(source.id)}
-                                  onChange={() => toggleOne(source.id)}
-                                  className="cursor-pointer accent-[#FF4500]"
-                                  aria-label={`Select ${source.url}`}
-                                />
-                              </td>
-                              <td className="py-3 pr-4 max-w-xs">
-                                <a
-                                  href={source.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1.5 text-foreground hover:text-[#FF4500] transition-colors truncate"
-                                >
-                                  <Link2Icon className="size-3 shrink-0" />
-                                  <span className="truncate">{source.url}</span>
-                                  <ExternalLinkIcon className="size-3 shrink-0 opacity-50" />
-                                </a>
-                              </td>
-                              <td className="py-3 pr-4">
-                                <EmbeddingStatusBadge status={source.status} />
-                              </td>
-                              <td className="py-3 pr-4 tabular-nums">
+                  <>
+                    {/* ── Mobile card list ───────────────────────────────── */}
+                    <div className="space-y-3 md:hidden">
+                      {paginatedSources.map((source) => {
+                        const isEmptyReady =
+                          source.status === 'ready' &&
+                          source.section_count === 0;
+                        return (
+                          <div
+                            key={source.id}
+                            className={cn(
+                              'space-y-2 border border-[#FF4500]/15 p-3 font-mono text-xs',
+                              isEmptyReady && 'bg-amber-500/5',
+                              selected.has(source.id) && 'bg-[#FF4500]/5'
+                            )}
+                          >
+                            <div className="flex items-start gap-2">
+                              <input
+                                type="checkbox"
+                                checked={selected.has(source.id)}
+                                onChange={() => toggleOne(source.id)}
+                                className="mt-0.5 cursor-pointer accent-[#FF4500]"
+                                aria-label={`Select ${source.url}`}
+                              />
+                              <a
+                                href={source.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex min-w-0 flex-1 items-center gap-1.5 text-foreground hover:text-[#FF4500] transition-colors"
+                              >
+                                <Link2Icon className="size-3 shrink-0" />
+                                <span className="truncate">{source.url}</span>
+                                <ExternalLinkIcon className="size-3 shrink-0 opacity-50" />
+                              </a>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pl-5">
+                              <EmbeddingStatusBadge status={source.status} />
+                              <span className="text-muted-foreground">
                                 {isEmptyReady ? (
                                   <span className="flex items-center gap-1 text-amber-500 font-semibold">
                                     <ExclamationTriangleIcon className="size-3" />
-                                    0
+                                    0 sections
                                   </span>
                                 ) : (
-                                  <span className="text-muted-foreground">
-                                    {source.section_count}
-                                  </span>
+                                  <>{source.section_count} sections</>
                                 )}
-                              </td>
-                              <td
-                                className="py-3 pr-4 whitespace-nowrap text-muted-foreground text-xs"
+                              </span>
+                              <span
+                                className="text-muted-foreground"
                                 suppressHydrationWarning
                               >
-                                {new Date(source.created_at).toLocaleString()}
-                              </td>
-                              <td className="py-3">
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="neutral"
-                                    size="sm"
-                                    disabled={isPending}
-                                    onClick={() => handleReindex(source.id)}
-                                    title="Re-index this source"
-                                    className="gap-1.5 text-xs"
+                                {new Date(source.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 pl-5">
+                              <Button
+                                variant="neutral"
+                                size="sm"
+                                disabled={isPending}
+                                onClick={() => handleReindex(source.id)}
+                                className="gap-1.5 text-xs"
+                              >
+                                <ReloadIcon className="size-3" />
+                                Reindex
+                              </Button>
+                              <Button
+                                variant="neutral"
+                                size="sm"
+                                disabled={isPending}
+                                onClick={() => handleDelete(source.id)}
+                                className="gap-1.5 text-xs text-red-500 hover:text-red-600"
+                              >
+                                <TrashIcon className="size-3" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* ── Desktop table ──────────────────────────────────── */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-sm font-mono">
+                        <thead>
+                          <tr className="border-b border-[#FF4500]/20 text-left">
+                            <th className="pb-3 pr-4 w-8">
+                              <input
+                                type="checkbox"
+                                checked={allSelected}
+                                onChange={toggleAll}
+                                className="cursor-pointer accent-[#FF4500]"
+                                aria-label="Select all sources on this page"
+                              />
+                            </th>
+                            <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+                              URL
+                            </th>
+                            <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                              Status
+                            </th>
+                            <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                              Sections
+                            </th>
+                            <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                              Indexed At
+                            </th>
+                            <th className="pb-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#FF4500]/10">
+                          {paginatedSources.map((source) => {
+                            const isEmptyReady =
+                              source.status === 'ready' &&
+                              source.section_count === 0;
+                            return (
+                              <tr
+                                key={source.id}
+                                className={cn(
+                                  'group',
+                                  isEmptyReady && 'bg-amber-500/5',
+                                  selected.has(source.id) && 'bg-[#FF4500]/5'
+                                )}
+                              >
+                                <td className="py-3 pr-4">
+                                  <input
+                                    type="checkbox"
+                                    checked={selected.has(source.id)}
+                                    onChange={() => toggleOne(source.id)}
+                                    className="cursor-pointer accent-[#FF4500]"
+                                    aria-label={`Select ${source.url}`}
+                                  />
+                                </td>
+                                <td className="py-3 pr-4 max-w-xs">
+                                  <a
+                                    href={source.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 text-foreground hover:text-[#FF4500] transition-colors truncate"
                                   >
-                                    <ReloadIcon className="size-3" />
-                                    Reindex
-                                  </Button>
-                                  <Button
-                                    variant="neutral"
-                                    size="sm"
-                                    disabled={isPending}
-                                    onClick={() => handleDelete(source.id)}
-                                    title="Delete this source"
-                                    className="gap-1.5 text-xs text-red-500 hover:text-red-600"
-                                  >
-                                    <TrashIcon className="size-3" />
-                                    Delete
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                                    <Link2Icon className="size-3 shrink-0" />
+                                    <span className="truncate">{source.url}</span>
+                                    <ExternalLinkIcon className="size-3 shrink-0 opacity-50" />
+                                  </a>
+                                </td>
+                                <td className="py-3 pr-4">
+                                  <EmbeddingStatusBadge status={source.status} />
+                                </td>
+                                <td className="py-3 pr-4 tabular-nums">
+                                  {isEmptyReady ? (
+                                    <span className="flex items-center gap-1 text-amber-500 font-semibold">
+                                      <ExclamationTriangleIcon className="size-3" />
+                                      0
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground">
+                                      {source.section_count}
+                                    </span>
+                                  )}
+                                </td>
+                                <td
+                                  className="py-3 pr-4 whitespace-nowrap text-muted-foreground text-xs"
+                                  suppressHydrationWarning
+                                >
+                                  {new Date(source.created_at).toLocaleString()}
+                                </td>
+                                <td className="py-3">
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="neutral"
+                                      size="sm"
+                                      disabled={isPending}
+                                      onClick={() => handleReindex(source.id)}
+                                      title="Re-index this source"
+                                      className="gap-1.5 text-xs"
+                                    >
+                                      <ReloadIcon className="size-3" />
+                                      Reindex
+                                    </Button>
+                                    <Button
+                                      variant="neutral"
+                                      size="sm"
+                                      disabled={isPending}
+                                      onClick={() => handleDelete(source.id)}
+                                      title="Delete this source"
+                                      className="gap-1.5 text-xs text-red-500 hover:text-red-600"
+                                    >
+                                      <TrashIcon className="size-3" />
+                                      Delete
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
                     {totalPages > 1 && (
                       <div className="mt-4 flex items-center justify-between font-mono text-xs text-muted-foreground">
                         <span>
@@ -473,7 +557,7 @@ export function AdminPage({
                         </div>
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -496,66 +580,104 @@ export function AdminPage({
                     No replies generated yet.
                   </p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm font-mono">
-                      <thead>
-                        <tr className="border-b border-[#FF4500]/20 text-left">
-                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
-                            Thread
-                          </th>
-                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
-                            Confidence
-                          </th>
-                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
-                            Status
-                          </th>
-                          <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
-                            Perfect?
-                          </th>
-                          <th className="pb-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
-                            Created At
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[#FF4500]/10">
-                        {initialReplies.map((reply) => (
-                          <tr key={reply.id} className="group">
-                            <td className="py-3 pr-4">
-                              <Link
-                                href={`/org/${slug}/${reply.thread_id}`}
-                                className="text-foreground hover:text-[#FF4500] transition-colors font-medium underline underline-offset-2"
-                              >
-                                {reply.thread_id.slice(0, 8)}…
-                              </Link>
-                            </td>
-                            <td className="py-3 pr-4">
-                              <ConfidenceBadge score={reply.confidence_score} />
-                            </td>
-                            <td className="py-3 pr-4">
-                              <ReplyStatusBadge status={reply.status} />
-                            </td>
-                            <td className="py-3 pr-4">
-                              {reply.is_perfect === true ? (
-                                <span className="text-emerald-500 font-bold">
-                                  ✓
-                                </span>
-                              ) : reply.is_perfect === false ? (
-                                <Cross2Icon className="size-3 text-red-500" />
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </td>
-                            <td
-                              className="py-3 whitespace-nowrap text-muted-foreground text-xs"
-                              suppressHydrationWarning
+                  <>
+                    {/* ── Mobile card list ───────────────────────────────── */}
+                    <div className="space-y-3 md:hidden">
+                      {initialReplies.map((reply) => (
+                        <div
+                          key={reply.id}
+                          className="space-y-2 border border-[#FF4500]/15 p-3 font-mono text-xs"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <Link
+                              href={`/org/${slug}/${reply.thread_id}`}
+                              className="text-foreground hover:text-[#FF4500] transition-colors font-medium underline underline-offset-2"
                             >
-                              {new Date(reply.created_at).toLocaleString()}
-                            </td>
+                              Thread {reply.thread_id.slice(0, 8)}…
+                            </Link>
+                            <ReplyStatusBadge status={reply.status} />
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground">
+                            <ConfidenceBadge score={reply.confidence_score} />
+                            <span>
+                              {reply.is_perfect === true ? (
+                                <span className="text-emerald-500 font-bold">✓ Perfect</span>
+                              ) : reply.is_perfect === false ? (
+                                <span className="text-red-500">✗ Not perfect</span>
+                              ) : (
+                                '—'
+                              )}
+                            </span>
+                            <span suppressHydrationWarning>
+                              {new Date(reply.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* ── Desktop table ──────────────────────────────────── */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-sm font-mono">
+                        <thead>
+                          <tr className="border-b border-[#FF4500]/20 text-left">
+                            <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+                              Thread
+                            </th>
+                            <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                              Confidence
+                            </th>
+                            <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+                              Status
+                            </th>
+                            <th className="pb-3 pr-4 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                              Perfect?
+                            </th>
+                            <th className="pb-3 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground whitespace-nowrap">
+                              Created At
+                            </th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody className="divide-y divide-[#FF4500]/10">
+                          {initialReplies.map((reply) => (
+                            <tr key={reply.id} className="group">
+                              <td className="py-3 pr-4">
+                                <Link
+                                  href={`/org/${slug}/${reply.thread_id}`}
+                                  className="text-foreground hover:text-[#FF4500] transition-colors font-medium underline underline-offset-2"
+                                >
+                                  {reply.thread_id.slice(0, 8)}…
+                                </Link>
+                              </td>
+                              <td className="py-3 pr-4">
+                                <ConfidenceBadge score={reply.confidence_score} />
+                              </td>
+                              <td className="py-3 pr-4">
+                                <ReplyStatusBadge status={reply.status} />
+                              </td>
+                              <td className="py-3 pr-4">
+                                {reply.is_perfect === true ? (
+                                  <span className="text-emerald-500 font-bold">
+                                    ✓
+                                  </span>
+                                ) : reply.is_perfect === false ? (
+                                  <Cross2Icon className="size-3 text-red-500" />
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </td>
+                              <td
+                                className="py-3 whitespace-nowrap text-muted-foreground text-xs"
+                                suppressHydrationWarning
+                              >
+                                {new Date(reply.created_at).toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   EnvelopeClosedIcon,
   GearIcon,
+  HomeIcon,
   LightningBoltIcon,
   MixIcon,
 } from '@radix-ui/react-icons';
@@ -27,7 +28,14 @@ export function MobileNav({ slug }: Props) {
         pathname.startsWith(`/org/${slug}`) &&
         !pathname.includes('/workflows') &&
         !pathname.includes('/sandbox') &&
-        !pathname.includes('/admin'),
+        !pathname.includes('/admin') &&
+        !pathname.includes('/dashboard'),
+    },
+    {
+      href: `/org/${slug}/dashboard`,
+      icon: HomeIcon,
+      label: 'Dashboard',
+      active: pathname.includes('/dashboard'),
     },
     {
       href: `/org/${slug}/workflows`,

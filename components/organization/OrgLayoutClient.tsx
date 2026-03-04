@@ -20,7 +20,8 @@ export function OrgLayoutClient({ sidebar, children }: Props) {
   const isFullPage =
     pathname.includes('/workflows') ||
     pathname.includes('/admin') ||
-    pathname.includes('/sandbox');
+    pathname.includes('/sandbox') ||
+    pathname.includes('/dashboard');
   // On the dashboard index, mobile shows the sidebar (thread list).
   // On a conversation or a full-page route, mobile shows the content.
   const hasContent = !!params.id || isFullPage;
