@@ -14,14 +14,14 @@ export type Database = {
   }
   public: {
     Tables: {
-      api_connection: {
+      mcp_server: {
         Row: {
           created_at: string
           id: string
           organization_id: string
           name: string
-          base_url: string
-          api_key: string
+          url: string
+          api_key: string | null
           description: string | null
         }
         Insert: {
@@ -29,8 +29,8 @@ export type Database = {
           id?: string
           organization_id: string
           name: string
-          base_url: string
-          api_key: string
+          url: string
+          api_key?: string | null
           description?: string | null
         }
         Update: {
@@ -38,13 +38,13 @@ export type Database = {
           id?: string
           organization_id?: string
           name?: string
-          base_url?: string
-          api_key?: string
+          url?: string
+          api_key?: string | null
           description?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "api_connection_organization_id_fkey"
+            foreignKeyName: "mcp_server_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organization"

@@ -1,4 +1,5 @@
-import { generateText } from 'ai';
+import { createMCPClient } from '@ai-sdk/mcp';
+import { generateText, stepCountIs } from 'ai';
 import { codeBlock } from 'common-tags';
 import { Resend } from 'resend';
 
@@ -141,86 +142,77 @@ async function retrieveSections(
 }
 
 /* -------------------------------------------------------------------------- */
-/*                               API ROUTING                                  */
+/*                               MCP TOOL USE                                 */
 /* -------------------------------------------------------------------------- */
 
-async function runApiRoutingAgent(
+async function gatherContextViaMcp(
   subject: string,
   question: string,
-  apiConnections: Array<{
+  mcpServers: Array<{
     id: string;
     name: string;
-    base_url: string;
+    url: string;
+    api_key: string | null;
     description: string | null;
   }>
-) {
-  if (!apiConnections.length || apiConnections.length === 0) return null;
+): Promise<string> {
+  if (!mcpServers.length) return '';
 
-  const apiList = apiConnections
-    .map(
-      (c) =>
-        `- id: ${c.id}\n  name: ${c.name}\n  description: ${c.description ?? 'No description'}`
-    )
-    .join('\n');
-
-  const { text } = await generateText({
-    model: textModel,
-    temperature: 0,
-    maxOutputTokens: 256,
-    system: codeBlock`
-      You are an API routing assistant.
-
-      If the question clearly requires live personalized data,
-      return JSON:
-      { "api_id": "...", "endpoint": "...", "query_params": {} }
-
-      Otherwise return:
-      NONE
-    `,
-    prompt: `Subject: ${subject}\nQuestion:\n${question}\n\nAPIs:\n${apiList}`,
-  });
-
-  const trimmed = text.trim();
-  if (trimmed === 'NONE') return null;
+  // Collect clients as they are created so the finally block can close them
+  // regardless of where in the try block an error occurs.
+  const clients: Awaited<ReturnType<typeof createMCPClient>>[] = [];
 
   try {
-    return parseLLMJSON(trimmed);
-  } catch {
-    return null;
-  }
-}
-
-async function callExternalApi(
-  connection: { base_url: string; api_key: string },
-  endpoint: string,
-  queryParams: Record<string, string>
-): Promise<string | null> {
-  try {
-    const url = new URL(
-      endpoint.startsWith('/') ? endpoint : `/${endpoint}`,
-      connection.base_url.endsWith('/')
-        ? connection.base_url
-        : `${connection.base_url}/`
+    const toolMaps = await Promise.allSettled(
+      mcpServers.map(async (server) => {
+        const client = await createMCPClient({
+          transport: {
+            type: 'sse',
+            url: server.url,
+            headers: server.api_key
+              ? { Authorization: `Bearer ${server.api_key}` }
+              : {},
+          },
+        });
+        clients.push(client);
+        return client.tools();
+      })
     );
 
-    for (const [k, v] of Object.entries(queryParams)) {
-      url.searchParams.set(k, v);
+    const allTools: Record<string, unknown> = {};
+    for (const result of toolMaps) {
+      if (result.status === 'fulfilled') {
+        Object.assign(allTools, result.value);
+      }
     }
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${connection.api_key}`,
-        'Content-Type': 'application/json',
-      },
+    if (!Object.keys(allTools).length) return '';
+
+    // Allow up to 5 tool-call/response round-trips before returning the
+    // gathered context summary. This caps latency while still supporting
+    // multi-step lookups (e.g. list customers → fetch a specific order).
+    const MCP_MAX_STEPS = 5;
+
+    const { text } = await generateText({
+      model: textModel,
+      tools: allTools as Parameters<typeof generateText>[0]['tools'],
+      stopWhen: stepCountIs(MCP_MAX_STEPS),
+      temperature: 0,
+      system: codeBlock`
+        You are a data-gathering assistant.
+        Call the available tools to retrieve information relevant to the customer question.
+        Once you have gathered the data, return a concise plain-text summary of what you found.
+        Do not invent data — only report what the tools returned.
+      `,
+      prompt: `Subject: ${subject}\nCustomer question:\n${question}`,
     });
 
-    if (!response.ok) return null;
-
-    const body = await response.text();
-    return body.length > 4000 ? body.slice(0, 4000) : body;
-  } catch {
-    return null;
+    return text.trim();
+  } catch (err) {
+    console.error('MCP context gathering failed:', err);
+    return '';
+  } finally {
+    await Promise.allSettled(clients.map((c) => c.close()));
   }
 }
 
@@ -310,7 +302,7 @@ export async function POST(request: Request) {
     { data: datasources },
     { data: org },
     { data: thread },
-    { data: apiConnections },
+    { data: mcpServers },
     { data: threadEmails },
   ] = await Promise.all([
     supabase
@@ -328,8 +320,8 @@ export async function POST(request: Request) {
       .eq('id', record.thread_id)
       .single(),
     supabase
-      .from('api_connection')
-      .select('id, name, base_url, api_key, description')
+      .from('mcp_server')
+      .select('id, name, url, api_key, description')
       .eq('organization_id', record.organization_id),
     supabase
       .from('email')
@@ -348,33 +340,13 @@ export async function POST(request: Request) {
 
   const questionText = `${thread?.subject ?? ''}\n${record.cleaned_body}`;
 
-  /* --------------------------- API ROUTING STEP --------------------------- */
+  /* --------------------------- MCP TOOL GATHERING ------------------------- */
 
-  let apiContext = '';
-
-  const routingDecision = await runApiRoutingAgent(
+  const apiContext = await gatherContextViaMcp(
     thread?.subject ?? '',
     record.cleaned_body,
-    apiConnections ?? []
+    mcpServers ?? []
   );
-
-  if (routingDecision) {
-    const chosenConnection = apiConnections?.find(
-      (c) => c.id === routingDecision.api_id
-    );
-
-    if (chosenConnection) {
-      const apiResponse = await callExternalApi(
-        chosenConnection,
-        routingDecision.endpoint,
-        routingDecision.query_params ?? {}
-      );
-
-      if (apiResponse) {
-        apiContext = apiResponse;
-      }
-    }
-  }
 
   /* -------------------------- VECTOR RETRIEVAL --------------------------- */
 

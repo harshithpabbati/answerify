@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getApiConnections } from '@/actions/api-connection';
+import { getMcpServers } from '@/actions/mcp-server';
 import { getOrgStats } from '@/actions/email';
 import { getOrganizationBySlug } from '@/actions/organization';
 import { getSources } from '@/actions/source';
@@ -32,12 +32,12 @@ export default async function OrgPage({ params }: Props) {
   const [
     { data: sources },
     { threadCount, replyCount },
-    { data: apiConnections },
+    { data: mcpServers },
     { data: workflows },
   ] = await Promise.all([
     getSources(org.id),
     getOrgStats(org.id),
-    getApiConnections(org.id),
+    getMcpServers(org.id),
     getWorkflows(org.id),
   ]);
 
@@ -56,7 +56,7 @@ export default async function OrgPage({ params }: Props) {
         org.autopilot_threshold ?? AUTOPILOT_THRESHOLD_DEFAULT
       }
       initialTonePolicy={org.tone_policy ?? null}
-      initialApiConnections={apiConnections ?? []}
+      initialMcpServers={mcpServers ?? []}
       workflowsCount={workflows?.length ?? 0}
     />
   );
