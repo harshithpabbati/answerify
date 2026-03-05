@@ -19,6 +19,7 @@ interface SandboxResult {
   confidence: number;
   vectorConfidence: number;
   modelConfidence: number;
+  partial: boolean;
   citations: string[];
   sections: SandboxSection[];
 }
@@ -243,6 +244,21 @@ export function SandboxPage({ orgId, slug }: { orgId: string; slug: string }) {
               <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FF4500]">
                 {'// AI Reply Preview'}
               </p>
+              {result.partial && (
+                <div className="flex items-start gap-3 border border-amber-500/30 bg-amber-500/5 p-4">
+                  <span className="mt-0.5 text-amber-500">⚠</span>
+                  <div>
+                    <p className="font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">
+                      Partial Answer — Needs Review
+                    </p>
+                    <p className="mt-1 font-mono text-xs text-muted-foreground">
+                      The AI could only partially answer this question from the
+                      knowledge base. This reply would be saved as a draft for a
+                      support agent to review and complete before sending.
+                    </p>
+                  </div>
+                </div>
+              )}
               <div className="bg-background border-[#FF4500]/20 overflow-hidden break-words border p-4 text-sm text-foreground">
                 <div
                   className="email-content"
