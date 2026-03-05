@@ -264,7 +264,7 @@ async function runGroundedAnswerAgent({
   const { text } = await generateText({
     model: textModel,
     temperature: 0.5,
-    maxOutputTokens: 700,
+    maxOutputTokens: 2000,
     system: systemPrompt,
     prompt: `
       Subject: ${subject}
@@ -286,7 +286,8 @@ async function runGroundedAnswerAgent({
 
   try {
     return parseLLMJSON(text);
-  } catch {
+  } catch (err) {
+    console.error('[reply] Failed to parse LLM JSON response:', err, '\nRaw text:', text);
     return { status: 'NO_INFORMATION', confidence: 0 };
   }
 }
