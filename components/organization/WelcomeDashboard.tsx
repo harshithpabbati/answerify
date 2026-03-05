@@ -24,6 +24,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { AGENT_PRESETS, AgentPresetColor } from '@/lib/agent-presets';
 import { apiConnectionsQueryKey, sourcesQueryKey } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
@@ -157,6 +158,42 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+// ─── Agent preset color classes ───────────────────────────────────────────────
+
+const PRESET_COLOR_CLASSES: Record<
+  AgentPresetColor,
+  { border: string; bg: string; text: string; hoverBorder: string; hoverBg: string }
+> = {
+  blue: {
+    border: 'border-blue-500/30',
+    bg: 'bg-blue-500/10',
+    text: 'text-blue-400',
+    hoverBorder: 'hover:border-blue-500/60',
+    hoverBg: 'hover:bg-blue-500/20',
+  },
+  green: {
+    border: 'border-green-500/30',
+    bg: 'bg-green-500/10',
+    text: 'text-green-400',
+    hoverBorder: 'hover:border-green-500/60',
+    hoverBg: 'hover:bg-green-500/20',
+  },
+  purple: {
+    border: 'border-purple-500/30',
+    bg: 'bg-purple-500/10',
+    text: 'text-purple-400',
+    hoverBorder: 'hover:border-purple-500/60',
+    hoverBg: 'hover:bg-purple-500/20',
+  },
+  orange: {
+    border: 'border-orange-500/30',
+    bg: 'bg-orange-500/10',
+    text: 'text-orange-400',
+    hoverBorder: 'hover:border-orange-500/60',
+    hoverBg: 'hover:bg-orange-500/20',
+  },
+};
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -561,10 +598,51 @@ export function WelcomeDashboard({
                     <CardTitle>🎨 Tone &amp; Policy</CardTitle>
                     <CardDescription>
                       Describe how the AI should sound and any rules it must
-                      follow (e.g. &ldquo;Always respond formally&rdquo;).
+                      follow (e.g. &ldquo;Always respond formally&rdquo;). Or
+                      pick a preset agent below to get started quickly.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    {/* Agent Presets */}
+                    <div className="space-y-1.5">
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                        Agent Presets
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {AGENT_PRESETS.map((preset) => {
+                          const colors =
+                            PRESET_COLOR_CLASSES[preset.color];
+                          return (
+                            <button
+                              key={preset.name}
+                              type="button"
+                              title={preset.description}
+                              onClick={() => {
+                                if (
+                                  tonePolicy.trim() &&
+                                  !window.confirm(
+                                    `Replace your current Tone & Policy with the "${preset.name}" preset?`
+                                  )
+                                ) {
+                                  return;
+                                }
+                                setTonePolicy(preset.systemPrompt);
+                              }}
+                              className={cn(
+                                'inline-flex items-center gap-1.5 rounded border px-2.5 py-1 font-mono text-xs transition-colors',
+                                colors.border,
+                                colors.bg,
+                                colors.text,
+                                colors.hoverBorder,
+                                colors.hoverBg
+                              )}
+                            >
+                              🤖 {preset.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                     <textarea
                       rows={4}
                       value={tonePolicy}
