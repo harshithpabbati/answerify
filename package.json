@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.37",
+    "@ai-sdk/mcp": "1.0.25",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-context-menu": "^2.2.16",

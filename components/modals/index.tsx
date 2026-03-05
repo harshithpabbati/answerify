@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
-import { useManageApiConnections } from '@/states/api-connection';
+import { useManageMcpServers } from '@/states/mcp-server';
 import {
   useCreateOrganization,
   useInviteMembers,
@@ -29,8 +29,8 @@ const InviteMembers = dynamic(() =>
 const ViewMembers = dynamic(() =>
   import('./organization').then((mod) => mod.ViewMembers)
 );
-const ManageApiConnections = dynamic(() =>
-  import('./api-connection').then((mod) => mod.ManageApiConnections)
+const ManageMcpServers = dynamic(() =>
+  import('./mcp-server').then((mod) => mod.ManageMcpServers)
 );
 
 export function Modals() {
@@ -40,7 +40,7 @@ export function Modals() {
   const [showDataSources] = useViewDataSource();
   const [inviteMembers] = useInviteMembers();
   const [viewMembers] = useMembers();
-  const [showApiConnections] = useManageApiConnections();
+  const [showMcpServers] = useManageMcpServers();
 
   return (
     <>
@@ -50,7 +50,8 @@ export function Modals() {
       {Boolean(showDataSources) && <ViewDataSources />}
       {Boolean(inviteMembers) && <InviteMembers />}
       {Boolean(viewMembers) && <ViewMembers />}
-      {Boolean(showApiConnections) && <ManageApiConnections />}
+      {Boolean(showMcpServers) && <ManageMcpServers />}
     </>
   );
 }
+

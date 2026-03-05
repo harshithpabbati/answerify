@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { fetchApiConnections } from '@/actions/api-connection';
+import { fetchMcpServers } from '@/actions/mcp-server';
 import {
   updateAutopilotSettings,
   updateTonePolicy,
 } from '@/actions/organization';
 import { fetchSources } from '@/actions/source';
 import { Tables } from '@/database.types';
-import { useManageApiConnections } from '@/states/api-connection';
+import { useManageMcpServers } from '@/states/mcp-server';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
 import {
   useInviteMembers,
@@ -25,7 +25,7 @@ import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { AGENT_PRESETS, AgentPresetColor } from '@/lib/agent-presets';
-import { apiConnectionsQueryKey, sourcesQueryKey } from '@/lib/query-keys';
+import { mcpServersQueryKey, sourcesQueryKey } from '@/lib/query-keys';
 import { cn } from '@/lib/utils';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard';
 import { Button } from '@/components/ui/button';
@@ -52,7 +52,7 @@ interface Props {
   autopilotEnabled: boolean;
   autopilotThreshold: number;
   initialTonePolicy: string | null;
-  initialApiConnections: Tables<'api_connection'>[];
+  initialMcpServers: Tables<'mcp_server'>[];
   workflowsCount: number;
 }
 
@@ -209,7 +209,7 @@ export function WelcomeDashboard({
   autopilotEnabled,
   autopilotThreshold,
   initialTonePolicy,
-  initialApiConnections,
+  initialMcpServers,
   workflowsCount,
 }: Props) {
   const { copied, copyToClipboard } = useCopyToClipboard();
@@ -217,7 +217,7 @@ export function WelcomeDashboard({
   const [, setViewDataSource] = useViewDataSource();
   const [, setInviteMembers] = useInviteMembers();
   const [, setUpdateOrganization] = useUpdateOrganization();
-  const [, setManageApiConnections] = useManageApiConnections();
+  const [, setManageMcpServers] = useManageMcpServers();
 
   const [enabled, setEnabled] = useState(autopilotEnabled);
   const [threshold, setThreshold] = useState(autopilotThreshold);
@@ -239,12 +239,12 @@ export function WelcomeDashboard({
     },
   });
 
-  const { data: apiConnections = initialApiConnections } = useQuery<
-    Tables<'api_connection'>[]
+  const { data: mcpServers = initialMcpServers } = useQuery<
+    Tables<'mcp_server'>[]
   >({
-    queryKey: apiConnectionsQueryKey(orgId),
-    queryFn: () => fetchApiConnections(orgId),
-    initialData: initialApiConnections,
+    queryKey: mcpServersQueryKey(orgId),
+    queryFn: () => fetchMcpServers(orgId),
+    initialData: initialMcpServers,
   });
 
   const saveAutopilot = async (nextEnabled: boolean, nextThreshold: number) => {
@@ -316,7 +316,7 @@ export function WelcomeDashboard({
           <StatChip value={threadsCount} label="Threads" />
           <StatChip value={repliesCount} label="Replies sent" />
           <StatChip value={sources.length} label="Data sources" />
-          <StatChip value={apiConnections.length} label="API connections" />
+          <StatChip value={mcpServers.length} label="MCP servers" />
           <StatChip value={workflowsCount} label="Workflows" />
         </div>
       </div>
@@ -697,19 +697,19 @@ export function WelcomeDashboard({
                 </div>
               </ToolCard>
 
-              {/* API Connections */}
+              {/* MCP Servers */}
               <ToolCard
                 icon="🔌"
-                title="Connections"
-                description="Connect external APIs to enrich AI context and actions."
-                badge={<CountBadge count={apiConnections.length} />}
+                title="MCP Servers"
+                description="Connect MCP servers so the AI can call their tools to fetch live customer data."
+                badge={<CountBadge count={mcpServers.length} />}
               >
                 <Button
                   variant="default"
                   className="w-full"
-                  onClick={() => setManageApiConnections({ orgId, slug })}
+                  onClick={() => setManageMcpServers({ orgId, slug })}
                 >
-                  Manage Connections
+                  Manage MCP Servers
                 </Button>
               </ToolCard>
 
