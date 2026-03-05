@@ -249,20 +249,20 @@ async function runGroundedAnswerAgent({
     RULES:
     - Base your answer on the provided context sections.
     - Do NOT invent information beyond what the context supports.
-    - If the context contains ANY relevant information, provide the best
-      possible answer and reflect your certainty in the confidence score.
-    - ONLY return NO_INFORMATION when the context is completely unrelated
-      to the question and you truly cannot provide any useful answer.
+    - NEVER include apologies, disclaimers, or notes about what the
+      context does NOT cover. Only include information that IS supported.
     - Output valid JSON only — no explanation, no markdown fences.
 
-    If answerable (even partially), return:
-    {
-      "status": "ANSWER",
-      "html": "<p>...</p>",
-      "confidence": 0.0 to 1.0
-    }
+    Return one of three statuses:
 
-    Only if the context is entirely irrelevant, return:
+    1. Fully answerable — context covers the entire question:
+    { "status": "ANSWER", "html": "<p>...</p>", "confidence": 0.0 to 1.0 }
+
+    2. Partially answerable — context covers some but not all of the question.
+       Provide ONLY the supported parts (no apologies or disclaimers):
+    { "status": "PARTIAL", "html": "<p>...</p>", "confidence": 0.0 to 1.0 }
+
+    3. Context is entirely irrelevant — nothing useful can be said:
     { "status": "NO_INFORMATION", "confidence": 0 }
   `;
 
@@ -408,7 +408,7 @@ export async function POST(request: Request) {
     tonePolicy: org?.tone_policy,
   });
 
-  if (answerResult.status !== 'ANSWER') {
+  if (answerResult.status === 'NO_INFORMATION') {
     const { data } = await supabase
       .from('reply')
       .insert({
@@ -425,6 +425,8 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ data }), { status: 200 });
   }
 
+  const isPartial = answerResult.status === 'PARTIAL';
+
   const finalConfidence = blendConfidence(
     vectorConfidence || URL_CONTEXT_FALLBACK_CONFIDENCE,
     answerResult.confidence
@@ -433,7 +435,7 @@ export async function POST(request: Request) {
   const autopilotEnabled = org?.autopilot_enabled ?? false;
   const autopilotThreshold = org?.autopilot_threshold ?? 0.7;
   const shouldAutoSend =
-    autopilotEnabled && finalConfidence >= autopilotThreshold;
+    !isPartial && autopilotEnabled && finalConfidence >= autopilotThreshold;
 
   const htmlContent = answerResult.html;
 
