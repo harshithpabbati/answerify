@@ -247,18 +247,23 @@ async function runGroundedAnswerAgent({
     You are a grounded customer support AI.
 
     RULES:
-    - Use ONLY the provided context.
-    - Do NOT invent information.
-    - If the answer is not fully supported, return:
-      { "status": "NO_INFORMATION", "confidence": 0 }
-    - Output valid JSON only.
+    - Base your answer on the provided context sections.
+    - Do NOT invent information beyond what the context supports.
+    - If the context contains ANY relevant information, provide the best
+      possible answer and reflect your certainty in the confidence score.
+    - ONLY return NO_INFORMATION when the context is completely unrelated
+      to the question and you truly cannot provide any useful answer.
+    - Output valid JSON only — no explanation, no markdown fences.
 
-    If answerable, return:
+    If answerable (even partially), return:
     {
       "status": "ANSWER",
       "html": "<p>...</p>",
       "confidence": 0.0 to 1.0
     }
+
+    Only if the context is entirely irrelevant, return:
+    { "status": "NO_INFORMATION", "confidence": 0 }
   `;
 
   const { text } = await generateText({
