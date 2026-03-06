@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from 'next-view-transitions';
 
 import { siteConfig } from '@/lib/config';
 import { cn } from '@/lib/utils';

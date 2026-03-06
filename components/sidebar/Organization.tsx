@@ -1,6 +1,7 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+import { useTransitionRouter } from 'next-view-transitions';
 import { deleteOrganization } from '@/actions/organization';
 import { Tables } from '@/database.types';
 import { useAddDataSource, useViewDataSource } from '@/states/data-source';
@@ -34,7 +35,7 @@ import {
 } from '@/components/ui/context-menu';
 
 export function Organization({ id, name, slug, support_email }: Tables<'organization'>) {
-  const router = useRouter();
+  const router = useTransitionRouter();
   const params = useParams();
   const [, setUpdateOrganization] = useUpdateOrganization();
   const [, setAddDataSource] = useAddDataSource();

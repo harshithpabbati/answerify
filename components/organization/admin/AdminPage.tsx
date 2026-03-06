@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import Link from 'next/link';
+import { Link } from 'next-view-transitions';
 import { deleteSource, reindexSource } from '@/actions/source';
 import type { AdminSource, RecentReply } from '@/actions/source';
 import {

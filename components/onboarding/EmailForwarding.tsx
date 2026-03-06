@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useTransitionRouter } from 'next-view-transitions';
 import { updateOnboardingStep } from '@/actions/auth';
 import {
   ArrowRightIcon,
@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function EmailForwarding({ email, slug }: Props) {
-  const router = useRouter();
+  const router = useTransitionRouter();
   const { copied, copyToClipboard } = useCopyToClipboard();
 
   const handleOnSetupForwarding = async () => {

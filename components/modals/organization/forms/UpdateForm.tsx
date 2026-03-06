@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useTransitionRouter } from 'next-view-transitions';
 import { updateOrganization } from '@/actions/organization';
 import { useUpdateOrganization } from '@/states/organization';
 import { useForm } from 'react-hook-form';
@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 
 export function UpdateOrganizationForm() {
-  const router = useRouter();
+  const router = useTransitionRouter();
   const [error, setError] = useState('');
   const [org, setShow] = useUpdateOrganization();
 
