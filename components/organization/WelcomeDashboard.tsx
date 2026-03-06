@@ -54,6 +54,7 @@ interface Props {
   initialTonePolicy: string | null;
   initialMcpServers: Tables<'mcp_server'>[];
   workflowsCount: number;
+  webSearchEnabled: boolean;
 }
 
 // ─── Stat chip ────────────────────────────────────────────────────────────────
@@ -211,6 +212,7 @@ export function WelcomeDashboard({
   initialTonePolicy,
   initialMcpServers,
   workflowsCount,
+  webSearchEnabled,
 }: Props) {
   const { copied, copyToClipboard } = useCopyToClipboard();
   const [, setAddDataSource] = useAddDataSource();
@@ -318,6 +320,15 @@ export function WelcomeDashboard({
           <StatChip value={sources.length} label="Data sources" />
           <StatChip value={mcpServers.length} label="MCP servers" />
           <StatChip value={workflowsCount} label="Workflows" />
+          <div className="group relative flex items-center gap-3 border border-[#FF4500]/20 bg-muted/50 px-4 py-3 transition-all duration-200 hover:border-[#FF4500]/60 hover:bg-[#FF4500]/5 overflow-hidden">
+            <span className="absolute left-0 top-0 h-full w-0.5 bg-[#FF4500] scale-y-0 origin-bottom transition-transform duration-200 group-hover:scale-y-100" />
+            <span className={cn(
+              'font-mono text-xs uppercase tracking-[0.2em]',
+              webSearchEnabled ? 'text-emerald-500' : 'text-muted-foreground'
+            )}>
+              🌐 Web Search {webSearchEnabled ? 'On' : 'Off'}
+            </span>
+          </div>
         </div>
       </div>
 

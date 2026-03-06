@@ -36,6 +36,7 @@
     "clsx": "^2.1.1",
     "common-tags": "^1.8.2",
     "date-fns": "^3.6.0",
+    "exa-js": "^2.7.0",
     "geist": "^1.7.0",
     "isomorphic-dompurify": "3.0.0-rc.2",
     "jotai": "^2.18.0",
