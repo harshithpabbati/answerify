@@ -58,6 +58,7 @@ export default async function DashboardPage({ params }: Props) {
       initialTonePolicy={org.tone_policy ?? null}
       initialMcpServers={mcpServers ?? []}
       workflowsCount={workflows?.length ?? 0}
+      webSearchEnabled={!!process.env.EXA_API_KEY}
     />
   );
 }

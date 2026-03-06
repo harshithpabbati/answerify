@@ -7,6 +7,7 @@ import { textModel } from '@/lib/ai';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { cleanBody } from '@/lib/cleanBody';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
+import { searchWeb } from '@/lib/exa-search';
 import { parseLLMJSON } from '@/lib/parse-llm-json';
 import { createServiceClient } from '@/lib/supabase/service';
 
@@ -225,6 +226,7 @@ async function runGroundedAnswerAgent({
   question,
   retrievedContext,
   apiContext,
+  webContext,
   conversationHistory,
   tonePolicy,
 }: {
@@ -232,6 +234,7 @@ async function runGroundedAnswerAgent({
   question: string;
   retrievedContext: string;
   apiContext?: string;
+  webContext?: string;
   conversationHistory?: string;
   tonePolicy?: string | null;
 }) {
@@ -272,6 +275,8 @@ async function runGroundedAnswerAgent({
       ${conversationHistory ? `Conversation history:\n${conversationHistory}\n` : ''}
 
       ${apiContext ? `Live API data:\n${apiContext}\n` : ''}
+
+      ${webContext ? `Web search results:\n${webContext}\n` : ''}
 
       Retrieved knowledge base sections:
       ${retrievedContext}
@@ -347,11 +352,14 @@ export async function POST(request: Request) {
 
   /* --------------------------- MCP TOOL GATHERING ------------------------- */
 
-  const apiContext = await gatherContextViaMcp(
-    thread?.subject ?? '',
-    record.cleaned_body,
-    mcpServers ?? []
-  );
+  const [apiContext, webContext] = await Promise.all([
+    gatherContextViaMcp(
+      thread?.subject ?? '',
+      record.cleaned_body,
+      mcpServers ?? []
+    ),
+    searchWeb(questionText),
+  ]);
 
   /* -------------------------- VECTOR RETRIEVAL --------------------------- */
 
@@ -376,6 +384,7 @@ export async function POST(request: Request) {
     question: record.cleaned_body,
     retrievedContext,
     apiContext,
+    webContext,
     conversationHistory,
     tonePolicy: org?.tone_policy,
   });

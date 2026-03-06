@@ -4,6 +4,7 @@ import { codeBlock } from 'common-tags';
 import { textModel } from '@/lib/ai';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
+import { searchWeb } from '@/lib/exa-search';
 import { parseLLMJSON } from '@/lib/parse-llm-json';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -61,11 +62,13 @@ async function runGroundedAnswerAgent({
   subject,
   question,
   retrievedContext,
+  webContext,
   tonePolicy,
 }: {
   subject: string;
   question: string;
   retrievedContext: string;
+  webContext?: string;
   tonePolicy?: string | null;
 }) {
   const systemPrompt = codeBlock`
@@ -101,6 +104,8 @@ async function runGroundedAnswerAgent({
 
       Customer question:
       ${question}
+
+      ${webContext ? `Web search results:\n${webContext}\n` : ''}
 
       Retrieved knowledge base sections:
       ${retrievedContext}
@@ -147,6 +152,18 @@ export async function POST(request: Request) {
   const tonePolicy = org?.tone_policy ?? null;
   const questionText = `${subject}\n${question}`;
 
+  /* ---------------------- WEB SEARCH + VECTOR RETRIEVAL ------------------ */
+
+  const embeddingPromise =
+    datasources && datasources.length > 0
+      ? generateEmbedding(questionText)
+      : Promise.resolve([] as number[]);
+
+  const [webContext, embeddingResult] = await Promise.all([
+    searchWeb(questionText),
+    embeddingPromise,
+  ]);
+
   /* -------------------------- VECTOR RETRIEVAL --------------------------- */
 
   const matchedSections: Array<{
@@ -158,17 +175,14 @@ export async function POST(request: Request) {
     similarity: number;
   }> = [];
 
-  if (datasources && datasources.length > 0) {
-    const embedding = await generateEmbedding(questionText);
-    if (embedding.length > 0) {
-      const { data } = await supabase.rpc('match_sections', {
-        embedding: serializeEmbedding(embedding),
-        match_threshold: 0.1,
-        p_organization_id: orgId,
-        match_count: 8,
-      });
-      if (data) matchedSections.push(...data);
-    }
+  if (embeddingResult.length > 0) {
+    const { data } = await supabase.rpc('match_sections', {
+      embedding: serializeEmbedding(embeddingResult),
+      match_threshold: 0.1,
+      p_organization_id: orgId,
+      match_count: 8,
+    });
+    if (data) matchedSections.push(...data);
   }
 
   // Expand context by fetching immediate neighbors (position ± 1) of each
@@ -232,7 +246,7 @@ export async function POST(request: Request) {
     datasourceUrl: datasources?.find((d) => d.id === s.datasource_id)?.url,
   }));
 
-  if (!retrievedContext.trim()) {
+  if (!retrievedContext.trim() && !webContext.trim()) {
     return new Response(
       JSON.stringify({
         html: '<p>No relevant information found in the knowledge base for this question.</p>',
@@ -252,6 +266,7 @@ export async function POST(request: Request) {
     subject,
     question,
     retrievedContext,
+    webContext,
     tonePolicy,
   });
 
