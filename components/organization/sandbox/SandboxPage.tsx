@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { Link } from 'next-view-transitions';
 import { ArrowLeftIcon, ExternalLinkIcon } from '@radix-ui/react-icons';
 import { toast } from 'sonner';
 

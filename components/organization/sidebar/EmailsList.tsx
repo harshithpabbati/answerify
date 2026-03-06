@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useReducer, useRef } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Link, useTransitionRouter } from 'next-view-transitions';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { getThreads } from '@/actions/email';
 import { Tables } from '@/database.types';
 import { GearIcon, LightningBoltIcon, MixIcon } from '@radix-ui/react-icons';
@@ -49,7 +49,7 @@ function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
 
 export function EmailsList({ orgId, name, slug, inboundEmail }: Props) {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const router = useTransitionRouter();
   const pathname = usePathname();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const statusRef = useRef<'open' | 'closed' | undefined>(undefined);

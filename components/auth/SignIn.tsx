@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useTransitionRouter } from 'next-view-transitions';
 import { signInWithPassword } from '@/actions/auth';
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { useForm } from 'react-hook-form';
@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 
 export function SignIn() {
-  const router = useRouter();
+  const router = useTransitionRouter();
   const [error, setError] = useState('');
 
   const form = useForm<SignInSchema>({

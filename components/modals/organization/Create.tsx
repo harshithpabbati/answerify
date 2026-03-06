@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useTransitionRouter } from 'next-view-transitions';
 import { useCreateOrganization } from '@/states/organization';
 import { toast } from 'sonner';
 
@@ -25,7 +25,7 @@ import { CreateOrganizationForm } from './forms';
 
 export function CreateOrganization() {
   const isMobile = useIsMobile();
-  const router = useRouter();
+  const router = useTransitionRouter();
   const [open, setOpen] = useCreateOrganization();
 
   const handleOnCreate = useCallback(

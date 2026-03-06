@@ -1,12 +1,13 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+import { useTransitionRouter } from 'next-view-transitions';
 import { updateOnboardingStep } from '@/actions/auth';
 
 import { AddDataSourceForm } from '@/components/modals/data-source/forms';
 
 export function DataSources() {
-  const router = useRouter();
+  const router = useTransitionRouter();
   const params = useParams<{ slug: string }>();
 
   const onAdd = async () => {

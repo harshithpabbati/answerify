@@ -1,12 +1,12 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useTransitionRouter } from 'next-view-transitions';
 import { updateOnboardingStep } from '@/actions/auth';
 
 import { CreateOrganizationForm } from '@/components/modals/organization/forms';
 
 export function Organization() {
-  const router = useRouter();
+  const router = useTransitionRouter();
 
   const handleOnCreate = async (slug: string) => {
     await updateOnboardingStep(slug, {
