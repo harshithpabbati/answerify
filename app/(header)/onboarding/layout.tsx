@@ -15,21 +15,6 @@ export default async function OnboardingLayout({
         <div className="pointer-events-none absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-[#FF4500]/10 blur-3xl" />
         <div className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full bg-[#FF4500]/8 blur-2xl" />
 
-        {/* Branding */}
-        <div className="relative z-10 border-b border-[#FF4500]/20 p-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center border-2 border-[#FF4500] bg-[#FF4500]/10">
-              <span className="font-mono text-lg font-black text-[#FF4500]">A</span>
-            </div>
-            <span className="font-display text-xl font-black uppercase tracking-tight text-foreground">
-              Answerify
-            </span>
-          </div>
-          <p className="font-mono mt-3 text-xs uppercase tracking-widest text-[#FF4500]/70">
-            Setup wizard
-          </p>
-        </div>
-
         {/* Steps */}
         <div className="relative z-10 flex flex-1 flex-col justify-center px-8 py-10">
           <p className="font-mono mb-6 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
