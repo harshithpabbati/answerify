@@ -3,7 +3,7 @@ import { createAiGateway } from 'ai-gateway-provider';
 import { createGoogleGenerativeAI as createGoogle } from 'ai-gateway-provider/providers/google';
 
 const cfAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-const cfGatewayName = process.env.CLOUDFLARE_GATEWAY_NAME;
+const cfGatewayName = 'default';
 const cfAigToken = process.env.CF_AIG_TOKEN;
 
 function buildTextModel() {
