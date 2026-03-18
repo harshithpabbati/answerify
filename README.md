@@ -114,7 +114,7 @@ This progressively improves the quality of future AI replies without any extra m
 
 ### Cloudflare AI Gateway
 
-Route all text-generation requests through [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) to get request logs, analytics, and observability.
+Route all AI requests (text generation and embeddings) through [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) to get request logs, analytics, and observability.
 
 | Variable                   | Description                                                                                       |
 | -------------------------- | ------------------------------------------------------------------------------------------------- |
