@@ -109,3 +109,18 @@ This progressively improves the quality of future AI replies without any extra m
 | `NEXT_PUBLIC_BASE_URL`          | Base URL of your deployment (e.g. `https://answerify.dev`)                                               |
 | `RESEND_API_KEY`                | Resend API key for sending emails                                                                        |
 | `GOOGLE_GENERATIVE_AI_API_KEY`  | Google Gemini API key for embeddings (`gemini-embedding-001`) and completions (`gemini-3-flash-preview`) |
+
+## Optional Environment Variables
+
+### Cloudflare AI Gateway
+
+Route all text-generation requests through [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) to get request logs, analytics, and observability.
+
+| Variable                   | Description                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------------- |
+| `CLOUDFLARE_ACCOUNT_ID`    | Your Cloudflare account ID                                                                        |
+| `CLOUDFLARE_GATEWAY_NAME`  | The name of your AI Gateway in the Cloudflare dashboard                                           |
+| `CF_AIG_TOKEN`             | AI Gateway token — required for [authenticated gateways](https://developers.cloudflare.com/ai-gateway/configuration/authentication/) |
+
+Set `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_GATEWAY_NAME` to enable the gateway. `CF_AIG_TOKEN` is only required when your gateway uses [authentication](https://developers.cloudflare.com/ai-gateway/configuration/authentication/). If `CLOUDFLARE_ACCOUNT_ID` or `CLOUDFLARE_GATEWAY_NAME` is not set, the app falls back to calling the Google Generative AI API directly.
+
