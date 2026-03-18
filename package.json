@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.37",
@@ -37,7 +41,7 @@
     "common-tags": "^1.8.2",
     "date-fns": "^3.6.0",
     "geist": "^1.7.0",
-    "isomorphic-dompurify": "3.0.0-rc.2",
+    "isomorphic-dompurify": "^3.5.1",
     "jotai": "^2.18.0",
     "jsdom": "^24.1.3",
     "mdast": "^3.0.0",
@@ -64,6 +68,7 @@
     "@eslint/eslintrc": "^3.3.4",
     "@eslint/js": "^10.0.1",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+    "@opennextjs/cloudflare": "^1.17.1",
     "@types/common-tags": "^1.8.4",
     "@types/jsdom": "^21.1.7",
     "@types/node": "^20.19.35",
@@ -77,6 +82,7 @@
     "eslint-plugin-tailwindcss": "^3.18.2",
     "postcss": "^8.5.8",
     "tailwindcss": "^3.4.19",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.75.0"
   }
 }
