@@ -19,7 +19,7 @@ const Tiptap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="rounded-base mt-4 h-40 animate-pulse border" />
+      <div className="rounded-lg mt-4 h-40 animate-pulse bg-gradient-to-r from-muted via-muted/50 to-muted" />
     ),
   }
 );
@@ -88,22 +88,24 @@ export function Conversations({
     <div className="flex h-[calc(100dvh-60px-4rem)] flex-col items-start justify-between md:h-[calc(100dvh-60px)]">
       <div
         ref={divRef}
-        className="flex size-full flex-col gap-4 overflow-scroll p-4"
+        className="flex size-full flex-col gap-6 overflow-scroll p-4 md:p-6"
       >
         {conversations.map((c) => (
           <Conversation key={c.id} {...c} />
         ))}
       </div>
 
-      <div className="bg-background border-b border-[#FF4500]/20 w-full border-t p-4">
+      <div className="relative w-full border-t border-[#FF4500]/10 bg-gradient-to-t from-muted/30 to-background p-4 backdrop-blur-sm">
+        <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-[#FF4500]/20 to-transparent" />
+        
         {reply && (
-          <div className="mb-2 flex items-center gap-2">
-            <span className="text-muted-foreground text-xs">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-muted-foreground font-mono text-[10px] uppercase tracking-wider">
               AI confidence:
             </span>
             <Badge
               variant={confidenceVariant(confidenceScore)}
-              className="text-xs"
+              className="text-xs font-semibold"
             >
               {confidenceLabel(confidenceScore)}{' '}
               {confidenceScore > 0
@@ -111,15 +113,24 @@ export function Conversations({
                 : ''}
             </Badge>
             {reply.status === 'sent' && (
-              <Badge variant="default" className="text-xs">
+              <Badge variant="default" className="text-xs font-semibold animate-pulse">
                 Auto-sent
               </Badge>
             )}
           </div>
         )}
-        <Tiptap editor={editor} />
-        <div className="mt-2 md:mt-4 flex flex-col md:flex-row flex-wrap justify-end gap-2">
-          <Button variant="neutral" onClick={() => handleSubmit()} size="lg">
+        
+        <div className="rounded-lg border border-[#FF4500]/20 bg-background shadow-lg shadow-[#FF4500]/5 overflow-hidden">
+          <Tiptap editor={editor} />
+        </div>
+        
+        <div className="mt-3 flex flex-col md:flex-row justify-end gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => handleSubmit()} 
+            size="lg"
+            className="border-[#FF4500]/30 hover:bg-[#FF4500]/10 hover:border-[#FF4500]"
+          >
             Submit
           </Button>
           <Button
@@ -127,10 +138,11 @@ export function Conversations({
               handleSubmit(status === 'closed' ? 'open' : 'closed')
             }
             size="lg"
+            className="bg-gradient-to-r from-[#FF4500] to-[#FF6B35] hover:from-[#FF4500]/90 hover:to-[#FF6B35]/90 shadow-lg shadow-[#FF4500]/20"
           >
             {status === 'closed'
-              ? 'Submit & re-open ticket'
-              : 'Submit & close ticket'}
+              ? 'Submit & re-open'
+              : 'Submit & close'}
           </Button>
         </div>
       </div>

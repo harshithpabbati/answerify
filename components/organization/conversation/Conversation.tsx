@@ -5,12 +5,10 @@ import { getNameInitials } from '@/lib/gravatar';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
-export function Conversation({ email_from_name, body, role }: Tables<'email'>) {
+export function Conversation({ email_from_name, body, role, created_at }: Tables<'email'>) {
   const isStaff = role === 'staff';
-  const flexAlignment = isStaff ? 'justify-end' : 'justify-start';
-  const avatarOrder = isStaff ? 'order-1' : '-order-1';
+  const isUser = role === 'user';
 
-  // Sanitize HTML to prevent XSS attacks
   const sanitizedBody = DOMPurify.sanitize(body, {
     ALLOWED_TAGS: [
       'p',
@@ -38,20 +36,59 @@ export function Conversation({ email_from_name, body, role }: Tables<'email'>) {
   });
 
   return (
-    <div
-      className={cn('flex w-full gap-2 max-w-sm md:max-w-none', flexAlignment)}
-    >
-      <div className="bg-background border-[#FF4500]/20 max-w-xl overflow-hidden break-words border p-4 text-sm text-foreground">
+    <div className="group flex w-full gap-3 animate-in slide-in-from-bottom-2 fade-in duration-300">
+      {isUser && (
+        <Avatar className="size-9 shrink-0 mt-1 ring-2 ring-[#FF4500]/20">
+          <AvatarFallback className="bg-gradient-to-br from-[#FF4500] to-[#FF6B35] text-white text-xs font-bold">
+            {getNameInitials(email_from_name)}
+          </AvatarFallback>
+        </Avatar>
+      )}
+      
+      <div className={cn('flex flex-col gap-1 max-w-[85%] md:max-w-[75%]', isStaff && 'ml-auto items-end')}>
+        <div className="flex items-center gap-2">
+          <span className={cn('font-mono text-[10px] uppercase tracking-wider font-semibold', isStaff ? 'text-[#FF4500]/70' : 'text-muted-foreground')}>
+            {email_from_name}
+          </span>
+          {created_at && (
+            <span className="font-mono text-[9px] text-muted-foreground/60">
+              {new Date(created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+        </div>
+        
         <div
-          className="email-content"
-          dangerouslySetInnerHTML={{ __html: sanitizedBody }}
-        />
+          className={cn(
+            'relative overflow-hidden transition-all duration-200',
+            isStaff
+              ? 'bg-gradient-to-br from-[#FF4500]/10 via-[#FF4500]/5 to-transparent border border-[#FF4500]/20 shadow-lg shadow-[#FF4500]/5'
+              : 'bg-muted/50 border border-border/50',
+            'p-4 text-sm leading-relaxed'
+          )}
+        >
+          {isStaff && (
+            <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-[#FF4500]/10 to-transparent rounded-bl-full opacity-60" />
+          )}
+          <div
+            className="email-content relative z-10"
+            dangerouslySetInnerHTML={{ __html: sanitizedBody }}
+          />
+        </div>
+        
+        {isStaff && (
+          <span className="font-mono text-[9px] text-[#FF4500]/50 uppercase tracking-wider">
+            AI Assistant
+          </span>
+        )}
       </div>
-      <Avatar className={cn('size-10', avatarOrder)}>
-        <AvatarFallback>
-          {getNameInitials(email_from_name)}
-        </AvatarFallback>
-      </Avatar>
+      
+      {isStaff && (
+        <Avatar className="size-9 shrink-0 mt-1 ring-2 ring-[#FF4500]/10">
+          <AvatarFallback className="bg-gradient-to-br from-slate-600 to-slate-800 text-white text-xs font-bold">
+            {getNameInitials(email_from_name)}
+          </AvatarFallback>
+        </Avatar>
+      )}
     </div>
   );
 }

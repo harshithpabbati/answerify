@@ -18,6 +18,9 @@ function matchesTrigger(
       return (thread.email_from ?? '')
         .toLowerCase()
         .endsWith(`@${trigger.value.toLowerCase()}`);
+    case 'has_tag':
+      const tags = thread.tags ?? [];
+      return tags.some((tag) => tag.toLowerCase() === trigger.value.toLowerCase());
     default:
       return false;
   }

@@ -5,26 +5,7 @@ import { Link } from 'next-view-transitions';
 
 import { cn } from '@/lib/utils';
 import { HumanizedTime } from '@/components/ui/humanized-time';
-
-const TAG_COLORS: Record<string, string> = {
-  Billing:
-    'border-blue-500/40 bg-blue-500/10 text-blue-400',
-  'Bug Report':
-    'border-red-500/40 bg-red-500/10 text-red-400',
-  'Feature Request':
-    'border-purple-500/40 bg-purple-500/10 text-purple-400',
-  'General Support':
-    'border-emerald-500/40 bg-emerald-500/10 text-emerald-400',
-  escalated:
-    'border-[#FF4500]/40 bg-[#FF4500]/10 text-[#FF4500]',
-};
-
-function tagClass(tag: string): string {
-  return (
-    TAG_COLORS[tag] ??
-    'border-muted-foreground/30 bg-muted text-muted-foreground'
-  );
-}
+import { IntentBadge } from '@/components/ui/intent-badge';
 
 interface Props {
   id: string;
@@ -42,30 +23,26 @@ export function Email({ id, slug, email_from, subject, created_at, tags }: Props
     <Link
       href={`/org/${slug}/${id}?${searchParams.toString()}`}
       className={cn(
-        'border-b border-[#FF4500]/10 px-4 py-3 transition-colors',
-        params.id === id ? 'bg-[#FF4500]/10' : 'bg-background hover:bg-[#FF4500]/5'
+        'group border-b border-[#FF4500]/10 px-4 py-3 transition-all duration-200',
+        params.id === id 
+          ? 'bg-gradient-to-r from-[#FF4500]/10 to-[#FF4500]/5' 
+          : 'bg-background hover:bg-gradient-to-r hover:from-[#FF4500]/5 hover:to-transparent'
       )}
     >
-      <div className="flex size-full flex-col gap-0.5 overflow-hidden">
-        <h3 className="font-mono truncate text-sm font-medium text-foreground">
-          {subject}
-        </h3>
-        <div className="flex min-w-0 items-center justify-between">
-          <span className="font-mono truncate text-xs text-muted-foreground">{email_from}</span>
+      <div className="flex size-full flex-col gap-1 overflow-hidden">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <h3 className="font-mono truncate text-sm font-semibold text-foreground group-hover:text-[#FF4500] transition-colors">
+            {subject}
+          </h3>
           <HumanizedTime time={created_at} />
         </div>
+        <div className="flex min-w-0 items-center justify-between">
+          <span className="font-mono truncate text-xs text-muted-foreground">{email_from}</span>
+        </div>
         {tags && tags.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1">
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
             {tags.map((tag) => (
-              <span
-                key={tag}
-                className={cn(
-                  'inline-flex items-center border px-1.5 py-px font-mono text-[10px] font-medium uppercase tracking-wider',
-                  tagClass(tag)
-                )}
-              >
-                {tag}
-              </span>
+              <IntentBadge key={tag} intent={tag} size="sm" />
             ))}
           </div>
         )}
@@ -73,4 +50,3 @@ export function Email({ id, slug, email_from, subject, created_at, tags }: Props
     </Link>
   );
 }
-

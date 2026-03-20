@@ -44,6 +44,12 @@ const TRIGGER_META: {
     placeholder: 'example.com',
   },
   {
+    value: 'has_tag',
+    label: 'Has tag',
+    hasValue: true,
+    placeholder: 'billing, bug-report…',
+  },
+  {
     value: 'any_email',
     label: 'Any incoming email',
     hasValue: false,

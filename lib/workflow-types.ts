@@ -1,4 +1,4 @@
-export type TriggerType = 'subject_contains' | 'sender_domain' | 'any_email';
+export type TriggerType = 'subject_contains' | 'sender_domain' | 'any_email' | 'has_tag';
 export type StepType = 'add_tag' | 'auto_reply' | 'escalate' | 'webhook';
 
 export type WorkflowTrigger = {
