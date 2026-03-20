@@ -5,10 +5,39 @@ import { textModel } from '@/lib/ai';
 import { parseLLMJSON } from '@/lib/parse-llm-json';
 
 export const DEFAULT_INTENT_CATEGORIES = [
+  // Core
   'Billing',
   'Bug Report',
   'Feature Request',
   'General Support',
+  // Account
+  'Account Access',
+  'Account Settings',
+  'Account Deletion',
+  // Billing & Commerce
+  'Refund Request',
+  'Payment Failed',
+  'Subscription Change',
+  'Invoice Request',
+  // Technical
+  'Performance Issue',
+  'Integration Issue',
+  'Data Export',
+  // Sales
+  'Upgrade Inquiry',
+  'Demo Request',
+  // Onboarding
+  'Onboarding Help',
+  'How-To Question',
+  // Trust & Safety
+  'Security Concern',
+  'Abuse Report',
+  'Privacy Request',
+  // Feedback
+  'Complaint',
+  'Compliment',
+  // Noise
+  'Spam / Irrelevant',
 ] as const;
 
 export type IntentCategory = (typeof DEFAULT_INTENT_CATEGORIES)[number];
