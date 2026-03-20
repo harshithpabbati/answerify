@@ -1,6 +1,7 @@
 import { Tables } from '@/database.types';
 import PostalMime from 'postal-mime';
 
+import { detectIntent } from '@/lib/intent-detection';
 import { createServiceClient } from '@/lib/supabase/service';
 import { runWorkflows } from '@/lib/workflow-runner';
 
@@ -119,10 +120,40 @@ export async function POST(request: Request) {
     });
   }
 
-  // Run matching workflows in the background — errors must not fail the webhook.
-  runWorkflows(supabase, thread).catch((err) =>
-    console.error('Workflow runner error:', err)
-  );
+  // Detect intent and assign tags — run in the background so errors don't
+  // block the webhook response. Workflows execute after intent tags are applied
+  // so that tag-based workflow rules fire on the freshly classified thread.
+  (async () => {
+    try {
+      const intentTags = await detectIntent(
+        thread.subject ?? '',
+        text ?? subject ?? ''
+      );
+
+      let taggedThread: Tables<'thread'> = thread;
+
+      if (intentTags.length > 0) {
+        const existingTags = thread.tags ?? [];
+        const newTags = [
+          ...existingTags,
+          ...intentTags.filter((t) => !existingTags.includes(t)),
+        ];
+
+        const { data: updated } = await supabase
+          .from('thread')
+          .update({ tags: newTags })
+          .eq('id', thread.id)
+          .select()
+          .single();
+
+        if (updated) taggedThread = updated;
+      }
+
+      await runWorkflows(supabase, taggedThread);
+    } catch (err) {
+      console.error('Intent detection / workflow runner error:', err);
+    }
+  })();
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });
 }

@@ -136,6 +136,19 @@ CREATE TABLE IF NOT EXISTS "public"."thread" (
 
 ALTER TABLE "public"."thread" OWNER TO "postgres";
 
+CREATE TABLE IF NOT EXISTS "public"."workflow" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "organization_id" "uuid" NOT NULL,
+    "name" "text" NOT NULL,
+    "description" "text",
+    "enabled" boolean DEFAULT true NOT NULL,
+    "trigger" "jsonb" NOT NULL,
+    "steps" "jsonb" DEFAULT '[]'::"jsonb" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+ALTER TABLE "public"."workflow" OWNER TO "postgres";
+
 ALTER TABLE ONLY "public"."datasource"
     ADD CONSTRAINT "datasource_pkey" PRIMARY KEY ("id");
 
@@ -160,6 +173,9 @@ ALTER TABLE ONLY "public"."reply"
 ALTER TABLE ONLY "public"."thread"
     ADD CONSTRAINT "thread_pkey" PRIMARY KEY ("id");
 
+ALTER TABLE ONLY "public"."workflow"
+    ADD CONSTRAINT "workflow_pkey" PRIMARY KEY ("id");
+
 CREATE INDEX "email_thread_id_created_at_idx" ON "public"."email" USING "btree" ("thread_id", "created_at");
 
 CREATE INDEX "email_organization_id_idx" ON "public"."email" USING "btree" ("organization_id");
@@ -179,6 +195,8 @@ CREATE INDEX "reply_organization_id_idx" ON "public"."reply" USING "btree" ("org
 CREATE INDEX "thread_org_status_last_msg_idx" ON "public"."thread" USING "btree" ("organization_id", "status", "last_message_created_at" DESC);
 
 CREATE INDEX "thread_message_id_idx" ON "public"."thread" USING "btree" ("message_id");
+
+CREATE INDEX "workflow_organization_id_idx" ON "public"."workflow" USING "btree" ("organization_id");
 
 CREATE OR REPLACE TRIGGER "generate_reply" AFTER INSERT ON "public"."email" FOR EACH ROW EXECUTE FUNCTION "supabase_functions"."http_request"('https://answerify.dev/api/webhooks/reply', 'POST', '{"Content-type":"application/json"}', '{}', '5000');
 
@@ -210,6 +228,9 @@ ALTER TABLE ONLY "public"."reply"
 
 ALTER TABLE ONLY "public"."thread"
     ADD CONSTRAINT "public_thread_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."workflow"
+    ADD CONSTRAINT "workflow_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
 CREATE POLICY "Access for organization members" ON "public"."email" USING ((( SELECT "auth"."uid"() AS "uid") IN ( SELECT "member"."user_id"
    FROM "public"."member"
@@ -243,6 +264,8 @@ CREATE POLICY "Organization members can invite members" ON "public"."member" FOR
 
 CREATE POLICY "Organization members have access to datasources" ON "public"."datasource" USING (("organization_id" IN ( SELECT "public"."get_user_organizations"(( SELECT "auth"."uid"() AS "uid"), 0) AS "get_user_organizations")));
 
+CREATE POLICY "Organization members have access to workflows" ON "public"."workflow" USING (("organization_id" IN ( SELECT "public"."get_user_organizations"(( SELECT "auth"."uid"() AS "uid"), 0) AS "get_user_organizations")));
+
 CREATE POLICY "Organization owners can remove member" ON "public"."member" FOR DELETE USING (("organization_id" IN ( SELECT "public"."get_user_organizations"(( SELECT "auth"."uid"() AS "uid"), 2) AS "get_user_organizations")));
 
 CREATE POLICY "Organization owners can update member" ON "public"."member" FOR UPDATE USING (("organization_id" IN ( SELECT "public"."get_user_organizations"(( SELECT "auth"."uid"() AS "uid"), 2) AS "get_user_organizations")));
@@ -258,6 +281,8 @@ ALTER TABLE "public"."organization" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."reply" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."thread" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "public"."workflow" ENABLE ROW LEVEL SECURITY;
 
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
 
@@ -299,6 +324,10 @@ GRANT ALL ON TABLE "public"."reply" TO "service_role";
 GRANT ALL ON TABLE "public"."thread" TO "anon";
 GRANT ALL ON TABLE "public"."thread" TO "authenticated";
 GRANT ALL ON TABLE "public"."thread" TO "service_role";
+
+GRANT ALL ON TABLE "public"."workflow" TO "anon";
+GRANT ALL ON TABLE "public"."workflow" TO "authenticated";
+GRANT ALL ON TABLE "public"."workflow" TO "service_role";
 
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "anon";
