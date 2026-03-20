@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const DEMO_KEY = 'demo-key';
+const DEMO_KEY = process.env.DEMO_API_KEY;
+
+function unauthorized() {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
 
 /**
  * GET /api/demo/customers
  *
  * Demo endpoint — returns a list of fictional customers with plan and usage
- * information.  Authenticate with: Authorization: Bearer demo-key
+ * information.  Authenticate with: Authorization: Bearer <DEMO_API_KEY>
  */
 export async function GET(request: NextRequest) {
+  if (!DEMO_KEY) {
+    return NextResponse.json({ error: 'Demo API not configured' }, { status: 503 });
+  }
   const auth = request.headers.get('authorization') ?? '';
   if (auth !== `Bearer ${DEMO_KEY}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return unauthorized();
   }
 
   return NextResponse.json({

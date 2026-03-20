@@ -1,126 +1,286 @@
-# Answerify - Your AI-Powered Support Ticket Superhero
+# Answerify - AI-Powered Customer Support Platform
 
-Stop ticket trouble! Answerify uses the power of AI to automatically answer your customer questions, saving you time and delighting your customers.
+Answerify is a modern customer support platform that uses AI to automatically answer customer questions, saving your team time while maintaining quality responses.
 
 ## Features
 
-- **Autopilot with Approval Loop** – Auto-send replies when AI confidence is high; fall back to human review for low-confidence or ambiguous requests.
-- **Citations** – Every AI reply includes source references (title + URL) so agents can verify answers.
-- **Learning Loop** – Human-approved edits can be fed back into the knowledge base to improve future answers.
-- **Dark-mode-first UI** – Modern minimal dashboard inspired by Linear/Vercel aesthetics.
+### 🤖 AI-Powered Auto-Replies
+
+Answerify uses Google Gemini AI to generate intelligent, contextually relevant responses based on your knowledge base. The system:
+
+- Analyzes incoming customer emails using semantic search
+- Generates accurate responses with source citations
+- Learns from human feedback to improve over time
+
+### 📊 Intelligent Knowledge Base Management
+
+- **Vector Embeddings**: Content is chunked and embedded for semantic search
+- **Multiple Data Sources**: Support URLs, documentation, FAQs, and more
+- **Internal Knowledge Base**: Auto-learns from approved responses
+- **Real-time Indexing**: New content is automatically indexed when added
+
+### ✉️ Email Thread Management
+
+- **Unified Inbox**: View all customer conversations in one place
+- **Real-time Updates**: New emails appear instantly via Supabase Realtime
+- **Status Tracking**: Open/closed ticket management
+- **Rich Text Editor**: Compose replies with Tiptap-powered formatting
+
+### 🎯 Intent Detection & Tagging
+
+The system automatically classifies incoming emails into categories:
+
+| Category | Icon | Description |
+|----------|------|-------------|
+| Billing | 💳 | Payment and invoice questions |
+| Bug Report | 🐛 | Software issues and errors |
+| Feature Request | ✨ | Enhancement suggestions |
+| General Support | 💬 | Standard support queries |
+| Account Access | 🔐 | Login and access issues |
+| Account Settings | ⚙️ | Configuration questions |
+| Account Deletion | 🗑️ | Data removal requests |
+| Refund Request | 💰 | Money return inquiries |
+| Payment Failed | ❌ | Transaction failures |
+| Subscription Change | 🔄 | Plan modifications |
+| Invoice Request | 📄 | Billing document requests |
+| Performance Issue | ⚡ | Speed and responsiveness |
+| Integration Issue | 🔌 | Third-party connectivity |
+| Data Export | 📤 | Information retrieval |
+| Upgrade Inquiry | 🚀 | Product upgrades |
+| Demo Request | 🎯 | Product demonstrations |
+| Onboarding Help | 🎓 | Getting started assistance |
+| How-To Question | ❓ | Usage instructions |
+| Security Concern | 🛡️ | Safety and privacy |
+| Abuse Report | 🚫 | Policy violations |
+| Privacy Request | 🔒 | GDPR and data requests |
+| Complaint | 😤 | Dissatisfaction |
+| Compliment | 🌟 | Positive feedback |
+| Spam / Irrelevant | 🚮 | Noise filtering |
+
+### 🔄 Workflow Automation
+
+Create automated rules to handle common scenarios:
+
+**Trigger Types:**
+- `subject_contains` - Match emails by keyword in subject
+- `sender_domain` - Match emails from specific domains
+- `has_tag` - Match emails with specific intent tags
+- `any_email` - Trigger on all incoming emails
+
+**Automation Steps:**
+- **Add Tag**: Automatically categorize emails
+- **Auto Reply**: Send predefined responses
+- **Escalate**: Flag high-priority items
+- **Call Webhook**: Integrate with external systems
+
+### 🛡️ Autopilot Mode
+
+Smart automation with human oversight:
+
+- **High Confidence (≥65%)**: Auto-sends AI-generated replies
+- **Low Confidence**: Creates drafts for human review
+- **Configurable Threshold**: Adjust sensitivity per organization
+- **Safety Guards**: Never sends empty or unclear responses
+
+### 📝 Learning Loop
+
+Continuous improvement from human feedback:
+
+1. Agent edits an AI draft
+2. System tracks the human response
+3. If approved, the response is chunked and embedded
+4. Future similar queries use this learned content
+5. Reply quality improves over time
+
+### 👥 Team Collaboration
+
+- **Role-Based Access**: Member, Admin, and Owner roles
+- **Invite System**: Add team members by email
+- **Organization Management**: Multiple workspaces supported
 
 ---
 
-## Autopilot Behavior & Safety
+## Architecture
 
-Autopilot is **enabled by default** for new organizations with a confidence threshold of **0.65** (65%).
+### Database Schema
 
-### How it works
+```
+┌─────────────────┐     ┌─────────────────┐
+│  organization   │────<│    member       │
+└─────────────────┘     └─────────────────┘
+        │
+        ├────<│    thread        │
+        │     └─────────────────┘
+        │            │
+        │            │
+        ├────<│    email         │
+        │     └─────────────────┘
+        │
+        ├────<│    reply         │
+        │     └─────────────────┘
+        │
+        ├────<│  datasource      │
+        │            │
+        │            │
+        │            └────<│    section      │
+        │                       └─────────────────┘
+        │
+        ├────<│   workflow      │
+        │     └─────────────────┘
+        │
+        └────<│   mcp_server    │
+              └─────────────────┘
+```
 
-1. An inbound email arrives and triggers reply generation.
-2. The system embeds the question and searches the `section` table for semantically similar pre-indexed content chunks (Agentic RAG).
-3. If enough high-quality vector matches are found (≥ 2 sections with similarity ≥ 0.65), the matched sections are used directly as context – **no URL fetching required**, dramatically reducing token usage.
-4. If vector search yields insufficient matches, the system falls back to Gemini's URL context tool to fetch and process datasource URLs.
-5. A confidence score (0–1) is computed from vector similarity or Gemini grounding metadata.
-6. If `autopilot_enabled = true` AND `confidence_score >= autopilot_threshold`:
-   - The reply is automatically sent via Resend and stored with `status = 'sent'`.
-7. Otherwise the reply is saved as `status = 'draft'` for human review.
+### Key Tables
 
-### Safety guardrails
+| Table | Description |
+|-------|-------------|
+| `organization` | Tenant workspace with settings |
+| `member` | User membership with roles |
+| `thread` | Email conversation thread |
+| `email` | Individual messages |
+| `reply` | AI-generated or human drafts |
+| `datasource` | Content sources (URLs) |
+| `section` | Chunked content with embeddings |
+| `workflow` | Automation rules |
+| `mcp_server` | MCP tool integrations |
 
-- If no relevant knowledge-base content is found, a **clarifying question** draft is created instead of an empty reply.
-- If the LLM returns `NO_INFORMATION`, a clarifying question draft is created (no auto-send).
-- If the Resend API call fails, the reply is saved as `status = 'failed'` (no silent loss).
+### API Flow
 
-### Toggling autopilot per org
+```
+Inbound Email
+      │
+      ▼
+┌─────────────────┐
+│ Webhook Handler │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Intent Detection│ ───► Tags added to thread
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐     ┌─────────────────┐
+│ Vector Search   │────>│ Match Sections  │
+└────────┬────────┘     └─────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Generate Reply  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Workflow Runner │
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌───────┐ ┌────────┐
+│ Auto │ │ Draft  │
+│ Send │ │ Review │
+└───────┘ └────────┘
+```
 
-Update the `organization` table:
+---
+
+## Environment Variables
+
+### Required
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
+| `SUPABASE_SERVICE_KEY` | Supabase service role key |
+| `NEXT_PUBLIC_BASE_URL` | Application base URL |
+| `RESEND_API_KEY` | Resend email API key |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini API key |
+
+### Optional - Cloudflare AI Gateway
+
+| Variable | Description |
+|----------|-------------|
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID |
+| `CLOUDFLARE_GATEWAY_NAME` | AI Gateway identifier |
+| `CF_AIG_TOKEN` | AI Gateway auth token |
+
+---
+
+## Development
+
+### Setup
+
+```bash
+# Install dependencies
+pnpm install
+
+# Copy environment variables
+cp .env.example .env.local
+
+# Start development server
+pnpm dev
+```
+
+### Database Migrations
+
+Apply migrations via Supabase CLI or dashboard:
+
+```bash
+supabase db push
+```
+
+### Key Scripts
+
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start development server |
+| `pnpm build` | Build for production |
+| `pnpm lint` | Run ESLint |
+| `pnpm tsc` | TypeScript type check |
+
+---
+
+## Configuration
+
+### Autopilot Settings
+
+```sql
+-- Disable autopilot
+UPDATE organization
+SET autopilot_enabled = false
+WHERE id = '<org-id>';
+
+-- Adjust confidence threshold
+UPDATE organization
+SET autopilot_threshold = 0.75
+WHERE id = '<org-id>';
+```
+
+### Tone Policy
+
+Customize AI response tone:
 
 ```sql
 UPDATE organization
-SET autopilot_enabled = false,   -- disable autopilot
-    autopilot_threshold = 0.75   -- or raise the threshold
+SET tone_policy = 'friendly'
 WHERE id = '<org-id>';
 ```
 
 ---
 
-## Confidence Score
+## Security
 
-The confidence score is derived from two possible sources, depending on the retrieval strategy used:
-
-**Vector search path (Agentic RAG):** Average similarity score from matched sections, clamped to `[0, 0.99]`.
-
-**URL context fallback:** Derived from Gemini grounding metadata. Falls back to `0.70` when URL context was used but no explicit grounding scores are returned.
-
-| scenario                        | approximate confidence |
-| ------------------------------- | ---------------------- |
-| No datasources                  | 0.00 (always draft)    |
-| URL context, no grounding data  | 0.70                   |
-| 2 sections, avg similarity 0.72 | 0.72                   |
-| 3 sections, avg similarity 0.85 | 0.85                   |
-| 5 sections, avg similarity 0.95 | 0.95                   |
-
-The threshold is configurable per organization (`autopilot_threshold`, default `0.65`).
+- **Row-Level Security (RLS)**: All tables enforce organization-based access
+- **Service Role**: Webhooks use service key for elevated access
+- **Email Sanitization**: All HTML content is XSS-sanitized
+- **API Authentication**: Demo endpoints require Bearer tokens
 
 ---
 
-## Citations Format
+## Support
 
-Citations are stored as a JSONB array on the `reply` table:
-
-```json
-[
-  {
-    "datasource_id": "uuid",
-    "title": "Getting Started Guide",
-    "url": "https://docs.example.com/getting-started",
-    "snippet": "First 200 characters of the matching section…"
-  }
-]
-```
-
-Citations are rendered as footnotes in the reply HTML and also displayed in the UI sources panel.
-
----
-
-## Learning Loop
-
-When a human edits an AI draft and clicks **"Approve & Send"**, the system automatically:
-
-1. Sends the reply to the customer.
-2. Tracks the human's edited version in `human_content` on the `reply` table (if different from the AI draft); sets `learned = false` initially.
-3. Finds or creates an internal knowledge-base datasource (`is_internal_kb = true`) for the organization.
-4. Chunks the final answer into sections and generates embeddings.
-5. Inserts the sections into the `section` table so they affect future retrieval.
-6. Sets `learned = true` on the `reply` row once embeddings are successfully stored.
-
-This progressively improves the quality of future AI replies without any extra manual steps.
-
----
-
-## Required Environment Variables
-
-| Variable                        | Description                                                                                              |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase project URL                                                                                     |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key                                                                                   |
-| `SUPABASE_SERVICE_KEY`          | Supabase service-role key (used in webhooks)                                                             |
-| `NEXT_PUBLIC_BASE_URL`          | Base URL of your deployment (e.g. `https://answerify.dev`)                                               |
-| `RESEND_API_KEY`                | Resend API key for sending emails                                                                        |
-| `GOOGLE_GENERATIVE_AI_API_KEY`  | Google Gemini API key for embeddings (`gemini-embedding-001`) and completions (`gemini-3-flash-preview`) |
-
-## Optional Environment Variables
-
-### Cloudflare AI Gateway
-
-Route all AI requests (text generation and embeddings) through [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) to get request logs, analytics, and observability.
-
-| Variable                   | Description                                                                                       |
-| -------------------------- | ------------------------------------------------------------------------------------------------- |
-| `CLOUDFLARE_ACCOUNT_ID`    | Your Cloudflare account ID                                                                        |
-| `CLOUDFLARE_GATEWAY_NAME`  | The name of your AI Gateway in the Cloudflare dashboard                                           |
-| `CF_AIG_TOKEN`             | AI Gateway token — required for [authenticated gateways](https://developers.cloudflare.com/ai-gateway/configuration/authentication/) |
-
-Set `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_GATEWAY_NAME` to enable the gateway. `CF_AIG_TOKEN` is only required when your gateway uses [authentication](https://developers.cloudflare.com/ai-gateway/configuration/authentication/). If `CLOUDFLARE_ACCOUNT_ID` or `CLOUDFLARE_GATEWAY_NAME` is not set, the app falls back to calling the Google Generative AI API directly.
-
+For issues and feature requests, please open a GitHub issue.

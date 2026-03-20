@@ -24,11 +24,13 @@ const Tiptap = dynamic(
   }
 );
 
+type ThreadStatus = 'open' | 'closed';
+
 interface Props {
   threadId: string;
   conversations: Tables<'email'>[];
   reply: Tables<'reply'> | null;
-  status: string;
+  status: ThreadStatus;
 }
 
 function confidenceLabel(score: number): string {
@@ -52,19 +54,18 @@ export function Conversations({
   const router = useRouter();
   const divRef = useRef<HTMLDivElement>(null);
 
+  const lastEmail = conversations[conversations.length - 1];
   const editor = useTiptap(
-    conversations[conversations.length - 1].role === 'user'
-      ? reply?.content
-      : ''
+    lastEmail?.role === 'user' ? reply?.content ?? '' : ''
   );
 
   useEffect(() => {
     if (!divRef.current) return;
     divRef.current.scrollTop = divRef.current.scrollHeight;
-  }, []);
+  }, [conversations]);
 
   const handleSubmit = async (
-    status: 'open' | 'closed' | undefined = undefined
+    ticketStatus: ThreadStatus | undefined = undefined
   ) => {
     if (!editor || !reply?.id) return;
     const content = editor.getHTML();
@@ -73,10 +74,10 @@ export function Conversations({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),
     });
-    sendEmail(threadId, {
-      content: editor?.getHTML(),
-      replyId: reply?.id,
-      status,
+    await sendEmail(threadId, {
+      content,
+      replyId: reply.id,
+      status: ticketStatus,
     });
     editor.commands.setContent('');
     router.refresh();

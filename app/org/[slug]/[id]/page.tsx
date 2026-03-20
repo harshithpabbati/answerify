@@ -8,6 +8,8 @@ import {
   Conversations,
 } from '@/components/organization/conversation';
 
+type ThreadStatus = 'open' | 'closed';
+
 interface Props {
   params: Promise<{ id: string; slug: string }>;
 }
@@ -34,7 +36,7 @@ export default async function EmailPage({ params }: Props) {
         threadId={thread.id}
         conversations={data ?? []}
         reply={replyData ?? null}
-        status={thread.status}
+        status={thread.status as ThreadStatus}
       />
     </div>
   );

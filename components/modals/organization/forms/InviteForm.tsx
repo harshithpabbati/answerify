@@ -82,7 +82,7 @@ export function InviteMemberForm({ orgId, onInvite }: Props) {
             name="role"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>Role</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
