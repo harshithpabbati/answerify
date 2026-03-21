@@ -1,7 +1,8 @@
-import { generateText } from 'ai';
+import { generateText, stepCountIs } from 'ai';
 import { codeBlock } from 'common-tags';
 
 import { textModel } from '@/lib/ai';
+import { makeSavoirTools } from '@/lib/savoir';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
 import { parseLLMJSON } from '@/lib/parse-llm-json';
@@ -68,12 +69,17 @@ async function runGroundedAnswerAgent({
   retrievedContext: string;
   tonePolicy?: string | null;
 }) {
+  const savoirTools = makeSavoirTools();
+
   const systemPrompt = codeBlock`
     You are a grounded customer support AI.
 
     RULES:
     - Base your answer on the provided context sections.
-    - Do NOT invent information beyond what the context supports.
+    - If the provided context is insufficient to fully answer the question and
+      sandbox tools are available, use them to explore the knowledge base further
+      before composing your response.
+    - Do NOT invent information beyond what the context or tool results support.
     - NEVER include apologies, disclaimers, or notes about what the
       context does NOT cover. Only include information that IS supported.
     - Output valid JSON only — no explanation, no markdown fences.
@@ -96,6 +102,7 @@ async function runGroundedAnswerAgent({
     temperature: 0.5,
     maxOutputTokens: 2000,
     system: systemPrompt,
+    ...(savoirTools && { tools: savoirTools, stopWhen: stepCountIs(5) }),
     prompt: `
       Subject: ${subject}
 
