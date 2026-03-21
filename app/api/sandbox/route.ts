@@ -1,10 +1,12 @@
 import { generateText, stepCountIs } from 'ai';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { codeBlock } from 'common-tags';
 
+import { Database } from '@/database.types';
 import { textModel } from '@/lib/ai';
-import { makeSavoirTools } from '@/lib/savoir';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
+import { makeKnowledgeTools } from '@/lib/knowledge-tools';
 import { parseLLMJSON } from '@/lib/parse-llm-json';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -63,21 +65,25 @@ async function runGroundedAnswerAgent({
   question,
   retrievedContext,
   tonePolicy,
+  supabase,
+  organizationId,
 }: {
   subject: string;
   question: string;
   retrievedContext: string;
   tonePolicy?: string | null;
+  supabase: SupabaseClient<Database>;
+  organizationId: string;
 }) {
-  const savoirTools = makeSavoirTools();
+  const knowledgeTools = makeKnowledgeTools(supabase, organizationId);
 
   const systemPrompt = codeBlock`
     You are a grounded customer support AI.
 
     RULES:
     - Base your answer on the provided context sections.
-    - If the provided context is insufficient to fully answer the question and
-      sandbox tools are available, use them to explore the knowledge base further
+    - If the provided context is insufficient to fully answer the question,
+      use the available knowledge base tools to search for more information
       before composing your response.
     - Do NOT invent information beyond what the context or tool results support.
     - NEVER include apologies, disclaimers, or notes about what the
@@ -102,7 +108,8 @@ async function runGroundedAnswerAgent({
     temperature: 0.5,
     maxOutputTokens: 2000,
     system: systemPrompt,
-    ...(savoirTools && { tools: savoirTools, stopWhen: stepCountIs(5) }),
+    tools: knowledgeTools,
+    stopWhen: stepCountIs(5),
     prompt: `
       Subject: ${subject}
 
@@ -260,6 +267,8 @@ export async function POST(request: Request) {
     question,
     retrievedContext,
     tonePolicy,
+    supabase,
+    organizationId: orgId,
   });
 
   if (answerResult.status === 'NO_INFORMATION') {
