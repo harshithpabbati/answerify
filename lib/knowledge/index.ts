@@ -29,13 +29,13 @@ export interface Knowledge {
 /**
  * Create a Knowledge instance backed by Answerify's Supabase knowledge base.
  *
- * Returns a `{ client, tools }` object that mirrors the `@savoir/sdk` API —
- * pass `knowledge.tools` directly to `generateText` / `streamText` to give
- * the AI model multi-step text search capabilities over the stored content.
+ * Returns a `{ client, tools }` object — pass `knowledge.tools` directly to
+ * `generateText` / `streamText` to give the AI model multi-step text search
+ * capabilities over the stored content.
  *
  * The tools are intentionally text-based (no vector/embedding search) so the
- * model can use them interactively, the same way Savoir's `bash` tool allows
- * running `grep`, `cat`, and `ls` against a documentation sandbox.
+ * model can explore the knowledge base interactively, similar to running
+ * `grep`, `cat`, and `ls` against a file tree.
  *
  * @example
  * ```ts
