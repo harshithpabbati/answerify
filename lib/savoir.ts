@@ -4,7 +4,7 @@ import { createSavoir } from '@savoir/sdk';
  * Creates AI SDK-compatible tools powered by a remote Savoir sandbox.
  *
  * NOTE: This is NOT used for Answerify's own knowledge base, which is stored
- * in Supabase and queried via `makeKnowledgeTools` (see lib/knowledge-tools.ts).
+ * in Supabase and queried via `createKnowledge` (see lib/knowledge/index.ts).
  *
  * Savoir tools (`bash`, `bash_batch`) connect to an external Savoir
  * knowledge-agent server and run shell commands against files hosted there.

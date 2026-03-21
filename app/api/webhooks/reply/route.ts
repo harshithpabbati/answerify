@@ -1,15 +1,13 @@
 import { createMCPClient } from '@ai-sdk/mcp';
 import { generateText, stepCountIs } from 'ai';
-import { SupabaseClient } from '@supabase/supabase-js';
 import { codeBlock } from 'common-tags';
 import { Resend } from 'resend';
 
-import { Database } from '@/database.types';
 import { textModel } from '@/lib/ai';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { cleanBody } from '@/lib/cleanBody';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
-import { makeKnowledgeTools } from '@/lib/knowledge-tools';
+import { createKnowledge } from '@/lib/knowledge';
 import { parseLLMJSON } from '@/lib/parse-llm-json';
 import { createServiceClient } from '@/lib/supabase/service';
 
@@ -239,10 +237,10 @@ async function runGroundedAnswerAgent({
   apiContext?: string;
   conversationHistory?: string;
   tonePolicy?: string | null;
-  supabase: SupabaseClient<Database>;
+  supabase: Awaited<ReturnType<typeof createServiceClient>>;
   organizationId: string;
 }) {
-  const knowledgeTools = makeKnowledgeTools(supabase, organizationId);
+  const { tools } = createKnowledge({ supabase, organizationId });
 
   const systemPrompt = codeBlock`
     You are a grounded customer support AI.
@@ -275,7 +273,7 @@ async function runGroundedAnswerAgent({
     temperature: 0.5,
     maxOutputTokens: 2000,
     system: systemPrompt,
-    tools: knowledgeTools,
+    tools,
     stopWhen: stepCountIs(5),
     prompt: `
       Subject: ${subject}
