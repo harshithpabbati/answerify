@@ -5,7 +5,10 @@ import { KnowledgeClient, SectionResult } from '../client';
 
 function formatSections(sections: SectionResult[]): string {
   return sections
-    .map((s, i) => `[Section ${i + 1}]${s.heading ? ` ${s.heading}` : ''}\n${s.content}`)
+    .map(
+      (s, i) =>
+        `[Section ${i + 1}]${s.heading ? ` ${s.heading}` : ''}\n${s.content}`
+    )
     .join('\n\n---\n\n');
 }
 
@@ -33,9 +36,20 @@ export function createSearchTool(client: KnowledgeClient) {
       try {
         const sections = await client.search(keyword, limit);
         if (!sections.length) {
-          return { sections: [], count: 0, message: `No sections found for "${keyword}".` };
+          return {
+            sections: [],
+            count: 0,
+            message: `No sections found for "${keyword}".`,
+          };
         }
-        return { sections: sections.map((s) => ({ heading: s.heading, content: s.content })), count: sections.length, formatted: formatSections(sections) };
+        return {
+          sections: sections.map((s) => ({
+            heading: s.heading,
+            content: s.content,
+          })),
+          count: sections.length,
+          formatted: formatSections(sections),
+        };
       } catch (err) {
         console.error('[knowledge/search] error:', err);
         return { sections: [], count: 0, message: 'Search failed.' };

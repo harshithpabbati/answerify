@@ -1,13 +1,17 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-
 import { Database } from '@/database.types';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 import { KnowledgeClient, KnowledgeConfig } from './client';
 import { createListSourcesTool } from './tools/list-sources';
 import { createReadSourceTool } from './tools/read-source';
 import { createSearchTool } from './tools/search';
 
-export type { KnowledgeConfig, KnowledgeClient, SectionResult, DatasourceResult } from './client';
+export type {
+  KnowledgeConfig,
+  KnowledgeClient,
+  SectionResult,
+  DatasourceResult,
+} from './client';
 
 export interface Knowledge {
   /** Low-level Supabase query client for direct access. */

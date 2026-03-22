@@ -1,6 +1,5 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-
 import { Database } from '@/database.types';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 export type KnowledgeConfig = {
   /** Supabase client (server or service role). */
@@ -86,7 +85,9 @@ export class KnowledgeClient {
    *
    * @param url  The datasource URL to read.
    */
-  async readSource(url: string): Promise<{ datasourceId: string; sections: SectionResult[] }> {
+  async readSource(
+    url: string
+  ): Promise<{ datasourceId: string; sections: SectionResult[] }> {
     const { data: ds, error: dsError } = await this.supabase
       .from('datasource')
       .select('id')
@@ -95,7 +96,6 @@ export class KnowledgeClient {
       .single();
 
     if (dsError) throw dsError;
-    if (!ds) return { datasourceId: '', sections: [] };
 
     const { data, error } = await this.supabase
       .from('section')
