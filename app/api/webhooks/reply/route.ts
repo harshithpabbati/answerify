@@ -7,6 +7,7 @@ import { textModel } from '@/lib/ai';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { cleanBody } from '@/lib/cleanBody';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
+import { createKnowledge } from '@/lib/knowledge';
 import { parseLLMJSON } from '@/lib/parse-llm-json';
 import { createServiceClient } from '@/lib/supabase/service';
 
@@ -227,6 +228,8 @@ async function runGroundedAnswerAgent({
   apiContext,
   conversationHistory,
   tonePolicy,
+  supabase,
+  organizationId,
 }: {
   subject: string;
   question: string;
@@ -234,13 +237,20 @@ async function runGroundedAnswerAgent({
   apiContext?: string;
   conversationHistory?: string;
   tonePolicy?: string | null;
+  supabase: Awaited<ReturnType<typeof createServiceClient>>;
+  organizationId: string;
 }) {
+  const { tools } = createKnowledge({ supabase, organizationId });
+
   const systemPrompt = codeBlock`
     You are a grounded customer support AI.
 
     RULES:
     - Base your answer on the provided context sections.
-    - Do NOT invent information beyond what the context supports.
+    - If the provided context is insufficient to fully answer the question,
+      use the available knowledge base tools to search for more information
+      before composing your response.
+    - Do NOT invent information beyond what the context or tool results support.
     - NEVER include apologies, disclaimers, or notes about what the
       context does NOT cover. Only include information that IS supported.
     - Output valid JSON only — no explanation, no markdown fences.
@@ -263,6 +273,8 @@ async function runGroundedAnswerAgent({
     temperature: 0.5,
     maxOutputTokens: 2000,
     system: systemPrompt,
+    tools,
+    stopWhen: stepCountIs(5),
     prompt: `
       Subject: ${subject}
 
@@ -378,6 +390,8 @@ export async function POST(request: Request) {
     apiContext,
     conversationHistory,
     tonePolicy: org?.tone_policy,
+    supabase,
+    organizationId: record.organization_id,
   });
 
   if (answerResult.status === 'NO_INFORMATION') {
