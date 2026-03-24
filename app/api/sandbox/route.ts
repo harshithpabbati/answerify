@@ -1,9 +1,10 @@
-import { generateText } from 'ai';
+import { generateText, stepCountIs } from 'ai';
 import { codeBlock } from 'common-tags';
 
 import { textModel } from '@/lib/ai';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
+import { createKnowledge } from '@/lib/knowledge';
 import { parseLLMJSON } from '@/lib/parse-llm-json';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -62,18 +63,27 @@ async function runGroundedAnswerAgent({
   question,
   retrievedContext,
   tonePolicy,
+  supabase,
+  organizationId,
 }: {
   subject: string;
   question: string;
   retrievedContext: string;
   tonePolicy?: string | null;
+  supabase: Awaited<ReturnType<typeof createServerClient>>;
+  organizationId: string;
 }) {
+  const { tools } = createKnowledge({ supabase, organizationId });
+
   const systemPrompt = codeBlock`
     You are a grounded customer support AI.
 
     RULES:
     - Base your answer on the provided context sections.
-    - Do NOT invent information beyond what the context supports.
+    - If the provided context is insufficient to fully answer the question,
+      use the available knowledge base tools to search for more information
+      before composing your response.
+    - Do NOT invent information beyond what the context or tool results support.
     - NEVER include apologies, disclaimers, or notes about what the
       context does NOT cover. Only include information that IS supported.
     - Output valid JSON only — no explanation, no markdown fences.
@@ -96,6 +106,8 @@ async function runGroundedAnswerAgent({
     temperature: 0.5,
     maxOutputTokens: 2000,
     system: systemPrompt,
+    tools,
+    stopWhen: stepCountIs(5),
     prompt: `
       Subject: ${subject}
 
@@ -253,6 +265,8 @@ export async function POST(request: Request) {
     question,
     retrievedContext,
     tonePolicy,
+    supabase,
+    organizationId: orgId,
   });
 
   if (answerResult.status === 'NO_INFORMATION') {
