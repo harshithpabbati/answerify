@@ -56,7 +56,7 @@ export function Conversations({
 
   const lastEmail = conversations[conversations.length - 1];
   const editor = useTiptap(
-    lastEmail?.role === 'user' ? reply?.content ?? '' : ''
+    lastEmail?.role === 'user' ? (reply?.content ?? '') : ''
   );
 
   useEffect(() => {
@@ -98,7 +98,7 @@ export function Conversations({
 
       <div className="relative w-full border-t border-[#FF4500]/10 bg-gradient-to-t from-muted/30 to-background p-4 backdrop-blur-sm">
         <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-[#FF4500]/20 to-transparent" />
-        
+
         {reply && (
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <span className="text-muted-foreground font-mono text-[10px] uppercase tracking-wider">
@@ -114,21 +114,22 @@ export function Conversations({
                 : ''}
             </Badge>
             {reply.status === 'sent' && (
-              <Badge variant="default" className="text-xs font-semibold animate-pulse">
+              <Badge
+                variant="default"
+                className="text-xs font-semibold animate-pulse"
+              >
                 Auto-sent
               </Badge>
             )}
           </div>
         )}
-        
-        <div className="rounded-lg border border-[#FF4500]/20 bg-background shadow-lg shadow-[#FF4500]/5 overflow-hidden">
-          <Tiptap editor={editor} />
-        </div>
-        
+
+        <Tiptap editor={editor} />
+
         <div className="mt-3 flex flex-col md:flex-row justify-end gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => handleSubmit()} 
+          <Button
+            variant="outline"
+            onClick={() => handleSubmit()}
             size="lg"
             className="border-[#FF4500]/30 hover:bg-[#FF4500]/10 hover:border-[#FF4500]"
           >
@@ -141,9 +142,7 @@ export function Conversations({
             size="lg"
             className="bg-gradient-to-r from-[#FF4500] to-[#FF6B35] hover:from-[#FF4500]/90 hover:to-[#FF6B35]/90 shadow-lg shadow-[#FF4500]/20"
           >
-            {status === 'closed'
-              ? 'Submit & re-open'
-              : 'Submit & close'}
+            {status === 'closed' ? 'Submit & re-open' : 'Submit & close'}
           </Button>
         </div>
       </div>
