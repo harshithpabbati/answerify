@@ -197,14 +197,14 @@ Inbound Email
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
 | `SUPABASE_SERVICE_KEY` | Supabase service role key |
 | `NEXT_PUBLIC_BASE_URL` | Application base URL |
-| `RESEND_API_KEY` | Resend email API key |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID |
+| `CLOUDFLARE_EMAIL_API_TOKEN` | Cloudflare Email Service API token |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | Google Gemini API key |
 
 ### Optional - Cloudflare AI Gateway
 
 | Variable | Description |
 |----------|-------------|
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID |
 | `CLOUDFLARE_GATEWAY_NAME` | AI Gateway identifier |
 | `CF_AIG_TOKEN` | AI Gateway auth token |
 

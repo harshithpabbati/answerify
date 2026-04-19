@@ -1,14 +1,13 @@
 import { createMCPClient } from '@ai-sdk/mcp';
 import { generateText, stepCountIs } from 'ai';
 import { codeBlock } from 'common-tags';
-import { Resend } from 'resend';
-
 import { textModel } from '@/lib/ai';
 import { URL_CONTEXT_FALLBACK_CONFIDENCE } from '@/lib/autopilot';
 import { cleanBody } from '@/lib/cleanBody';
 import { generateEmbedding, serializeEmbedding } from '@/lib/embeddings';
 import { createKnowledge } from '@/lib/knowledge';
 import { parseLLMJSON } from '@/lib/parse-llm-json';
+import { sendEmailViaCF } from '@/lib/send-email';
 import { createServiceClient } from '@/lib/supabase/service';
 
 /* -------------------------------------------------------------------------- */
@@ -428,17 +427,14 @@ export async function POST(request: Request) {
   /* ----------------------------- AUTO SEND ------------------------------- */
 
   if (shouldAutoSend && thread) {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-
-    const sent = await resend.emails.send({
-      from: 'Support <support@answerify.dev>',
-      to: [thread.email_from],
+    const sent = await sendEmailViaCF({
+      to: thread.email_from,
       subject: thread.subject,
       html: htmlContent,
-      headers: { 'In-Reply-To': thread.message_id },
+      messageId: thread.message_id,
     });
 
-    if (sent?.data?.id) {
+    if (sent.id) {
       await supabase.from('email').insert({
         organization_id: record.organization_id,
         thread_id: record.thread_id,

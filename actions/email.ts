@@ -2,9 +2,8 @@
 
 import { cache } from 'react';
 
-import { Resend } from 'resend';
-
 import { cleanBody } from '@/lib/cleanBody';
+import { sendEmailViaCF } from '@/lib/send-email';
 import { createServerClient } from '@/lib/supabase/server';
 
 export async function getOrgStats(orgId: string) {
@@ -74,7 +73,7 @@ export async function updateReplyStatus(replyId: string, content: string) {
     .match({ id: replyId });
 }
 
-export async function sendEmailWithResend({
+export async function sendEmailWithCF({
   to,
   subject,
   content,
@@ -85,17 +84,7 @@ export async function sendEmailWithResend({
   content: string;
   messageId: string;
 }) {
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const { data } = await resend.emails.send({
-    from: 'Support <support@answerify.dev>',
-    to: [to],
-    subject,
-    html: content,
-    headers: {
-      'In-Reply-To': messageId,
-    },
-  });
-  return data;
+  return sendEmailViaCF({ to, subject, html: content, messageId });
 }
 
 export async function updateTicketStatus(
@@ -129,13 +118,13 @@ export async function sendEmail(
     .single();
   if (error || !data?.id) return { data: null, error };
 
-  const resendData = await sendEmailWithResend({
+  const cfData = await sendEmailWithCF({
     to: data.email_from,
     subject: data.subject,
     content,
     messageId: data.message_id,
   });
-  if (!resendData?.id) return;
+  if (!cfData.id) return;
 
   const { data: emailData, error: emailError } = await supabase
     .from('email')
