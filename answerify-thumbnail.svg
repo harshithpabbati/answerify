@@ -1,0 +1,36 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="900" fill="#09090B"/>
+  <rect x="64" y="64" width="1472" height="772" rx="28" fill="#111114" stroke="#FF4500" stroke-width="2"/>
+  <path d="M64 196H1536" stroke="#FF4500" stroke-opacity="0.28"/>
+  <path d="M560 64V836" stroke="#FF4500" stroke-opacity="0.18"/>
+  <path d="M64 516H1536" stroke="#FF4500" stroke-opacity="0.18"/>
+  <circle cx="116" cy="130" r="10" fill="#FF4500"/>
+  <circle cx="152" cy="130" r="10" fill="#F59E0B"/>
+  <circle cx="188" cy="130" r="10" fill="#10B981"/>
+  <text x="110" y="260" fill="#FF4500" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="6">AI-POWERED SUPPORT INTELLIGENCE</text>
+  <text x="110" y="360" fill="#FAFAFA" font-family="Inter, Arial, sans-serif" font-size="88" font-weight="900">Answerify</text>
+  <text x="110" y="430" fill="#A1A1AA" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="500">Grounded customer support replies with RAG, autopilot, and workflows.</text>
+  <rect x="110" y="500" width="190" height="56" rx="12" fill="#FF4500"/>
+  <text x="146" y="536" fill="#09090B" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800">AUTO-REPLY</text>
+  <rect x="320" y="500" width="220" height="56" rx="12" stroke="#FAFAFA" stroke-opacity="0.3"/>
+  <text x="366" y="536" fill="#FAFAFA" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">CITED RAG</text>
+  <text x="110" y="660" fill="#FAFAFA" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="700">• Intent tagging</text>
+  <text x="110" y="716" fill="#FAFAFA" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="700">• MCP data lookups</text>
+  <text x="110" y="772" fill="#FAFAFA" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="700">• Human-in-the-loop learning</text>
+  <rect x="660" y="242" width="780" height="470" rx="22" fill="#09090B" stroke="#27272A"/>
+  <rect x="700" y="288" width="700" height="86" rx="16" fill="#111114" stroke="#FF4500" stroke-opacity="0.3"/>
+  <text x="734" y="324" fill="#A1A1AA" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="600">Inbound email</text>
+  <text x="734" y="356" fill="#FAFAFA" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700">“Can I get a refund and export my data?”</text>
+  <rect x="700" y="404" width="210" height="58" rx="14" fill="#1C1917" stroke="#FF4500" stroke-opacity="0.35"/>
+  <text x="736" y="440" fill="#FDBA74" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">Refund Request</text>
+  <rect x="930" y="404" width="176" height="58" rx="14" fill="#111827" stroke="#60A5FA" stroke-opacity="0.4"/>
+  <text x="968" y="440" fill="#93C5FD" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">Data Export</text>
+  <rect x="1126" y="404" width="274" height="58" rx="14" fill="#052E16" stroke="#34D399" stroke-opacity="0.4"/>
+  <text x="1162" y="440" fill="#6EE7B7" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">Confidence 0.82</text>
+  <rect x="700" y="500" width="700" height="170" rx="16" fill="#111114"/>
+  <text x="734" y="540" fill="#A1A1AA" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="600">Generated reply</text>
+  <text x="734" y="586" fill="#FAFAFA" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">We can help with both requests.</text>
+  <text x="734" y="626" fill="#D4D4D8" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="500">Your refund has been submitted for review, and you can export</text>
+  <text x="734" y="658" fill="#D4D4D8" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="500">your data from Settings → Privacy → Export Data.</text>
+  <text x="734" y="696" fill="#71717A" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="600">Sources: Refund Policy • Data Export Docs • Prior approved reply</text>
+</svg>
