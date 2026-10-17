@@ -246,6 +246,11 @@ supabase db push
 
 ## Configuration
 
+### Discovering Knowledge Base Sources
+
+Use [Parallel Search MCP to discover public support documentation](docs/discover-knowledge-sources.md),
+review the results, and import selected URLs into Answerify's knowledge base.
+
 ### Autopilot Settings
 
 ```sql
